@@ -261,17 +261,18 @@ function vinylCapMat(hex){
     color:new THREE.Color(hex).convertSRGBToLinear(), roughness:.42, metalness:0});  // sRGB 輸出下保持飽和
   return capMats[hex];
 }
+const occluders = [];   // 會遮擋視線的場地元件（材質各自獨立，可單獨淡出）
 function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
   // 平滑 PVC 充氣管（業主指定：不要一節一節的縫線感）
   const a=V3(x1,y1,z1), b=V3(x2,y2,z2), d=b.clone().sub(a);
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),18,1), vinylCapMat(hex));
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),18,1), vinylCapMat(hex).clone());
   m.position.copy(a).add(d.clone().multiplyScalar(.5));
   m.quaternion.setFromUnitVectors(UP, d.clone().normalize());
-  m.castShadow = true; scene.add(m);
+  m.castShadow = true; scene.add(m); occluders.push(m);
   // 球形充氣接頭（轉角圓潤）
   [a,b].forEach(p=>{
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(r,14,10), vinylCapMat(hex));
-    cap.position.copy(p); cap.castShadow = true; scene.add(cap);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(r,14,10), vinylCapMat(hex).clone());
+    cap.position.copy(p); cap.castShadow = true; scene.add(cap); occluders.push(cap);
   });
 }
 {
@@ -412,11 +413,24 @@ function makeGoalRing(x, color){
   scene.add(grp);
   return {grp, torus, lamp, x, y:RING.y, z:0, color, baseColor:color};
 }
-// 紅隊往紅框進攻（+x）、藍隊往藍框進攻（−x）
-const ringEast = makeGoalRing( RING.x, 0xff1133);  // 紅色球門：紅隊進攻目標
-const ringWest = makeGoalRing(-RING.x, 0x1166ff);  // 藍色球門：藍隊進攻目標
+// 業主指定：藍場（−x）放紅色球門環、紅場（+x）放藍色球門環
+// → 各隊攻「己方顏色的框」＝深入敵方半場得分（紅隊家在 +x、攻 −x 紅框；藍隊家在 −x、攻 +x 藍框）
+const ringEast = makeGoalRing( RING.x, 0x1166ff);  // 紅場上的藍框：藍隊進攻目標
+const ringWest = makeGoalRing(-RING.x, 0xff1133);  // 藍場上的紅框：紅隊進攻目標
 
 // ---------- 無人機模型 ----------
+// LED 光暈貼圖（徑向漸層，加法混合 → 過曝爆亮感）
+const glowTex = (()=>{
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const g=cv.getContext('2d');
+  const gr=g.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,'rgba(255,255,255,1)');
+  gr.addColorStop(0.22,'rgba(255,255,255,.9)');
+  gr.addColorStop(0.55,'rgba(255,255,255,.28)');
+  gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gr; g.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(cv);
+})();
 function buildDroneMesh(teamColor, isStriker){
   const grp = new THREE.Group();
   // 球形護籠（測地線網格）
@@ -425,13 +439,40 @@ function buildDroneMesh(teamColor, isStriker){
     new THREE.LineBasicMaterial({color:teamColor, transparent:true, opacity: isStriker?0.95:0.55})
   );
   grp.add(cage);
-  // LED 燈環（赤道）
-  const led = new THREE.Mesh(
-    new THREE.TorusGeometry(DRONE_R, 0.014, 10, 40),
-    new THREE.MeshStandardMaterial({color:0x111111, emissive:teamColor,
-      emissiveIntensity: isStriker?2.6:1.1, roughness:.5})
-  );
-  led.rotation.x = Math.PI/2; grp.add(led);
+  // 環形燈：WS2812B LED 燈條 12 顆（白，赤道）＋深色燈條基座
+  const strip = new THREE.Mesh(
+    new THREE.TorusGeometry(DRONE_R, 0.011, 8, 40),
+    new THREE.MeshStandardMaterial({color:0x15171c, roughness:.6}));
+  strip.rotation.x = Math.PI/2; grp.add(strip);
+  const ledGeo = new THREE.SphereGeometry(0.0085, 8, 6);
+  // 燈珠核心用 MeshBasicMaterial（不受光照、永遠全亮 → LED 自發光感）
+  const ledCore = new THREE.Color(teamColor).lerp(new THREE.Color(0xffffff), 0.45);
+  const ledMat = new THREE.MeshBasicMaterial({color:ledCore});
+  const ringGlowMat = new THREE.SpriteMaterial({map:glowTex, color:teamColor,
+    transparent:true, opacity:0.85, blending:THREE.AdditiveBlending, depthWrite:false});
+  for(let k=0; k<12; k++){
+    const a = k/12*Math.PI*2;
+    const px = new THREE.Mesh(ledGeo, ledMat);
+    px.position.set(Math.sin(a)*(DRONE_R+0.006), 0, Math.cos(a)*(DRONE_R+0.006));
+    grp.add(px);
+    const sp = new THREE.Sprite(ringGlowMat);   // 每顆燈珠帶光暈
+    sp.scale.set(0.05,0.05,1); sp.position.copy(px.position); grp.add(sp);
+  }
+  // 尾燈：WS2812B 4 顆（黃色、特別明亮），與環形燈同在最大球徑赤道上（local −z 為機尾）
+  const tailGeo = new THREE.SphereGeometry(0.011, 8, 6);   // 燈珠略大
+  const tailMat = new THREE.MeshBasicMaterial({color:0xffe855});
+  const tailGlowMat = new THREE.SpriteMaterial({map:glowTex, color:0xffdd22,
+    transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
+  for(let k=0; k<4; k++){
+    const a = Math.PI + (k-1.5)/3*(Math.PI/3.5);   // 機尾 180°±26° 扇形展開
+    const tl = new THREE.Mesh(tailGeo, tailMat);
+    tl.position.set(Math.sin(a)*(DRONE_R+0.008), 0, Math.cos(a)*(DRONE_R+0.008));
+    grp.add(tl);
+    const sp = new THREE.Sprite(tailGlowMat);   // 尾燈光暈更大更亮
+    sp.scale.set(0.1,0.1,1); sp.position.copy(tl.position); grp.add(sp);
+  }
+  const tailGlow = new THREE.PointLight(0xffdd22, 1.1, 1.5);   // 黃色點光源照亮周圍
+  tailGlow.position.set(0, 0, -DRONE_R*0.9); grp.add(tailGlow);
   // 機身
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.028,0.05),
     new THREE.MeshStandardMaterial({color:0x14161c, roughness:.6, metalness:.4}));
@@ -469,7 +510,7 @@ function buildDroneMesh(teamColor, isStriker){
   }
   grp.traverse(o=>{ if(o.isMesh) o.castShadow = true; });
   scene.add(grp);
-  return {grp, props, led, cage, ribbon, ribbonGeo};
+  return {grp, props, ledGlow:ringGlowMat, cage, ribbon, ribbonGeo};  // ledGlow 供 Striker 呼吸燈用
 }
 
 // ---------- 無人機物理實體 ----------
@@ -477,7 +518,7 @@ class Drone{
   constructor(team, role, spawn, yaw0){
     this.team = team;               // 'red' | 'blue'
     this.role = role;               // 'striker' | 'defender' | 'harasser'
-    this.attackDir = team==='red' ? 1 : -1;
+    this.attackDir = team==='red' ? -1 : 1;   // 紅隊攻 −x 紅框、藍隊攻 +x 藍框（框在敵方半場）
     this.color = team==='red' ? 0xff4455 : 0x3388ff;
     this.spawn = spawn.clone(); this.yaw0 = yaw0;
     this.mesh = buildDroneMesh(this.color, role==='striker');
@@ -610,8 +651,8 @@ class Drone{
     this.mesh.props.forEach((p,i)=>{ p.rotation.z = this.propSpin*(i%2?1:-1); });
     // Striker LED 與識別帶呼吸 / 得分權指示
     if(this.role==='striker'){
-      const base = this.canScore ? 2.6 : 0.9;
-      this.mesh.led.material.emissiveIntensity = base + Math.sin(t*6)*0.5;
+      // 得分權指示：環形燈光暈呼吸（解鎖時亮且呼吸、未解鎖時暗）
+      this.mesh.ledGlow.opacity = this.canScore ? 0.78 + Math.sin(t*6)*0.2 : 0.3;
       if(this.mesh.ribbon){
         const r = this.mesh.ribbon, vh = Math.hypot(this.vel.x, this.vel.z);
         r.position.set(this.pos.x, this.pos.y - DRONE_R + 0.02, this.pos.z);
@@ -632,14 +673,15 @@ class Drone{
 
 // ---------- 建立 3v3 ----------
 const drones = [];
-const player = new Drone('red','striker', V3(-1.3,DRONE_R,0),  Math.PI/2);
+// 紅隊家＝紅場（+x），機頭朝 −x；藍隊家＝藍場（−x），機頭朝 +x
+const player = new Drone('red','striker', V3(1.3,DRONE_R,0),  -Math.PI/2);
 player.isPlayer = true;
 drones.push(player);
-drones.push(new Drone('red','defender',  V3(-2.4,DRONE_R, 0.9), Math.PI/2));
-drones.push(new Drone('red','harasser',  V3(-2.4,DRONE_R,-0.9), Math.PI/2));
-drones.push(new Drone('blue','striker',  V3(1.3,DRONE_R,0),  -Math.PI/2));
-drones.push(new Drone('blue','defender', V3(2.4,DRONE_R, 0.9), -Math.PI/2));
-drones.push(new Drone('blue','harasser', V3(2.4,DRONE_R,-0.9), -Math.PI/2));
+drones.push(new Drone('red','defender',  V3(2.4,DRONE_R, 0.9), -Math.PI/2));
+drones.push(new Drone('red','harasser',  V3(2.4,DRONE_R,-0.9), -Math.PI/2));
+drones.push(new Drone('blue','striker',  V3(-1.3,DRONE_R,0),  Math.PI/2));
+drones.push(new Drone('blue','defender', V3(-2.4,DRONE_R, 0.9), Math.PI/2));
+drones.push(new Drone('blue','harasser', V3(-2.4,DRONE_R,-0.9), Math.PI/2));
 const blueStriker = drones[3];
 
 // ---------- 機體互撞（等質量球體衝量） ----------
@@ -1128,6 +1170,29 @@ function updateCamera(dt){
   camera.position.copy(camPos); camera.lookAt(camLook);
 }
 
+// ---------- 場地遮擋自動半透明（攝影機→玩家機射線，被擋住的充氣管淡出） ----------
+const occRay = new THREE.Raycaster();
+function updateOccluders(dt){
+  let hitSet = null;
+  if(camMode !== 1){                       // FPV 視角不需要
+    const dir = player.pos.clone().sub(camera.position);
+    const dist = dir.length();
+    if(dist > 0.3){
+      occRay.set(camera.position, dir.multiplyScalar(1/dist));
+      occRay.far = dist;
+      hitSet = new Set(occRay.intersectObjects(occluders, false).map(h=>h.object));
+    }
+  }
+  for(const o of occluders){
+    const m = o.material;
+    const tgt = (hitSet && hitSet.has(o)) ? 0.22 : 1.0;   // 遮擋時淡至 22%
+    m.opacity += (tgt - m.opacity)*Math.min(1, dt*9);     // 平滑過渡
+    const tr = m.opacity < 0.985;
+    m.transparent = tr;
+    m.depthWrite = !tr;
+  }
+}
+
 // ---------- 比賽流程 ----------
 let state = 'menu';   // menu | play | pause | over
 let timeLeft = MATCH_TIME;
@@ -1235,6 +1300,7 @@ function loop(){
     else if(f.m.opacity>0.01) f.m.opacity *= Math.pow(0.001, dt);
   }
   if(msgTimer>0){ msgTimer-=dt; if(msgTimer<=0) msgEl.style.opacity=0; }
+  updateOccluders(dt);
   updateHUD();
   updateCamera(dt);
   renderer.render(scene, camera);
