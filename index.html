@@ -58,6 +58,24 @@
     transition:all .15s;font-family:inherit}
   .modeBtn:hover{transform:scale(1.06);border-color:#7dffa9;color:#7dffa9;box-shadow:0 0 18px rgba(125,255,169,.25)}
   .modeBtn:disabled{opacity:.35;cursor:default;transform:none;box-shadow:none;border-color:rgba(120,160,255,.45);color:#e8ecf5}
+  /* 連線對戰按鈕：閃亮強調（跑馬燈漸層邊框＋呼吸光暈＋掃光），跟其餘模式按鈕做出區隔 */
+  #btnNet{position:relative;overflow:hidden;border:2px solid transparent;
+    background:linear-gradient(rgba(20,30,60,.85),rgba(20,30,60,.85)) padding-box,
+      linear-gradient(90deg,#ffd75a,#7dffa9,#5aa0ff,#ffd75a) border-box;
+    background-size:100% 100%, 300% 100%;
+    text-shadow:0 0 10px rgba(255,230,150,.65);
+    animation:netBorderShift 4s linear infinite, netGlowPulse 2.2s ease-in-out infinite}
+  #btnNet:hover{transform:scale(1.08);
+    animation:netBorderShift 1.6s linear infinite, netGlowPulse 1s ease-in-out infinite}
+  #btnNet::after{content:'';position:absolute;top:0;left:-60%;width:35%;height:100%;
+    background:linear-gradient(120deg,transparent,rgba(255,255,255,.65),transparent);
+    transform:skewX(-20deg);animation:netShine 2.8s ease-in-out infinite;pointer-events:none}
+  @keyframes netBorderShift{to{background-position:0 0, 300% 0}}
+  @keyframes netGlowPulse{
+    0%,100%{box-shadow:0 0 10px rgba(255,215,90,.35),0 0 24px rgba(125,255,169,.22)}
+    50%{box-shadow:0 0 22px rgba(255,215,90,.7),0 0 40px rgba(125,255,169,.5)}
+  }
+  @keyframes netShine{0%{left:-60%}55%,100%{left:130%}}
   #netPanel{margin-top:26px;width:600px;max-width:90vw}
   #netCodeInput{width:130px;text-align:center;font-size:22px;letter-spacing:5px;text-transform:uppercase;
     padding:9px 6px;border-radius:8px;border:1px solid #3a3f5c;background:#0e1220;color:#fff;font-family:inherit}
@@ -1138,7 +1156,7 @@ function readPlayerInput(){ readInputInto(player.input); }
 
 // ---------- 音效（WebAudio 合成） ----------
 const sfx = (()=>{
-  let ctx=null, motorOsc=null, motorGain=null, noiseBuf=null, crowdGain=null;
+  let ctx=null, noiseBuf=null, crowdGain=null, engines=null;
   function init(){
     if(ctx) return;
     ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -1155,24 +1173,79 @@ const sfx = (()=>{
     crowdGain = ctx.createGain(); crowdGain.gain.value=0.02;
     crowdSrc.connect(cf); cf.connect(crowdGain); crowdGain.connect(ctx.destination);
     crowdSrc.start();
-    // 馬達聲：鋸齒波 + 低通
-    motorOsc = ctx.createOscillator(); motorOsc.type='sawtooth'; motorOsc.frequency.value=150;
-    const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=900;
-    motorGain = ctx.createGain(); motorGain.gain.value=0;
-    motorOsc.connect(lp); lp.connect(motorGain); motorGain.connect(ctx.destination);
-    motorOsc.start();
     // 噪音 buffer（碰撞）
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.12, ctx.sampleRate);
     const ch = noiseBuf.getChannelData(0);
     for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*(1-i/ch.length);
+    // 螺旋槳氣流噪音循環（白噪音，6 台機共用同一段音源，各機再各自濾波／調音量／定位）
+    const propBuf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
+    const pd = propBuf.getChannelData(0);
+    for(let i=0;i<pd.length;i++) pd[i] = Math.random()*2-1;
+    const propSrc = ctx.createBufferSource(); propSrc.buffer=propBuf; propSrc.loop=true;
+    propSrc.start();
+    // 每台機各自一組馬達音源：雙鋸齒波些微失諧（模擬多顆馬達不完全同步的厚度）
+    // ＋濾波氣流噪音，各自經 PannerNode 依與鏡頭的相對距離／方位做距離衰減與左右定位，
+    // 讓 6 台機各自發聲、越靠近鏡頭越大聲、越遠越小聲（並帶些微左右聲道差異）
+    engines = drones.map(()=>{
+      const o1 = ctx.createOscillator(); o1.type='sawtooth'; o1.frequency.value=150;
+      const o2 = ctx.createOscillator(); o2.type='sawtooth'; o2.frequency.value=150; o2.detune.value=13;
+      const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=950;
+      const toneGain = ctx.createGain(); toneGain.gain.value=0;
+      const nf = ctx.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=1400; nf.Q.value=0.7;
+      const noiseGain = ctx.createGain(); noiseGain.gain.value=0;
+      const panner = ctx.createPanner();
+      panner.panningModel = 'equalpower';
+      panner.distanceModel = 'inverse';
+      panner.refDistance = 1.5;
+      panner.maxDistance = 16;
+      panner.rolloffFactor = 1.1;
+      o1.connect(lp); o2.connect(lp); lp.connect(toneGain); toneGain.connect(panner);
+      propSrc.connect(nf); nf.connect(noiseGain); noiseGain.connect(panner);
+      panner.connect(ctx.destination);
+      o1.start(); o2.start();
+      return {o1,o2,toneGain,nf,noiseGain,panner};
+    });
+  }
+  // 每幀呼叫：更新聽者（鏡頭）位置朝向，以及各機馬達音高/音量/空間定位
+  function updateEngines(dronesArr, listenerPos, listenerLook, playing){
+    if(!ctx || !engines) return;
+    const t0 = ctx.currentTime, TC = 0.06;
+    const lis = ctx.listener;
+    const fx = listenerLook.x-listenerPos.x, fy = listenerLook.y-listenerPos.y, fz = listenerLook.z-listenerPos.z;
+    const fl = Math.hypot(fx,fy,fz) || 1;
+    if(lis.positionX){
+      lis.positionX.setTargetAtTime(listenerPos.x, t0, TC);
+      lis.positionY.setTargetAtTime(listenerPos.y, t0, TC);
+      lis.positionZ.setTargetAtTime(listenerPos.z, t0, TC);
+      lis.forwardX.setTargetAtTime(fx/fl, t0, TC);
+      lis.forwardY.setTargetAtTime(fy/fl, t0, TC);
+      lis.forwardZ.setTargetAtTime(fz/fl, t0, TC);
+      lis.upX.setTargetAtTime(0, t0, TC); lis.upY.setTargetAtTime(1, t0, TC); lis.upZ.setTargetAtTime(0, t0, TC);
+    }else if(lis.setPosition){
+      lis.setPosition(listenerPos.x, listenerPos.y, listenerPos.z);
+      lis.setOrientation(fx/fl, fy/fl, fz/fl, 0, 1, 0);
+    }
+    dronesArr.forEach((d,i)=>{
+      const e = engines[i]; if(!e) return;
+      if(e.panner.positionX){
+        e.panner.positionX.setTargetAtTime(d.pos.x, t0, 0.03);
+        e.panner.positionY.setTargetAtTime(d.pos.y, t0, 0.03);
+        e.panner.positionZ.setTargetAtTime(d.pos.z, t0, 0.03);
+      }else if(e.panner.setPosition){
+        e.panner.setPosition(d.pos.x, d.pos.y, d.pos.z);
+      }
+      const ratio = clamp(d.thrustN/(MASS*G) - 0.4, -0.4, 1.4);
+      const freq = 130 + ratio*190;
+      e.o1.frequency.setTargetAtTime(freq, t0, TC);
+      e.o2.frequency.setTargetAtTime(freq, t0, TC);
+      e.nf.frequency.setTargetAtTime(1300+ratio*700, t0, TC);
+      e.toneGain.gain.setTargetAtTime(playing ? 0.022+Math.max(0,ratio)*0.016 : 0, t0, 0.1);
+      e.noiseGain.gain.setTargetAtTime(playing ? 0.008+Math.max(0,ratio)*0.014 : 0, t0, 0.1);
+    });
   }
   return {
     init,
-    motor(thrustRatio, on){
-      if(!ctx) return;
-      motorOsc.frequency.setTargetAtTime(120+thrustRatio*180, ctx.currentTime, 0.05);
-      motorGain.gain.setTargetAtTime(on?0.035:0, ctx.currentTime, 0.08);
-    },
+    updateEngines,
     hit(v){
       if(!ctx) return;
       const s=ctx.createBufferSource(); s.buffer=noiseBuf;
@@ -1557,7 +1630,8 @@ function netMaybeBroadcastSnapshot(){
     drones: drones.map(d=>({
       x:d.pos.x, y:d.pos.y, z:d.pos.z,
       vx:d.vel.x, vy:d.vel.y, vz:d.vel.z,
-      yaw:d.yaw, tp:d.tiltP, tr:d.tiltR, dist:d.disturb, cs:d.canScore
+      yaw:d.yaw, tp:d.tiltP, tr:d.tiltR, dist:d.disturb, cs:d.canScore,
+      th:d.thrustN/(MASS*G)
     }))
   });
 }
@@ -1582,6 +1656,7 @@ function applyNetSnapshotInterp(){
     d.tiltP = lerp(p.tp,c.tp,a); d.tiltR = lerp(p.tr,c.tr,a);
     d.disturb = lerp(p.dist,c.dist,a);
     d.canScore = c.cs;
+    d.thrustN = lerp(p.th,c.th,a)*MASS*G;   // 供馬達音效依推力調整音高/音量用
     d.propSpin += 0.9;
   });
 }
@@ -1627,7 +1702,6 @@ function loop(){
     const mm = Math.floor(Math.max(0,timeLeft)/60), ss = Math.floor(Math.max(0,timeLeft)%60);
     tEl.textContent = mm+':'+String(ss).padStart(2,'0');
     tEl.className = timeLeft<=10 ? 'danger' : timeLeft<=30 ? 'warn' : '';
-    sfx.motor(0,false);
   }else if(state==='play'){
     // ---- 單機／示範賽／連線對戰房主：完整權威物理 ----
     timeLeft -= dt;
@@ -1666,10 +1740,6 @@ function loop(){
       acc -= H;
     }
     updateFouls(dt);
-    const cd = camDrone();
-    sfx.motor(cd ? cd.thrustN/(MASS*G)-0.4 : 0, !!cd);
-  }else{
-    sfx.motor(0,false);
   }
   if(mode==='net' && NET.isHost) netMaybeBroadcastSnapshot();   // 房主：無論何種 state 都持續廣播（暫停/賽後也同步）
 
@@ -1710,6 +1780,7 @@ function loop(){
   updateOccluders(dt);
   updateHUD();
   updateCamera(dt);
+  sfx.updateEngines(drones, camera.position, camLook, state==='play');   // 各機依與鏡頭的距離/方位即時調整音量與定位
   renderer.render(scene, camera);
 }
 loop();
