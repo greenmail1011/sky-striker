@@ -56,6 +56,28 @@
     border:2px solid rgba(120,160,255,.45);background:rgba(20,30,60,.6);color:#e8ecf5;
     transition:all .15s;font-family:inherit}
   .modeBtn:hover{transform:scale(1.06);border-color:#7dffa9;color:#7dffa9;box-shadow:0 0 18px rgba(125,255,169,.25)}
+  .modeBtn:disabled{opacity:.35;cursor:default;transform:none;box-shadow:none;border-color:rgba(120,160,255,.45);color:#e8ecf5}
+  #netPanel{margin-top:26px;width:600px;max-width:90vw}
+  #netCodeInput{width:130px;text-align:center;font-size:22px;letter-spacing:5px;text-transform:uppercase;
+    padding:9px 6px;border-radius:8px;border:1px solid #3a3f5c;background:#0e1220;color:#fff;font-family:inherit}
+  #netCodeInput::placeholder{letter-spacing:2px;font-size:13px;color:#5c6488}
+  .netBtn{padding:10px 18px;font-size:14px}
+  #netLobby{margin-top:18px;background:rgba(255,255,255,.04);border:1px solid rgba(120,160,255,.2);
+    border-radius:12px;padding:16px 20px}
+  #netLobbyHead{text-align:center;margin-bottom:12px;font-size:13px;color:#aab8d8}
+  #netLobbyHead b{color:#7dffa9;letter-spacing:5px;font-size:16px}
+  .netSlotRow{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;margin-bottom:5px}
+  .netSlotRow.t-red{background:rgba(185,28,28,.12)} .netSlotRow.t-blue{background:rgba(29,78,216,.12)}
+  .netSlotName{width:110px;font-size:13px;font-weight:700;letter-spacing:1px}
+  .t-red .netSlotName{color:#f87171} .t-blue .netSlotName{color:#60a5fa}
+  .netSlotOcc{flex:1;font-size:13px;color:#cdd8ee}
+  .netSlotOcc.ai{color:#6b7290;font-style:italic}
+  .netSlotOcc.me{color:#ffd75a;font-weight:700}
+  .netBtnSmall{padding:5px 14px;font-size:12px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:700;
+    border:1px solid rgba(125,255,169,.5);background:rgba(125,255,169,.1);color:#7dffa9;transition:all .12s}
+  .netBtnSmall:hover{background:rgba(125,255,169,.25)}
+  .netBtnSmall.leave{border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.1);color:#f87171}
+  .netBtnSmall.leave:hover{background:rgba(248,113,113,.25)}
   @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
   #vignette{position:fixed;inset:0;pointer-events:none;z-index:5;
     background:radial-gradient(ellipse at center,transparent 62%,rgba(0,0,0,.45) 100%)}
@@ -93,6 +115,8 @@
 </div>
 <div class="hud" id="msg"></div>
 <div class="hud" id="credit">新竹市無人機創新科技協會©</div>
+<div class="hud" id="netBadge" style="display:none;top:12px;right:16px;background:rgba(8,12,24,.7);
+  border:1px solid rgba(120,160,255,.25);border-radius:10px;padding:6px 12px;font-size:12px;color:#9fc1ff"></div>
 <div class="hud" id="telemetry">
   <b>你的 Striker（紅）</b><br>
   速度 <span id="tSpd">0.0</span> m/s<br>
@@ -126,17 +150,43 @@
   <div class="modes">
     <button class="modeBtn" id="btnPlayer">🎮 玩家 vs AI</button>
     <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
+    <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
+  </div>
+  <div id="netPanel" style="display:none">
+    <div id="netJoinRow" style="display:flex;gap:10px;justify-content:center;align-items:center">
+      <input id="netCodeInput" maxlength="6" placeholder="輸入房號">
+      <button class="modeBtn netBtn" id="btnNetJoin">加入房間</button>
+      <button class="modeBtn netBtn" id="btnNetCreate">建立新房間</button>
+    </div>
+    <div id="netMsg" style="text-align:center;color:#fbbf24;font-size:13px;margin-top:8px;min-height:16px"></div>
+    <div id="netLobby" style="display:none">
+      <div id="netLobbyHead">房號 <b id="netRoomCodeShow"></b>　<span id="netStatus"></span></div>
+      <div id="netSlots"></div>
+      <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center">
+        <button class="modeBtn netBtn" id="btnNetStart" style="display:none">開始比賽</button>
+        <button class="netBtnSmall leave" id="btnNetLeave">離開房間</button>
+      </div>
+      <div id="netWaitMsg" style="text-align:center;color:#aab8d8;font-size:13px;margin-top:6px"></div>
+    </div>
   </div>
   <div class="credit">新竹市無人機創新科技協會©</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-'use strict';
+<script type="module">
 /* ============================================================
    無人機足球模擬器 — 新竹市無人機創新科技協會©
    真實世界導向：四軸飛行動力學 + 剛體碰撞 + FIDA 規則
    ============================================================ */
+
+// ---------- 連線對戰：Trystero (Firebase 配對訊號策略，僅用於 WebRTC 配對，
+//            比賽資料為瀏覽器對瀏覽器直連、不經過 Firebase) ----------
+// 專屬 Firebase 專案「drone-soccer-net」（另一個 Google 帳號建立，新加坡機房 asia-southeast1，
+// Spark 免費方案）。測試模式規則（開放讀寫至 2026-08-21，之後需自行到主控台延長或收斂規則）。
+// 若之後想換成別的專案：到 https://firebase.google.com/ 建專案 → Build → Realtime Database
+// → 建立資料庫 → 複製資料庫網址 → 貼到下面 FIREBASE_APP_ID 取代即可。
+import {joinRoom, selfId} from 'https://cdn.jsdelivr.net/npm/@trystero-p2p/firebase/+esm';
+const FIREBASE_APP_ID = 'https://drone-soccer-net-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 // ---------- 物理常數（真實單位：公尺、秒、公斤） ----------
 const G = 9.81;                 // 重力加速度
@@ -737,41 +787,79 @@ const finalScore = t => score[t].g - score[t].o - score[t].d;
 const FOUL_ZONE = 1.0;     // 己方球門禁區半徑 m
 const FOUL_TIME = 3.0;     // 逗留逾此秒數 → 防守違規（守門）
 
+// 廣播/播放比賽事件（進球、違規、開賽…）：本地立即播放視覺/音效，
+// 連線對戰時房主同步 fxAct 廣播給其他人（target 省略＝全體，指定則只給該玩家）
+function netBroadcastFx(data, target){
+  if(mode!=='net' || !NET.isHost) return;
+  if(target===selfId) return;   // 目標就是房主自己，已在本地播放過，不需再送一次
+  NET.actions.fxAct.send(data, target?{target}:undefined);
+}
+function playFx(data){
+  if(data.type==='goal'){
+    flashMsg('GOAL!  '+(data.team==='red'?'紅隊得分':'藍隊得分'),
+      data.team==='red' ? '#ff5a5a' : '#5aa0ff', 2.2);
+    ringPulse = {ring: data.ring==='E'?ringEast:ringWest, t:0};
+    sfx.goal(); sfx.cheer();
+  }else if(data.type==='foulAtk'){
+    flashMsg((data.team==='red'?'紅隊':'藍隊')+'進攻違規 −1（非 Striker 穿框）', '#fb923c', 1.8);
+    sfx.foul();
+  }else if(data.type==='foulDef'){
+    flashMsg((data.team==='red'?'紅隊':'藍隊')+'防守違規 −1（守門逗留）', '#fbbf24', 1.8);
+    sfx.foul();
+  }else if(data.type==='unlock'){
+    flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
+  }else if(data.type==='zoneWarn'){
+    flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
+  }else if(data.type==='start'){
+    flashMsg('比賽開始！', '#ffe680', 1.5);
+    sfx.whistle();
+  }else if(data.type==='warn30'){
+    sfx.warn();
+  }else if(data.type==='end'){
+    sfx.buzzer();
+    const rF = finalScore('red'), bF = finalScore('blue');
+    const res = rF>bF ? '紅隊獲勝！🏆' : bF>rF ? '藍隊獲勝！🏆' : '平手！';
+    flashMsg('最終 ' + bF + ' : ' + rF + '　' + res + '（按 R 重賽）',
+      rF>bF ? '#f87171' : bF>rF ? '#60a5fa' : '#ffe680', 9999);
+  }
+}
+function fireFx(data, targetPeer){ playFx(data); netBroadcastFx(data, targetPeer); }
+
 function checkGoals(){
-  for(const d of drones){
+  drones.forEach((d,i)=>{
     const atkRing = d.attackDir>0 ? ringEast : ringWest;   // 進攻己方顏色的框
     // Striker 回防解鎖
     if(d.role==='striker' && !d.canScore
        && Math.sign(d.pos.x||1)!==Math.sign(atkRing.x) && Math.abs(d.pos.x)>0.4){
       d.canScore = true;
       if(d.isPlayer && mode==='player') flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
+      else if(mode==='net' && NET.slotOwners[i]) fireFx({type:'unlock'}, NET.slotOwners[i]);
     }
     // 穿越框平面偵測
     const crossed = (d.prevX-atkRing.x)*(d.pos.x-atkRing.x) < 0;
-    if(!crossed) continue;
+    if(!crossed) return;
     const radial = Math.hypot(d.pos.y-atkRing.y, d.pos.z-atkRing.z);
     const through = radial < RING.R - DRONE_R + 0.05;  // 護籠有彈性，判定稍寬
     const rightWay = Math.sign(d.pos.x-d.prevX) === Math.sign(d.attackDir);
-    if(!through || !rightWay) continue;
+    if(!through || !rightWay) return;
     if(d.role==='striker'){
-      if(!d.canScore) continue;
+      if(!d.canScore) return;
       score[d.team].g++;
       d.canScore = false;
       updateScore(true, d.team);
-      goalFx(atkRing, d.team);
+      fireFx({type:'goal', team:d.team, ring: atkRing===ringEast?'E':'W'});
     }else{
       // 非 Striker 穿框 → 進攻違規（僅 Striker 可進攻得分）
       score[d.team].o++;
       updateScore();
-      flashMsg((d.team==='red'?'紅隊':'藍隊')+'進攻違規 −1（非 Striker 穿框）', '#fb923c', 1.8);
-      sfx.foul();
+      fireFx({type:'foulAtk', team:d.team});
     }
-  }
+  });
 }
 
 // 防守違規：於己方球門禁區逗留逾時（守門）
 function updateFouls(dt){
-  for(const d of drones){
+  drones.forEach((d,i)=>{
     const ownRing = d.attackDir>0 ? ringWest : ringEast;  // 己方防守的框（自家半場）
     const dist = Math.sqrt(
       (d.pos.x-ownRing.x)**2 + (d.pos.y-ownRing.y)**2 + (d.pos.z-ownRing.z)**2);
@@ -780,19 +868,21 @@ function updateFouls(dt){
       if(d.isPlayer && mode==='player' && d.zoneT>1.5 && !d.zoneWarned){
         d.zoneWarned = true;
         flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
+      }else if(mode==='net' && d.zoneT>1.5 && !d.zoneWarned && NET.slotOwners[i]){
+        d.zoneWarned = true;
+        fireFx({type:'zoneWarn'}, NET.slotOwners[i]);
       }
       if(d.zoneT > FOUL_TIME){
         score[d.team].d++;
         d.zoneT = 0; d.zoneWarned = false; d.backoffT = 2.5;
         updateScore();
-        flashMsg((d.team==='red'?'紅隊':'藍隊')+'防守違規 −1（守門逗留）', '#fbbf24', 1.8);
-        sfx.foul();
+        fireFx({type:'foulDef', team:d.team});
       }
     }else{
       d.zoneT = 0; d.zoneWarned = false;
     }
     d.backoffT = Math.max(0, d.backoffT - dt);
-  }
+  });
 }
 
 function updateScore(pop, team){
@@ -809,13 +899,6 @@ function updateScore(pop, team){
   }
 }
 let ringPulse = null;
-function goalFx(ring, team){
-  flashMsg('GOAL!  '+(team==='red'?'紅隊得分':'藍隊得分'),
-    team==='red' ? '#ff5a5a' : '#5aa0ff', 2.2);
-  ringPulse = {ring, t:0};
-  sfx.goal();
-  sfx.cheer();
-}
 
 // ---------- AI 飛手 ----------
 function angDiff(a,b){ let d=a-b; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; return d; }
@@ -959,6 +1042,19 @@ addEventListener('keydown', e=>{
   keys[e.code]=true;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
   if(e.code==='KeyC') camMode=(camMode+1)%3;
+  if(mode==='net'){
+    // 連線對戰：比賽流程只能由房主操作（P/R），避免雙方狀態互相搶權；
+    // M 一律代表「離開房間」返回選單（房主離開時其他人也會收到斷線通知）
+    if(NET.isHost){
+      if(e.code==='KeyP' && state==='play') setState('pause');
+      else if(e.code==='KeyP' && state==='pause') setState('play');
+      if(e.code==='KeyR' && state!=='menu') restart();
+    }else if((e.code==='KeyP'||e.code==='KeyR') && state!=='menu'){
+      flashMsg('只有房主可以操作暫停／重賽', '#fbbf24', 1.2);
+    }
+    if(e.code==='KeyM' && state!=='menu') netLeave();
+    return;
+  }
   if(e.code==='KeyP' && state==='play') setState('pause');
   else if(e.code==='KeyP' && state==='pause') setState('play');
   if(e.code==='KeyR' && state!=='menu') restart();
@@ -1001,12 +1097,15 @@ function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
     const v = !!(gp.buttons[n] && gp.buttons[n].pressed);
     const fired = v && !padPrev[n]; padPrev[n] = v; return fired;
   };
+  if(mode==='net' && !NET.isHost){                      // 連線對戰非房主：只能切視角
+    if(btn(3)) camMode = (camMode+1)%3;
+    return;
+  }
   if(btn(9)){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); } // OPTIONS=暫停
   if(btn(3)) camMode = (camMode+1)%3;                  // △=切換視角
   if(btn(8) && state!=='menu') restart();              // SHARE=重賽
 }
-function readPlayerInput(){
-  const i = player.input;
+function readInputInto(i){    // i：任一 drone 的 .input（本地玩家操控用，連線對戰時也用同一套讀法）
   i.pitch    = (keys['KeyW']?1:0) + (keys['KeyS']?-1:0);
   i.roll     = (keys['KeyD']?1:0) + (keys['KeyA']?-1:0);
   i.yawRate  = ((keys['ArrowLeft']?1:0) + (keys['ArrowRight']?-1:0)) * YAW_RATE;
@@ -1019,6 +1118,7 @@ function readPlayerInput(){
     i.pitch    = clamp(i.pitch    - padDZ(gp.axes[3]), -1, 1);
   }
 }
+function readPlayerInput(){ readInputInto(player.input); }
 
 // ---------- 音效（WebAudio 合成） ----------
 const sfx = (()=>{
@@ -1130,12 +1230,15 @@ function flashMsg(text, color, dur){
   msgEl.style.opacity = 1; msgTimer = dur;
 }
 function updateHUD(){
-  document.getElementById('tSpd').textContent = player.vel.length().toFixed(1);
-  document.getElementById('tAlt').textContent = Math.max(0,player.pos.y-DRONE_R).toFixed(1);
-  document.getElementById('tThr').textContent = Math.round(player.thrustN/(MASS*G)*100);
-  const badge = document.getElementById('armBadge');
-  badge.textContent = player.canScore ? '已解鎖' : '需回防';
-  badge.className = player.canScore ? 'armed' : 'disarmed';
+  const hd = camDrone();
+  if(hd){
+    document.getElementById('tSpd').textContent = hd.vel.length().toFixed(1);
+    document.getElementById('tAlt').textContent = Math.max(0,hd.pos.y-DRONE_R).toFixed(1);
+    document.getElementById('tThr').textContent = Math.round(hd.thrustN/(MASS*G)*100);
+    const badge = document.getElementById('armBadge');
+    badge.textContent = hd.canScore ? '已解鎖' : '需回防';
+    badge.className = hd.canScore ? 'armed' : 'disarmed';
+  }
   // 搖桿即時狀態（每幀直接查詢瀏覽器，方便除錯）
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   let gpFound = null;
@@ -1148,20 +1251,35 @@ function updateHUD(){
     tp.textContent = '未偵測（請按搖桿任意鍵）';
     tp.style.color = '#fbbf24';
   }
+  // 連線對戰狀態徽章
+  if(mode==='net'){
+    const nb = document.getElementById('netBadge');
+    nb.style.display = 'block';
+    const roleTxt = NET.isHost ? '房主' : '玩家';
+    const slotTxt = NET.mySlot>=0 ? SLOT_LABELS[NET.mySlot] : '觀戰中';
+    nb.innerHTML = `房號 <b style="color:#7dffa9">${NET.roomId||''}</b>　${roleTxt}／${slotTxt}　連線人數 ${NET.peers.size+1}`;
+  }
 }
 
 // ---------- 攝影機 ----------
 let camMode = 0;  // 0 追視 1 機載 2 全場
 const camPos = V3(0,3.5,6.5), camLook = V3(0,1,0);
+// 連線對戰時鏡頭跟拍「我方配對到的機」；未配位（觀戰）則退回全場鏡頭
+function camDrone(){
+  if(mode==='net') return NET.mySlot>=0 ? drones[NET.mySlot] : null;
+  return player;
+}
 function updateCamera(dt){
   let dp, dl;
-  const fwd = V3(Math.sin(player.yaw),0,Math.cos(player.yaw));
+  const cd = camDrone();
+  if(!cd){ camMode = 2; }
+  const fwd = cd ? V3(Math.sin(cd.yaw),0,Math.cos(cd.yaw)) : V3(0,0,1);
   if(camMode===0){          // 第三人稱追視
-    dp = player.pos.clone().addScaledVector(fwd,-2.2).add(V3(0,1.0,0));
-    dl = player.pos.clone().addScaledVector(fwd,1.6);
+    dp = cd.pos.clone().addScaledVector(fwd,-2.2).add(V3(0,1.0,0));
+    dl = cd.pos.clone().addScaledVector(fwd,1.6);
   }else if(camMode===1){    // 機載 FPV
-    dp = player.pos.clone().add(V3(0,0.12,0)).addScaledVector(fwd,0.15);
-    dl = player.pos.clone().addScaledVector(fwd,4).add(V3(0,0.3,0));
+    dp = cd.pos.clone().add(V3(0,0.12,0)).addScaledVector(fwd,0.15);
+    dl = cd.pos.clone().addScaledVector(fwd,4).add(V3(0,0.3,0));
   }else{                    // 全場轉播
     dp = V3(0, 3.6, 5.6); dl = V3(0, 0.9, 0);   // 貼近場地，場地為主角
   }
@@ -1174,8 +1292,9 @@ function updateCamera(dt){
 const occRay = new THREE.Raycaster();
 function updateOccluders(dt){
   let hitSet = null;
-  if(camMode !== 1){                       // FPV 視角不需要
-    const dir = player.pos.clone().sub(camera.position);
+  const cd = camDrone();
+  if(camMode !== 1 && cd){                       // FPV 視角不需要
+    const dir = cd.pos.clone().sub(camera.position);
     const dist = dir.length();
     if(dist > 0.3){
       occRay.set(camera.position, dir.multiplyScalar(1/dist));
@@ -1203,19 +1322,16 @@ function restart(){
   timeLeft = MATCH_TIME; warned30 = false;
   drones.forEach(d=>d.reset());
   setState('play');
-  flashMsg('比賽開始！', '#ffe680', 1.5);
-  sfx.whistle();
+  fireFx({type:'start'});
 }
 function endMatch(){
   setState('over');
-  sfx.buzzer();
-  const rF = finalScore('red'), bF = finalScore('blue');
-  const res = rF>bF ? '紅隊獲勝！🏆' : bF>rF ? '藍隊獲勝！🏆' : '平手！';
-  flashMsg('最終 ' + bF + ' : ' + rF + '　' + res + '（按 R 重賽）',
-    rF>bF ? '#f87171' : bF>rF ? '#60a5fa' : '#ffe680', 9999);
+  fireFx({type:'end'});
 }
-let mode = 'player';   // 'player' | 'demo'
+let mode = 'player';   // 'player' | 'demo' | 'net'
 function startGame(m){
+  if(NET.connected) netTeardown();          // 若切回單機模式，順便離開連線房間
+  document.getElementById('netPanel').style.display = 'none';
   mode = m;
   document.getElementById('overlay').style.display='none';
   sfx.init();
@@ -1227,6 +1343,247 @@ function startGame(m){
 document.getElementById('btnPlayer').addEventListener('click', ()=>startGame('player'));
 document.getElementById('btnDemo').addEventListener('click', ()=>startGame('demo'));
 
+// ============================================================
+// 連線對戰（Host 權威模擬 + Trystero P2P）
+//   - 房主：跑完整物理／AI（如同單機），並定時廣播 snapshot 給所有人
+//   - 其他人：只送自己的操作給房主，畫面完全用收到的 snapshot 內插顯示
+//   - 這樣不需要讓每台瀏覽器的物理／AI 隨機數保持一致，最不容易兜不起來
+// ============================================================
+const SLOT_LABELS = ['紅隊 Striker','紅隊 Defender','紅隊 Harasser','藍隊 Striker','藍隊 Defender','藍隊 Harasser'];
+const shortId = id => id ? id.slice(0,5) : '';
+const NET = {
+  room: null, roomId: null, isHost: false, hostId: null,
+  slotOwners: [null,null,null,null,null,null],   // 與 drones[] 同序：peerId 或 null(=AI代打)
+  mySlot: -1,
+  peers: new Set(),
+  remoteInputs: {},           // peerId -> {pitch,roll,yawRate,throttle}（host 端使用）
+  snapPrev: null, snapCur: null,
+  actions: {},
+  connected: false,
+  lastInputSend: 0, lastSnapSend: 0,
+};
+
+function randomRoomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 去掉易混淆字元
+  let s = ''; for(let i=0;i<5;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+function netJoin(code, asHost){
+  if(FIREBASE_APP_ID.startsWith('PASTE_')){
+    document.getElementById('netMsg').textContent = '尚未設定 Firebase：請先在程式碼頂端填入 FIREBASE_APP_ID';
+    return;
+  }
+  netTeardown();
+  NET.roomId = code;
+  NET.isHost = asHost;
+  if(asHost) NET.hostId = selfId;
+  NET.room = joinRoom({appId: FIREBASE_APP_ID}, 'drone-soccer-hsinchu-' + code);
+
+  const inputAct = NET.room.makeAction('input');
+  const snapAct  = NET.room.makeAction('snap');
+  const slotAct  = NET.room.makeAction('slots');
+  const claimAct = NET.room.makeAction('claim');
+  const helloAct = NET.room.makeAction('hello');
+  const fxAct    = NET.room.makeAction('fx');
+  const matchAct = NET.room.makeAction('match');
+  NET.actions = {inputAct, snapAct, slotAct, claimAct, helloAct, fxAct, matchAct};
+
+  NET.room.onPeerJoin = peerId=>{
+    NET.peers.add(peerId);
+    if(NET.isHost){
+      helloAct.send({isHost:true}, {target:peerId});
+      slotAct.send(NET.slotOwners, {target:peerId});
+    }
+    refreshLobbyUI();
+  };
+  NET.room.onPeerLeave = peerId=>{
+    NET.peers.delete(peerId);
+    delete NET.remoteInputs[peerId];
+    if(NET.isHost){
+      let changed = false;
+      NET.slotOwners = NET.slotOwners.map(o=> o===peerId ? (changed=true, null) : o);
+      if(changed) slotAct.send(NET.slotOwners);
+    }
+    if(peerId===NET.hostId && !NET.isHost){
+      flashMsg('房主已離線，連線對戰中止', '#f87171', 4);
+      netLeave();
+      return;
+    }
+    refreshLobbyUI();
+  };
+  helloAct.onMessage = (data,{peerId})=>{ if(data.isHost){ NET.hostId = peerId; refreshLobbyUI(); } };
+  slotAct.onMessage = data=>{
+    NET.slotOwners = data;
+    NET.mySlot = NET.slotOwners.indexOf(selfId);
+    refreshLobbyUI();
+  };
+  claimAct.onMessage = (data,{peerId})=>{ if(NET.isHost) processClaim(peerId, data.slot, data.want); };
+  inputAct.onMessage = (data,{peerId})=>{ NET.remoteInputs[peerId] = data; };
+  snapAct.onMessage = data=>{ NET.snapPrev = NET.snapCur; NET.snapCur = data; NET.snapCur._recv = performance.now(); };
+  fxAct.onMessage = data=> playFx(data);
+  matchAct.onMessage = data=>{ if(data.cmd==='start') localNetStart(); };
+
+  NET.connected = true;
+  NET.mySlot = -1;   // 尚未選位；房主/玩家都要在大廳自行點選要操控的位置
+  document.getElementById('netJoinRow').style.display = 'none';
+  document.getElementById('netLobby').style.display = 'block';
+  document.getElementById('netMsg').textContent = '';
+  document.getElementById('netRoomCodeShow').textContent = code;
+  refreshLobbyUI();
+}
+
+function netTeardown(){
+  if(NET.room){ try{ NET.room.leave(); }catch(e){} }
+  NET.room = null; NET.actions = {}; NET.peers = new Set(); NET.remoteInputs = {};
+  NET.slotOwners = [null,null,null,null,null,null];
+  NET.mySlot = -1; NET.isHost = false; NET.hostId = null; NET.connected = false;
+  NET.snapPrev = null; NET.snapCur = null;
+}
+
+function netLeave(){
+  netTeardown();
+  mode = 'player';
+  setState('menu');
+  document.getElementById('overlay').style.display = 'flex';
+  document.getElementById('netPanel').style.display = 'none';
+  document.getElementById('netJoinRow').style.display = 'flex';
+  document.getElementById('netLobby').style.display = 'none';
+  document.getElementById('netBadge').style.display = 'none';
+  document.getElementById('netCodeInput').value = '';
+}
+
+function processClaim(peerId, slot, want){    // 僅房主呼叫：唯一裁決者，避免搶位衝突
+  if(slot<0 || slot>5) return;
+  if(want){
+    if(NET.slotOwners[slot]===null){
+      NET.slotOwners = NET.slotOwners.map(o=> o===peerId ? null : o);   // 先讓出舊位置
+      NET.slotOwners[slot] = peerId;
+    }
+  }else if(NET.slotOwners[slot]===peerId){
+    NET.slotOwners[slot] = null;
+  }
+  NET.actions.slotAct && NET.actions.slotAct.send(NET.slotOwners);
+  NET.mySlot = NET.slotOwners.indexOf(selfId);
+  refreshLobbyUI();
+}
+function requestSlot(slot, want){
+  if(state==='play' || state==='pause'){ flashMsg('比賽進行中無法更換位置', '#fbbf24', 1.2); return; }
+  if(NET.isHost) processClaim(selfId, slot, want);
+  else if(NET.hostId) NET.actions.claimAct.send({slot, want}, {target: NET.hostId});
+}
+
+function refreshLobbyUI(){
+  if(!NET.connected) return;
+  const statusEl = document.getElementById('netStatus');
+  statusEl.textContent = NET.isHost ? '你是房主'
+    : (NET.hostId ? '已連線，房主 ' + shortId(NET.hostId) : '尋找房主中…');
+  const wrap = document.getElementById('netSlots');
+  wrap.innerHTML = '';
+  NET.slotOwners.forEach((owner,i)=>{
+    const row = document.createElement('div');
+    row.className = 'netSlotRow ' + (i<3 ? 't-red' : 't-blue');
+    const name = document.createElement('div');
+    name.className = 'netSlotName'; name.textContent = SLOT_LABELS[i];
+    const occ = document.createElement('div');
+    let btn = null;
+    if(owner===null){
+      occ.className = 'netSlotOcc ai'; occ.textContent = 'AI 代打';
+      btn = document.createElement('button');
+      btn.className = 'netBtnSmall'; btn.textContent = '坐上此位置';
+      btn.onclick = ()=> requestSlot(i, true);
+    }else if(owner===selfId){
+      occ.className = 'netSlotOcc me'; occ.textContent = '你';
+      btn = document.createElement('button');
+      btn.className = 'netBtnSmall leave'; btn.textContent = '離開位置';
+      btn.onclick = ()=> requestSlot(i, false);
+    }else{
+      occ.className = 'netSlotOcc'; occ.textContent = '玩家 ' + shortId(owner);
+    }
+    row.append(name, occ); if(btn) row.append(btn);
+    wrap.appendChild(row);
+  });
+  document.getElementById('btnNetStart').style.display = NET.isHost ? 'inline-block' : 'none';
+  document.getElementById('netWaitMsg').textContent = NET.isHost ? ''
+    : (NET.hostId ? '等待房主開始比賽…' : '');
+}
+
+function netStartMatch(){
+  if(!NET.isHost) return;
+  NET.actions.matchAct.send({cmd:'start'});
+  localNetStart();
+}
+function localNetStart(){
+  mode = 'net';
+  document.getElementById('overlay').style.display = 'none';
+  sfx.init();
+  camMode = NET.mySlot>=0 ? 0 : 2;
+  document.querySelector('#telemetry b').textContent =
+    NET.mySlot>=0 ? '你的機（' + SLOT_LABELS[NET.mySlot] + '）' : '觀戰模式';
+  restart();
+}
+
+// ---- 每幀：非房主送出自己的操作給房主（節流 ~30Hz） ----
+function sendMyInputToHost(){
+  if(NET.mySlot<0 || !NET.hostId) return;
+  const now = performance.now();
+  if(now - NET.lastInputSend < 33) return;
+  NET.lastInputSend = now;
+  const i = drones[NET.mySlot].input;
+  NET.actions.inputAct.send({pitch:i.pitch, roll:i.roll, yawRate:i.yawRate, throttle:i.throttle}, {target: NET.hostId});
+}
+// ---- 每幀：房主節流廣播世界快照（~24Hz），含分數／時間／狀態 ----
+function netMaybeBroadcastSnapshot(){
+  const now = performance.now();
+  if(now - NET.lastSnapSend < 42) return;
+  NET.lastSnapSend = now;
+  NET.actions.snapAct.send({
+    state, timeLeft,
+    score: {red:{...score.red}, blue:{...score.blue}},
+    drones: drones.map(d=>({
+      x:d.pos.x, y:d.pos.y, z:d.pos.z,
+      vx:d.vel.x, vy:d.vel.y, vz:d.vel.z,
+      yaw:d.yaw, tp:d.tiltP, tr:d.tiltR, dist:d.disturb, cs:d.canScore
+    }))
+  });
+}
+// ---- 每幀（非房主）：用最近兩份 snapshot 內插所有機的視覺狀態，並鏡射分數/時間/狀態 ----
+function applyNetSnapshotInterp(){
+  const cur = NET.snapCur;
+  if(!cur) return;
+  state = cur.state; timeLeft = cur.timeLeft;
+  score.red = cur.score.red; score.blue = cur.score.blue;
+  updateScore();
+  const prev = NET.snapPrev;
+  let a = 1;
+  if(prev){
+    const span = Math.max(1, cur._recv - prev._recv);
+    a = clamp((performance.now() - cur._recv) / span + 1, 0, 1.6);   // 稍微外插，減少延遲感
+  }
+  drones.forEach((d,i)=>{
+    const c = cur.drones[i], p = prev ? prev.drones[i] : c;
+    d.pos.set(lerp(p.x,c.x,a), lerp(p.y,c.y,a), lerp(p.z,c.z,a));
+    d.vel.set(lerp(p.vx,c.vx,a), lerp(p.vy,c.vy,a), lerp(p.vz,c.vz,a));
+    d.yaw = p.yaw + angDiff(c.yaw,p.yaw)*a;
+    d.tiltP = lerp(p.tp,c.tp,a); d.tiltR = lerp(p.tr,c.tr,a);
+    d.disturb = lerp(p.dist,c.dist,a);
+    d.canScore = c.cs;
+    d.propSpin += 0.9;
+  });
+}
+
+document.getElementById('btnNet').addEventListener('click', ()=>{
+  document.getElementById('netPanel').style.display = 'block';
+});
+document.getElementById('btnNetCreate').addEventListener('click', ()=> netJoin(randomRoomCode(), true));
+document.getElementById('btnNetJoin').addEventListener('click', ()=>{
+  const v = document.getElementById('netCodeInput').value.trim().toUpperCase();
+  if(!v){ document.getElementById('netMsg').textContent = '請輸入房號'; return; }
+  netJoin(v, false);
+});
+document.getElementById('btnNetStart').addEventListener('click', netStartMatch);
+document.getElementById('btnNetLeave').addEventListener('click', netLeave);
+
 // ---------- 主迴圈（固定步長物理） ----------
 const clock = new THREE.Clock();
 let acc = 0;
@@ -1237,19 +1594,45 @@ function loop(){
   const t = clock.elapsedTime;
   pollPadButtons();   // 搖桿按鍵（含暫停中可恢復）
 
-  if(state==='play'){
-    // 計時
+  const isNetClient = mode==='net' && !NET.isHost;
+
+  if(isNetClient){
+    // ---- 連線對戰・非房主：不跑本地物理／AI，只送輸入、鏡射房主的權威快照 ----
+    if(NET.mySlot>=0) readInputInto(drones[NET.mySlot].input);
+    sendMyInputToHost();
+    applyNetSnapshotInterp();
+    const tEl = document.getElementById('timer');
+    const mm = Math.floor(Math.max(0,timeLeft)/60), ss = Math.floor(Math.max(0,timeLeft)%60);
+    tEl.textContent = mm+':'+String(ss).padStart(2,'0');
+    tEl.className = timeLeft<=10 ? 'danger' : timeLeft<=30 ? 'warn' : '';
+    sfx.motor(0,false);
+  }else if(state==='play'){
+    // ---- 單機／示範賽／連線對戰房主：完整權威物理 ----
     timeLeft -= dt;
     if(timeLeft<=0){ timeLeft=0; endMatch(); }
     const mm = Math.floor(timeLeft/60), ss = Math.floor(timeLeft%60);
     const tEl = document.getElementById('timer');
     tEl.textContent = mm+':'+String(ss).padStart(2,'0');
     tEl.className = timeLeft<=10 ? 'danger' : timeLeft<=30 ? 'warn' : '';
-    if(timeLeft<=30 && timeLeft>0 && !warned30){ warned30=true; sfx.warn(); }
+    if(timeLeft<=30 && timeLeft>0 && !warned30){ warned30=true; fireFx({type:'warn30'}); }
 
-    // 控制（示範賽模式下玩家機也交給 AI）
+    // 控制
     if(mode==='player') readPlayerInput();
-    drones.forEach(d=>{ if(!d.isPlayer || mode==='demo') aiThink(d, dt); });
+    else if(mode==='net' && NET.mySlot>=0) readInputInto(drones[NET.mySlot].input);
+    drones.forEach((d,i)=>{
+      if(mode==='net'){
+        const owner = NET.slotOwners[i];
+        if(owner===null) aiThink(d, dt);                       // 空位：AI 代打
+        else if(owner!==selfId){                                // 別人的機：套用最後收到的遠端輸入
+          const ri = NET.remoteInputs[owner];
+          if(ri) Object.assign(d.input, ri);
+          else d.input = {pitch:0,roll:0,yawRate:0,throttle:0}; // 尚未收到輸入前先懸停
+        }
+        // 自己的機：input 已由上面 readInputInto 寫入
+      }else if(!d.isPlayer || mode==='demo'){
+        aiThink(d, dt);
+      }
+    });
 
     // 物理（固定子步長，數值穩定）
     acc += dt;
@@ -1261,10 +1644,12 @@ function loop(){
       acc -= H;
     }
     updateFouls(dt);
-    sfx.motor(player.thrustN/(MASS*G)-0.4, true);
+    const cd = camDrone();
+    sfx.motor(cd ? cd.thrustN/(MASS*G)-0.4 : 0, !!cd);
   }else{
     sfx.motor(0,false);
   }
+  if(mode==='net' && NET.isHost) netMaybeBroadcastSnapshot();   // 房主：無論何種 state 都持續廣播（暫停/賽後也同步）
 
   // 視覺
   drones.forEach(d=>d.syncMesh(t));
