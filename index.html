@@ -44,7 +44,8 @@
     border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.75;opacity:.92}
   #help b{color:#9fc1ff;display:inline-block;min-width:64px}
   #overlay{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(20,30,60,.92),rgba(4,6,12,.97));
-    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;color:#fff;cursor:pointer}
+    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;color:#fff;cursor:pointer;
+    overflow-y:auto;padding:24px 0}
   #overlay h1{font-size:44px;margin:0 0 6px;letter-spacing:2px;
     background:linear-gradient(90deg,#ff5a5a,#ffd75a,#5aa0ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
   #overlay h2{font-weight:400;font-size:16px;color:#aab8d8;margin:0 0 26px}
@@ -139,7 +140,7 @@
 <div id="overlay">
   <h1>無人機足球競賽</h1>
   <h2>真實物理模擬 · 6×3×3 m 室內競技場 · 3 v 3</h2>
-  <div class="rules">
+  <div class="rules" id="rulesBox">
     <b>規則：</b>只有 <b>Striker</b>（機身下方<b>垂掛紅色識別緞帶</b>）穿過<b>己方顏色的懸吊式電子球門</b>才得分（紅隊攻紅框、藍隊攻藍框），進球時球門亮燈顯示。<br>
     得分後 Striker 必須<b>飛回己方半場</b>重新解鎖得分權。<br>
     衝撞是合法戰術——但被撞會暫時失控翻滾！一節 <b>3 分鐘</b>。<br>
@@ -147,12 +148,15 @@
     <b>最終分數 ＝ 得分 − 進攻違規 − 防守違規</b>，最終分數高者勝。<br>
     玩家模式中你操控<b>紅隊 Striker</b>；示範賽則由 AI 全自動對戰。
   </div>
-  <div class="modes">
+  <div class="modes" id="modesRow">
     <button class="modeBtn" id="btnPlayer">🎮 玩家 vs AI</button>
     <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
     <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
   </div>
   <div id="netPanel" style="display:none">
+    <div style="text-align:center;margin-bottom:12px">
+      <button class="netBtnSmall" id="btnNetBack">‹ 返回選單</button>
+    </div>
     <div id="netJoinRow" style="display:flex;gap:10px;justify-content:center;align-items:center">
       <input id="netCodeInput" maxlength="6" placeholder="輸入房號">
       <button class="modeBtn netBtn" id="btnNetJoin">加入房間</button>
@@ -179,14 +183,23 @@
    真實世界導向：四軸飛行動力學 + 剛體碰撞 + FIDA 規則
    ============================================================ */
 
-// ---------- 連線對戰：Trystero (Firebase 配對訊號策略，僅用於 WebRTC 配對，
-//            比賽資料為瀏覽器對瀏覽器直連、不經過 Firebase) ----------
-// 專屬 Firebase 專案「drone-soccer-net」（另一個 Google 帳號建立，新加坡機房 asia-southeast1，
-// Spark 免費方案）。測試模式規則（開放讀寫至 2026-08-21，之後需自行到主控台延長或收斂規則）。
-// 若之後想換成別的專案：到 https://firebase.google.com/ 建專案 → Build → Realtime Database
-// → 建立資料庫 → 複製資料庫網址 → 貼到下面 FIREBASE_APP_ID 取代即可。
-import {joinRoom, selfId} from 'https://cdn.jsdelivr.net/npm/@trystero-p2p/firebase/+esm';
-const FIREBASE_APP_ID = 'https://drone-soccer-net-default-rtdb.asia-southeast1.firebasedatabase.app';
+// ---------- 連線對戰：Trystero (Nostr 配對訊號策略，僅用於 WebRTC 配對，
+//            比賽資料為瀏覽器對瀏覽器直連、端對端加密，不經過任何中繼) ----------
+// 2026-07-22 改用 Nostr 策略，勿改回 Firebase 策略——除錯過程：
+//   1. jsdelivr 的 /+esm 打包 @trystero-p2p/firebase 時，會把 @firebase/app、
+//      @firebase/database、@firebase/component 各自拆成獨立副本，導致 Firebase SDK
+//      內部的 component registry 對不上，joinRoom() 直接同步丟出例外「Service
+//      database is not available」——按鈕點下去畫面完全沒反應，只有主控台看得到。
+//      改用 esm.sh 的打包方式解決了這個例外（它會正確去重共用依賴）。
+//   2. 但即使不再丟例外，實測開兩個分頁互連，Firebase 策略仍會卡在「雙方都寫入
+//      Realtime Database 的 presence 資料、但誰也沒發現對方」，onPeerJoin 永遠不觸發
+//      （用 REST 直接讀資料庫確認雙方 peerId 都有寫進同一個房間路徑，純粹是 Trystero
+//      Firebase 策略本身在配對階段卡住，不是規則權限或程式碼呼叫方式的問題）。
+//   3. 換成 Nostr 策略（Trystero 預設、官方 README 列為最推薦的策略，比原本考慮的
+//      BitTorrent 更穩定）用同樣方式實測：兩分頁 10 秒內互相發現、makeAction 訊息
+//      雙向送達都正常。因此改用 Nostr，且不再需要任何 Firebase 專案/帳號設定。
+import {joinRoom, selfId} from 'https://esm.sh/trystero/nostr';
+const NET_APP_ID = 'hsinchu-drone-soccer-net-v1';   // 純字串即可，不需要任何外部帳號/網址
 
 // ---------- 物理常數（真實單位：公尺、秒、公斤） ----------
 const G = 9.81;                 // 重力加速度
@@ -1061,6 +1074,9 @@ addEventListener('keydown', e=>{
   if(e.code==='KeyM' && state!=='menu'){   // 返回模式選單
     setState('menu');
     document.getElementById('overlay').style.display='flex';
+    document.getElementById('netPanel').style.display='none';
+    document.getElementById('rulesBox').style.display='block';
+    document.getElementById('modesRow').style.display='flex';
   }
 });
 addEventListener('keyup', e=>{ keys[e.code]=false; });
@@ -1370,15 +1386,11 @@ function randomRoomCode(){
 }
 
 function netJoin(code, asHost){
-  if(FIREBASE_APP_ID.startsWith('PASTE_')){
-    document.getElementById('netMsg').textContent = '尚未設定 Firebase：請先在程式碼頂端填入 FIREBASE_APP_ID';
-    return;
-  }
   netTeardown();
   NET.roomId = code;
   NET.isHost = asHost;
   if(asHost) NET.hostId = selfId;
-  NET.room = joinRoom({appId: FIREBASE_APP_ID}, 'drone-soccer-hsinchu-' + code);
+  NET.room = joinRoom({appId: NET_APP_ID}, 'drone-soccer-hsinchu-' + code);
 
   const inputAct = NET.room.makeAction('input');
   const snapAct  = NET.room.makeAction('snap');
@@ -1451,6 +1463,8 @@ function netLeave(){
   document.getElementById('netLobby').style.display = 'none';
   document.getElementById('netBadge').style.display = 'none';
   document.getElementById('netCodeInput').value = '';
+  document.getElementById('rulesBox').style.display = 'block';
+  document.getElementById('modesRow').style.display = 'flex';
 }
 
 function processClaim(peerId, slot, want){    // 僅房主呼叫：唯一裁決者，避免搶位衝突
@@ -1573,7 +1587,15 @@ function applyNetSnapshotInterp(){
 }
 
 document.getElementById('btnNet').addEventListener('click', ()=>{
+  document.getElementById('rulesBox').style.display = 'none';
+  document.getElementById('modesRow').style.display = 'none';
   document.getElementById('netPanel').style.display = 'block';
+});
+document.getElementById('btnNetBack').addEventListener('click', ()=>{
+  if(NET.connected){ netLeave(); return; }
+  document.getElementById('netPanel').style.display = 'none';
+  document.getElementById('rulesBox').style.display = 'block';
+  document.getElementById('modesRow').style.display = 'flex';
 });
 document.getElementById('btnNetCreate').addEventListener('click', ()=> netJoin(randomRoomCode(), true));
 document.getElementById('btnNetJoin').addEventListener('click', ()=>{
