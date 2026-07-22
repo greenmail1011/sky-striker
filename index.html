@@ -233,11 +233,21 @@ const MAX_TILT = 30 * Math.PI/180;   // 最大傾角（競技角度模式）
 const TILT_RATE = 5.5;          // 傾角響應速率 (rad/s)
 const YAW_RATE = 2.6;           // 偏航角速度 (rad/s)
 const THR_RANGE = 0.65;         // 推力調節幅度（懸停推力 ±65%）
-const DRAG_K1 = 0.05, DRAG_K2 = 0.05;  // 線性 + 平方空氣阻力（小機體）
+const DRAG_K1 = 0.14, DRAG_K2 = 0.10;  // 線性 + 平方空氣阻力（小機體）
+// 2026-07-22 業主反映操作「太絲滑、難控」（鬆桿/反打後動量還在，一直漂移）：
+// 阻力係數由 0.05/0.05 調高到 0.14/0.10，鬆桿減速更明顯；同架構下最高水平速度
+// 約從 6.3 m/s 降到 4.2 m/s（半油門+全傾角時，見下方 step() 的推力/阻力平衡）。
+// 這是全域參數，AI 飛手共用同一套 step()，衝刺絕對速度會等比例變慢，但 aiThink/flyToward
+// 的 skill、aggro、maxV 倍率差異（見下方「AI 設計」相關常數）仍保留，攻防相對強弱不受影響；
+// 若之後覺得比賽整體變慢、衝刺不夠猛，優先調高 Striker 衝刺的 maxV 倍率，不要把阻力調回去。
 const REST_DRONE = 0.55;        // 機體互撞恢復係數
 const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
-const RING = { R: 0.2, tube: 0.04, y: 1.6, x: 2.2 }; // 球門框（內徑開口 40cm，Class 20 規格）
+const RING = { R: 0.26, tube: 0.04, y: 1.6, x: 2.2 }; // 球門框內徑開口
+// 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
+// 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
+// 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
+// 如果還想再大，直接調這個數字即可；但別把 tube（框管粗細）也跟著放大，視覺上會太粗。
 const MATCH_TIME = 180;         // 一節 3 分鐘
 
 // ---------- 基本工具 ----------
@@ -474,14 +484,9 @@ function makeGoalRing(x, color){
   );
   torus.rotation.y = Math.PI/2;
   grp.add(torus);
-  // 外圈光暈 + 內圈光膜（讓框色一眼可辨）
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(RING.R+RING.tube, RING.tube*2.6, 12, 48),
-    new THREE.MeshBasicMaterial({color, transparent:true, opacity:.22,
-      blending:THREE.AdditiveBlending, depthWrite:false}));
-  halo.rotation.y = Math.PI/2; grp.add(halo);
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(RING.R-0.02, 32),
-    new THREE.MeshBasicMaterial({color, transparent:true, opacity:.22, side:THREE.DoubleSide}));
-  disc.rotation.y = Math.PI/2; grp.add(disc);
+  // 2026-07-22 拿掉：原本內圈光膜（disc，填滿開口）+ 外圈光暈（halo，蓋到開口邊緣一點）
+  // 業主反映「穿越環不要有半透明的部分」——那層霧會擋住開口，瞄準穿框時看不清楚實際邊界，
+  // 勿再加回蓋住開口的半透明物件；框本身 emissiveIntensity:2.8 已經夠亮夠顯眼，不需要額外光膜。
   // 懸吊織帶：球門以白色吊帶自頂部框架垂吊（照片實景，非固定桿）
   const strapMat = new THREE.MeshStandardMaterial({color:0xe9e5d8, roughness:.85, side:THREE.DoubleSide});
   const ceilY = FIELD.h - RING.y;          // 群組座標中的頂部高度
