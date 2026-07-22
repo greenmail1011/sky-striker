@@ -1505,7 +1505,10 @@ function netJoin(code, asHost){
   };
   claimAct.onMessage = (data,{peerId})=>{ if(NET.isHost) processClaim(peerId, data.slot, data.want); };
   inputAct.onMessage = (data,{peerId})=>{ NET.remoteInputs[peerId] = data; };
-  snapAct.onMessage = data=>{ NET.snapPrev = NET.snapCur; NET.snapCur = data; NET.snapCur._recv = performance.now(); };
+  snapAct.onMessage = data=>{
+    NET.snapPrev = NET.snapCur; NET.snapCur = data; NET.snapCur._recv = performance.now();
+    if(mode!=='net'){ updateNetWaitStatus(); maybeEnterLiveMatch(); }   // 大廳中即時同步「比賽進行中／剩餘時間」，並視情況自動接手中途加入
+  };
   fxAct.onMessage = data=> playFx(data);
   matchAct.onMessage = data=>{ if(data.cmd==='start') localNetStart(); };
 
@@ -1555,16 +1558,47 @@ function processClaim(peerId, slot, want){    // 僅房主呼叫：唯一裁決�
   refreshLobbyUI();
 }
 function requestSlot(slot, want){
-  if(state==='play' || state==='pause'){ flashMsg('比賽進行中無法更換位置', '#fbbf24', 1.2); return; }
+  const live = netLiveState()==='play' || netLiveState()==='pause';
+  if(live){
+    if(!want){ flashMsg('比賽進行中無法離開位置', '#fbbf24', 1.2); return; }
+    if(NET.slotOwners[slot]!==null){ flashMsg('這個位置已經有人了，比賽進行中無法搶位', '#fbbf24', 1.5); return; }
+  }
   if(NET.isHost) processClaim(selfId, slot, want);
   else if(NET.hostId) NET.actions.claimAct.send({slot, want}, {target: NET.hostId});
 }
 
+// 比賽是否「已在進行中」：自己已進場（net 模式）就看本地權威 state；
+// 還在大廳、尚未進場的人（例如中途加入者）就看目前收到的房主最新快照
+function netLiveState(){ return mode==='net' ? state : (NET.snapCur ? NET.snapCur.state : 'menu'); }
+function netLiveTimeLeft(){ return mode==='net' ? timeLeft : (NET.snapCur ? NET.snapCur.timeLeft : 0); }
+// 大廳中（尚未進場）如果偵測到比賽已在進行、且自己已經有位置了 → 直接接手該機進場
+function maybeEnterLiveMatch(){
+  if(mode==='net' || NET.mySlot<0) return;
+  if(netLiveState()==='play' || netLiveState()==='pause') localNetEnterLive();
+}
+function updateNetWaitStatus(){
+  const el = document.getElementById('netWaitMsg');
+  if(!el || !NET.connected) return;
+  const live = netLiveState()==='play' || netLiveState()==='pause';
+  if(live){
+    const tl = Math.max(0, netLiveTimeLeft()||0);
+    const mm = Math.floor(tl/60), ss = Math.floor(tl%60);
+    const hasVacancy = NET.slotOwners.includes(null);
+    el.textContent = (netLiveState()==='pause' ? '⏸ 比賽暫停中，剩餘 ' : '⏱ 比賽進行中，剩餘 ')
+      + mm+':'+String(ss).padStart(2,'0')
+      + (hasVacancy ? '　尚有空位，可點選中途加入' : '　目前滿位，請等待比賽結束');
+    el.style.color = '#7dffa9';
+  }else{
+    el.textContent = NET.isHost ? '' : (NET.hostId ? '等待房主開始比賽…' : '');
+    el.style.color = '#aab8d8';
+  }
+}
 function refreshLobbyUI(){
   if(!NET.connected) return;
   const statusEl = document.getElementById('netStatus');
   statusEl.textContent = NET.isHost ? '你是房主'
     : (NET.hostId ? '已連線，房主 ' + shortId(NET.hostId) : '尋找房主中…');
+  const live = netLiveState()==='play' || netLiveState()==='pause';
   const wrap = document.getElementById('netSlots');
   wrap.innerHTML = '';
   NET.slotOwners.forEach((owner,i)=>{
@@ -1577,22 +1611,24 @@ function refreshLobbyUI(){
     if(owner===null){
       occ.className = 'netSlotOcc ai'; occ.textContent = 'AI 代打';
       btn = document.createElement('button');
-      btn.className = 'netBtnSmall'; btn.textContent = '坐上此位置';
+      btn.className = 'netBtnSmall'; btn.textContent = live ? '中途加入' : '坐上此位置';
       btn.onclick = ()=> requestSlot(i, true);
     }else if(owner===selfId){
       occ.className = 'netSlotOcc me'; occ.textContent = '你';
-      btn = document.createElement('button');
-      btn.className = 'netBtnSmall leave'; btn.textContent = '離開位置';
-      btn.onclick = ()=> requestSlot(i, false);
+      if(!live){
+        btn = document.createElement('button');
+        btn.className = 'netBtnSmall leave'; btn.textContent = '離開位置';
+        btn.onclick = ()=> requestSlot(i, false);
+      }
     }else{
       occ.className = 'netSlotOcc'; occ.textContent = '玩家 ' + shortId(owner);
     }
     row.append(name, occ); if(btn) row.append(btn);
     wrap.appendChild(row);
   });
-  document.getElementById('btnNetStart').style.display = NET.isHost ? 'inline-block' : 'none';
-  document.getElementById('netWaitMsg').textContent = NET.isHost ? ''
-    : (NET.hostId ? '等待房主開始比賽…' : '');
+  document.getElementById('btnNetStart').style.display = (NET.isHost && !live) ? 'inline-block' : 'none';
+  updateNetWaitStatus();
+  maybeEnterLiveMatch();
 }
 
 function netStartMatch(){
@@ -1608,6 +1644,19 @@ function localNetStart(){
   document.querySelector('#telemetry b').textContent =
     NET.mySlot>=0 ? '你的機（' + SLOT_LABELS[NET.mySlot] + '）' : '觀戰模式';
   restart();
+}
+// 中途加入：比賽已在進行中才會走這條路（見 maybeEnterLiveMatch）。
+// 跟 localNetStart() 幾乎一樣，差別是不呼叫 restart()——比分/時間/所有機的位置
+// 直接套用目前已收到的房主快照，不能重置正在進行中的比賽。
+function localNetEnterLive(){
+  mode = 'net';
+  document.getElementById('overlay').style.display = 'none';
+  sfx.init();
+  camMode = NET.mySlot>=0 ? 0 : 2;
+  document.querySelector('#telemetry b').textContent =
+    NET.mySlot>=0 ? '你的機（' + SLOT_LABELS[NET.mySlot] + '）' : '觀戰模式';
+  flashMsg('已加入比賽中場！', '#7dffa9', 1.6);
+  applyNetSnapshotInterp();
 }
 
 // ---- 每幀：非房主送出自己的操作給房主（節流 ~30Hz） ----
