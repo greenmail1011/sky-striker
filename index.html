@@ -103,6 +103,55 @@
   #credit{bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;
     color:#8a94ad;letter-spacing:1px;opacity:.85}
   #overlay .credit{margin-top:18px;font-size:13px;color:#8a94ad;letter-spacing:1px}
+  /* ---------- 闖關模式（2026-08-26 新增） ---------- */
+  #btnCampaign{border-color:rgba(255,215,90,.6);color:#ffd75a}
+  #btnCampaign:hover{border-color:#ffd75a;color:#fff;box-shadow:0 0 18px rgba(255,215,90,.35)}
+  #campPanel{margin-top:24px;width:720px;max-width:92vw}
+  #campHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  #campStarTotal{font-size:15px;color:#ffd75a;font-weight:900;letter-spacing:1px}
+  .campChapter{background:rgba(255,255,255,.04);border:1px solid rgba(120,160,255,.2);
+    border-radius:12px;padding:12px 16px;margin-bottom:12px}
+  .campChTitle{font-size:14px;font-weight:900;color:#9fc1ff;letter-spacing:2px;margin-bottom:10px}
+  .campChTitle span{font-weight:400;color:#7c88a8;letter-spacing:0;margin-left:8px;font-size:12px}
+  .campGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}
+  .campCell{border-radius:9px;padding:7px 6px;cursor:pointer;text-align:center;min-width:0;
+    border:1px solid rgba(120,160,255,.3);background:rgba(20,30,60,.6);transition:all .13s}
+  .campCell:hover{transform:translateY(-2px);border-color:#7dffa9;box-shadow:0 0 14px rgba(125,255,169,.22)}
+  .campCell .n{font-size:11px;color:#7c88a8;font-variant-numeric:tabular-nums}
+  .campCell .nm{font-size:12.5px;font-weight:700;color:#e8ecf5;margin:1px 0 3px;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .campCell .st{font-size:12px;letter-spacing:2px;color:#4d5578}
+  .campCell .st b{color:#ffd75a;font-weight:400}
+  .campCell.locked{opacity:.38;cursor:not-allowed;border-color:rgba(120,160,255,.15)}
+  .campCell.locked:hover{transform:none;border-color:rgba(120,160,255,.15);box-shadow:none}
+  .campCell.done{border-color:rgba(255,215,90,.45)}
+  /* 闖關進行中 HUD */
+  #campHUD{top:12px;left:50%;transform:translateX(-50%);min-width:430px;max-width:92vw;
+    background:rgba(7,7,26,.86);border:1px solid #1e1e40;border-radius:14px;padding:9px 18px;
+    backdrop-filter:blur(6px);text-align:center}
+  #campHUD .ttl{font-size:15px;font-weight:900;color:#ffd75a;letter-spacing:1px}
+  #campHUD .brf{font-size:12.5px;color:#cdd8ee;margin-top:3px;line-height:1.5}
+  #campHUD .row{display:flex;gap:16px;justify-content:center;align-items:center;margin-top:7px;
+    font-size:13px;font-variant-numeric:tabular-nums;color:#e8ecf5}
+  #campHUD .row i{font-style:normal;color:#7c88a8;font-size:11px;margin-right:3px}
+  #campDots{letter-spacing:3px;font-size:15px;color:#3a4160}
+  #campDots b{color:#7dffa9;font-weight:400}
+  #campLimit{color:#fbbf24}
+  #campLimit.danger{color:#f87171;animation:pulse .8s infinite}
+  /* 過關 / 失敗結算 */
+  #campResult{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 45%,rgba(20,30,60,.9),rgba(4,6,12,.96))}
+  #campResultBox{background:rgba(12,16,32,.95);border:1px solid rgba(120,160,255,.32);border-radius:18px;
+    padding:30px 44px;text-align:center;min-width:340px}
+  #campResultBox h3{margin:0 0 4px;font-size:30px;letter-spacing:3px;color:#7dffa9}
+  #campResultBox h3.fail{color:#f87171}
+  #campResultSub{font-size:13.5px;color:#aab8d8;margin-bottom:16px}
+  #campStars{font-size:46px;letter-spacing:10px;color:#2e3450;margin-bottom:12px}
+  #campStars b{color:#ffd75a;font-weight:400;text-shadow:0 0 22px rgba(255,215,90,.6)}
+  #campStats{font-size:13px;color:#cdd8ee;line-height:1.9;margin-bottom:20px;font-variant-numeric:tabular-nums}
+  #campStats em{font-style:normal;color:#7c88a8;margin-right:4px}
+  #campResultBtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  #campResultBtns .modeBtn{padding:10px 20px;font-size:14px}
 </style>
 </head>
 <body>
@@ -138,6 +187,16 @@
   text-align:center;font-size:14px;color:#cdd8ee;letter-spacing:1px">
   🎯 練習模式　穿越次數<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
 </div>
+<div class="hud" id="campHUD" style="display:none">
+  <div class="ttl" id="campTitle">—</div>
+  <div class="brf" id="campBrief">—</div>
+  <div class="row">
+    <span><i>進度</i><span id="campDots"></span></span>
+    <span><i>時間</i><span id="campTime">0.0</span>s</span>
+    <span><i>碰撞</i><span id="campHits">0</span></span>
+    <span id="campLimitWrap" style="display:none"><i>限時</i><span id="campLimit">0.0</span>s</span>
+  </div>
+</div>
 <div class="hud" id="credit">新竹市無人機創新科技協會©</div>
 <div class="hud" id="netBadge" style="display:none;top:12px;right:16px;background:rgba(8,12,24,.7);
   border:1px solid rgba(120,160,255,.25);border-radius:10px;padding:6px 12px;font-size:12px;color:#9fc1ff"></div>
@@ -155,7 +214,7 @@
   <b>← / →</b> 機頭旋轉<br>
   <b>↑ / ↓</b> 上升 / 下降<br>
   <b>C</b> 視角（追視/機載/全場）<br>
-  <b>P</b> 暫停&nbsp;<b>R</b> 重賽&nbsp;<b>M</b> 模式選單<br>
+  <b>P</b> 暫停&nbsp;<b>R</b> 重來&nbsp;<b>M</b> 模式選單<br>
   <b>🎮 搖桿</b> 左桿=油門/旋轉、右桿=前後/側飛<br>
   <b>&nbsp;</b> △視角&nbsp;OPTIONS暫停&nbsp;SHARE重賽
 </div>
@@ -174,6 +233,7 @@
   <div class="modes" id="modesRow">
     <button class="modeBtn" id="btnPlayer">🎮 玩家 vs AI</button>
     <button class="modeBtn" id="btnPractice">🎯 穿越圓環練習</button>
+    <button class="modeBtn" id="btnCampaign">🏆 闖關模式</button>
     <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
     <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
   </div>
@@ -197,7 +257,31 @@
       <div id="netWaitMsg" style="text-align:center;color:#aab8d8;font-size:13px;margin-top:6px"></div>
     </div>
   </div>
+  <div id="campPanel" style="display:none">
+    <div id="campHead">
+      <button class="netBtnSmall" id="btnCampBack">‹ 返回選單</button>
+      <div id="campStarTotal">⭐ 0 / 72</div>
+    </div>
+    <div id="campList"></div>
+    <div style="text-align:center;margin-top:10px">
+      <button class="netBtnSmall leave" id="btnCampReset">清除闖關紀錄</button>
+    </div>
+  </div>
   <div class="credit">新竹市無人機創新科技協會©</div>
+</div>
+
+<div id="campResult">
+  <div id="campResultBox">
+    <h3 id="campResultTitle">關卡完成</h3>
+    <div id="campResultSub">—</div>
+    <div id="campStars">☆☆☆</div>
+    <div id="campStats">—</div>
+    <div id="campResultBtns">
+      <button class="modeBtn" id="btnCampRetry">↻ 重玩</button>
+      <button class="modeBtn" id="btnCampNext">下一關 ›</button>
+      <button class="modeBtn" id="btnCampList">關卡列表</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -983,6 +1067,8 @@ function startPractice(){
   if(NET.connected) netTeardown();          // 若切自連線模式，順便離開連線房間
   document.getElementById('netPanel').style.display = 'none';
   mode = 'practice';
+  campExitCleanup();                        // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
+  document.getElementById('campPanel').style.display = 'none';
   document.getElementById('overlay').style.display = 'none';
   sfx.init();
   camMode = 0;
@@ -1151,13 +1237,17 @@ addEventListener('keydown', e=>{
   if(e.code==='KeyP' && state==='play') setState('pause');
   else if(e.code==='KeyP' && state==='pause') setState('play');
   if(e.code==='KeyR' && state!=='menu'){
-    if(mode==='practice') restartPractice(); else restart();
+    if(mode==='practice') restartPractice();
+    else if(mode==='campaign') campRestart();
+    else restart();
   }
   if(e.code==='KeyM' && state!=='menu'){   // 返回模式選單
     setState('menu');
+    campExitCleanup();                               // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
     drones.forEach(d=>setDroneVisible(d,true));      // 若剛才在練習模式，恢復其餘 5 台機顯示
     document.getElementById('scoreboard').style.display='flex';
     document.getElementById('practiceHUD').style.display='none';
+    document.getElementById('campPanel').style.display='none';
     document.getElementById('overlay').style.display='flex';
     document.getElementById('netPanel').style.display='none';
     document.getElementById('rulesBox').style.display='block';
@@ -1205,7 +1295,9 @@ function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
   if(btn(9)){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); } // OPTIONS=暫停
   if(btn(3)) camMode = (camMode+1)%3;                  // △=切換視角
   if(btn(8) && state!=='menu'){                        // SHARE=重賽
-    if(mode==='practice') restartPractice(); else restart();
+    if(mode==='practice') restartPractice();
+    else if(mode==='campaign') campRestart();
+    else restart();
   }
 }
 function readInputInto(i){    // i：任一 drone 的 .input（本地玩家操控用，連線對戰時也用同一套讀法）
@@ -1491,6 +1583,8 @@ let mode = 'player';   // 'player' | 'demo' | 'net' | 'practice'
 function startGame(m){
   if(NET.connected) netTeardown();          // 若切回單機模式，順便離開連線房間
   document.getElementById('netPanel').style.display = 'none';
+  campExitCleanup();                            // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
+  document.getElementById('campPanel').style.display = 'none';
   drones.forEach(d=>setDroneVisible(d,true));   // 若剛才在練習模式，恢復其餘 5 台機顯示
   document.getElementById('scoreboard').style.display = 'flex';
   document.getElementById('practiceHUD').style.display = 'none';
@@ -1807,6 +1901,483 @@ document.getElementById('btnNetLeave').addEventListener('click', netLeave);
 const clock = new THREE.Clock();
 let acc = 0;
 const H = 1/120;            // 物理步長 120Hz
+
+// ============================================================
+// 闖關模式（2026-08-26 新增）
+//   業主要求：參考市售無人機教學 App 的「關卡式訓練」形式，做出自己的闖關模式。
+//   關卡內容為原創，依本模擬器的 6×3×3 m 場地、Class 20 機體與無人機足球
+//   考證課程重新設計（未複製他牌關卡資料）。
+//   - 24 關 / 4 章；每關 3 星：完成=1★、時間≤par=2★、再加碰撞≤maxHit=3★
+//   - 場上只有玩家機（同練習模式，其餘 5 台 setDroneVisible(false)、不進物理）
+//   - 進度存 localStorage（CAMP_SAVE_KEY），前一關拿到 ≥1★ 才解鎖下一關
+//   - 新增的光環／航點／停機坪／信標都是「非實體」純視覺判定，只有原本的
+//     電子球門框（collideRing）與本模式的柱子（campCollidePoles）是剛體，
+//     避免初學者一直被看不見的東西彈開而受挫。
+// ============================================================
+const CAMP_SAVE_KEY = 'hsinchuDroneSoccerCampaignV1';
+const CAMP_CHAPTERS = [
+  {n:1, title:'第一章　基礎操控', sub:'定高 · 懸停 · 平移 · 轉向'},
+  {n:2, title:'第二章　航線與精準', sub:'路徑飛行 · 高度變換 · 精準降落'},
+  {n:3, title:'第三章　穿環技術', sub:'單環 · 連環 · S 型 · 限時'},
+  {n:4, title:'第四章　比賽技能', sub:'射門 · 回防解鎖 · 繞桿 · 側風'},
+];
+// 任務建構子（座標單位：公尺，場地 x∈[-3,3]、z∈[-1.5,1.5]、y∈[0,3]）
+const HV=(x,y,z,r,hold)=>({t:'hover',x,y,z,r,hold});          // 懸停圈內停留 hold 秒
+const WP=(x,y,z,r=0.34)=>({t:'wp',x,y,z,r});                  // 觸及航點球
+const GT=(x,y,z,ax='x',r=0.42)=>({t:'gate',x,y,z,ax,r});      // 穿越光環（非實體）
+const LD=(x,z,r=0.4)=>({t:'land',x,z,r});                     // 低速降落於停機坪
+const FC=(x,z,tol=14,hold=1.4)=>({t:'face',x,z,tol,hold});    // 機頭對準信標
+const GL=(side)=>({t:'goal',side});                            // 穿越真實電子球門（W=紅框、E=藍框）
+// 圓形航線用：以 (cx,cz) 為圓心、半徑 rr、高度 y，取 n 個等分航點
+const CIRCLE=(cx,y,cz,rr,n,ph=0)=>Array.from({length:n},(_,i)=>{
+  const a = ph + i/n*Math.PI*2;
+  return WP(cx+Math.cos(a)*rr, y, cz+Math.sin(a)*rr, 0.36);
+});
+
+const CAMP_LEVELS = [
+  // ---- 第一章　基礎操控 ----
+  {ch:1, name:'起飛練習', brief:'平穩起飛，把機體停進 1.5 m 高的懸停圈，停滿 3 秒。',
+   par:20, maxHit:2, tasks:[HV(1.3,1.5,0,0.5,3)]},
+  {ch:1, name:'懸停練習', brief:'換成更小的懸停圈，穩住 6 秒——少修正、少漂移才是穩。',
+   par:26, maxHit:1, tasks:[HV(1.3,1.5,0,0.32,6)]},
+  {ch:1, name:'降落練習', brief:'先爬升到 2.2 m 的圈內，再輕輕降回起飛墊（下降要慢）。',
+   par:28, maxHit:1, tasks:[HV(1.3,2.2,0,0.45,1.5), LD(1.3,0,0.45)]},
+  {ch:1, name:'前後飛行練習', brief:'機頭朝向不要動，只用 W／S 前後直線往返兩個航點。',
+   par:30, maxHit:2, tasks:[WP(0.2,1.4,0), WP(2.4,1.4,0), WP(0.2,1.4,0)]},
+  {ch:1, name:'左右側移練習', brief:'一樣不要轉向——用 A／D 側飛左右平移通過航點。',
+   par:32, maxHit:2, tasks:[WP(1.3,1.4,1.15), WP(1.3,1.4,-1.15), WP(1.3,1.4,1.15)]},
+  {ch:1, name:'轉向對準練習', brief:'原地旋轉（← →），讓機頭依序對準三座信標並穩住。',
+   par:36, maxHit:1, tasks:[FC(-2.2,0), FC(2.6,0), FC(0,1.4)]},
+  // ---- 第二章　航線與精準 ----
+  {ch:2, name:'對角線飛行練習', brief:'同時改變高度與左右位置，走出一條真正的對角線。',
+   par:36, maxHit:2, tasks:[WP(2.4,0.6,1.1), WP(0.2,2.3,-1.1), WP(2.4,0.6,1.1)]},
+  {ch:2, name:'矩形航線練習', brief:'沿矩形四角依序飛完一圈，四個轉角都要收得住。',
+   par:42, maxHit:2, tasks:[WP(2.4,1.4,1.0), WP(0.3,1.4,1.0), WP(0.3,1.4,-1.0), WP(2.4,1.4,-1.0), WP(2.4,1.4,1.0)]},
+  {ch:2, name:'圓形航線練習', brief:'繞場中央飛一個圓，速度盡量平均、不要忽快忽慢。',
+   par:46, maxHit:2, tasks:CIRCLE(1.2,1.5,0,1.0,8,Math.PI/2)},
+  {ch:2, name:'高度變換練習', brief:'在高低航點之間交替飛行，專心練油門的加減。',
+   par:42, maxHit:2, tasks:[WP(2.3,2.4,0), WP(1.3,0.55,0), WP(0.3,2.4,0), WP(1.3,0.55,0)]},
+  {ch:2, name:'精準降落練習', brief:'飛過航點後，降落在對角那塊比較小的停機坪上。',
+   par:36, maxHit:1, tasks:[WP(0.5,1.8,0.95), LD(2.3,-0.95,0.3)]},
+  {ch:2, name:'8 字飛行', brief:'繞兩個圓心畫出一個 8 字，交叉點要維持住高度。',
+   par:52, maxHit:3,
+   tasks:[WP(2.0,1.5,0.9), WP(2.6,1.5,0), WP(2.0,1.5,-0.9), WP(1.2,1.5,0),
+          WP(0.4,1.5,0.9), WP(-0.2,1.5,0), WP(0.4,1.5,-0.9), WP(1.2,1.5,0)]},
+  // ---- 第三章　穿環技術 ----
+  {ch:3, name:'穿越練習', brief:'對準己方顏色的紅色電子球門，穩穩地穿過去一次。',
+   par:22, maxHit:1, tasks:[GL('W')]},
+  {ch:3, name:'連續穿環', brief:'紅框 → 藍框 → 紅框，連續穿越三次不落地。',
+   par:40, maxHit:2, tasks:[GL('W'), GL('E'), GL('W')]},
+  {ch:3, name:'高低穿梭', brief:'三道光環一高一低交替——進環前先把高度修好再進去。',
+   par:40, maxHit:2, tasks:[GT(0.6,0.75,0), GT(-0.7,2.2,0), GT(0.6,0.75,0)]},
+  {ch:3, name:'S 型穿越', brief:'三道光環左右錯開，用側飛畫出 S 型路線穿過去。',
+   par:40, maxHit:2, tasks:[GT(0.9,1.5,0.85), GT(-0.3,1.5,-0.85), GT(-1.5,1.5,0.85)]},
+  {ch:3, name:'限時穿環挑戰', brief:'45 秒內完成四次穿框——這關開始要講速度了。',
+   par:36, maxHit:3, limit:45, tasks:[GL('W'), GL('E'), GL('W'), GL('E')]},
+  {ch:3, name:'障礙穿梭', brief:'場上立起三根柱子，撞到會失控翻滾——從光環之間鑽過去。',
+   par:40, maxHit:2, tasks:[GT(1.0,1.5,0.8), GT(-0.6,1.5,-0.8)],
+   poles:[{x:1.9,z:0}, {x:0.2,z:0.75}, {x:-1.4,z:-0.6}]},
+  // ---- 第四章　比賽技能 ----
+  {ch:4, name:'動態滑行射門', brief:'從己方半場加速起跑，一路滑行直接穿過紅框得分。',
+   par:24, maxHit:1, tasks:[WP(2.5,1.6,0,0.4), GL('W')]},
+  {ch:4, name:'回防解鎖', brief:'得分後必須飛回己方半場才能再次得分——這是 FIDA 的回防規則。',
+   par:40, maxHit:2, tasks:[GL('W'), WP(2.5,1.3,0,0.5), GL('W')]},
+  {ch:4, name:'繞桿挑戰', brief:'五根柱子左右繞行，像籃球運球繞桿一樣蛇行過去。',
+   par:52, maxHit:3,
+   tasks:[WP(2.0,1.4,0.75), WP(1.1,1.4,-0.75), WP(0.2,1.4,0.75), WP(-0.7,1.4,-0.75), WP(-1.6,1.4,0.75)],
+   poles:[{x:2.45,z:0.07}, {x:1.55,z:-0.07}, {x:0.65,z:0.07}, {x:-0.25,z:-0.07}, {x:-1.15,z:0.07}]},
+  {ch:4, name:'側風體驗', brief:'場上有穩定側風，機體會被持續吹偏——用側飛一路修正回來。',
+   par:46, maxHit:3, wind:{x:0, z:1.5, gust:0.4},
+   tasks:[HV(1.3,1.6,0,0.4,4), WP(0,1.6,0), GL('W')]},
+  {ch:4, name:'強風走廊', brief:'風更強而且會來陣風——先穿過兩道光環，再精準降落。',
+   par:54, maxHit:4, wind:{x:-0.9, z:1.9, gust:1.1},
+   tasks:[GT(0.8,1.5,0), GT(-0.8,1.5,0), LD(-2.3,0,0.4)]},
+  {ch:4, name:'終極挑戰', brief:'柱子 ＋ 側風 ＋ 限時 75 秒：走完全程並完成兩次射門。',
+   par:62, maxHit:5, limit:75, wind:{x:0.6, z:-1.4, gust:0.9},
+   poles:[{x:1.55,z:0.55}, {x:0.35,z:-0.6}, {x:-1.0,z:0.5}],
+   tasks:[GT(1.6,1.5,0.75), WP(0.2,2.0,-0.9), GL('W'), WP(2.5,1.3,0,0.5), GL('W')]},
+];
+CAMP_LEVELS.forEach((L,i)=>{ L.id = i+1; L.no = L.ch + '-' + (i+1 - CAMP_LEVELS.findIndex(x=>x.ch===L.ch)); });
+const CAMP_STAR_TOTAL = CAMP_LEVELS.length*3;
+
+// ---------- 闖關：場景物件（光環／航點／停機坪／信標／柱子） ----------
+const CAMP_COL = { pend:0x46557f, act:0x7dffa9, done:0xffd75a };
+const POLE_R = 0.07;
+const campGroup = new THREE.Group();
+scene.add(campGroup);
+const campSRGB = hex => new THREE.Color(hex).convertSRGBToLinear();
+function campMat(hex, op){
+  const m = new THREE.MeshBasicMaterial({color:campSRGB(hex), transparent:true, opacity:op,
+                                         depthWrite:false, side:THREE.DoubleSide});
+  m.userData.op0 = op;          // 記住原始不透明度：切到 done 狀態時是「絕對值變暗」而不是每次都再乘一次
+  return m;
+}
+// 由地面往上的細光柱：幫助判斷航點的水平位置（3D 空間中純球體很難目測遠近）
+function campBeam(x, y, z, hex){
+  const g = new THREE.CylinderGeometry(0.012, 0.012, Math.max(0.02,y), 6, 1, true);
+  const m = new THREE.Mesh(g, campMat(hex, 0.25));
+  m.position.set(x, y/2, z);
+  return m;
+}
+function campBuildMarker(task){
+  const g = new THREE.Group();
+  const c = CAMP_COL.pend;
+  if(task.t==='hover' || task.t==='wp'){
+    const r = task.r;
+    const wireMat = new THREE.MeshBasicMaterial({color:campSRGB(c), wireframe:true, transparent:true, opacity:0.55});
+    wireMat.userData.op0 = 0.55;
+    const wire = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), wireMat);
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(r*0.97, 1), campMat(c, 0.10));
+    g.add(wire, core);
+    g.position.set(task.x, task.y, task.z);
+    g.userData.parts = [wire.material, core.material];
+    g.userData.pulse = [wire, core];
+    const beam = campBeam(task.x, task.y, task.z, c);
+    beam.userData.isBeam = true;
+    campGroup.add(beam);
+    g.userData.beam = beam;
+  }else if(task.t==='gate'){
+    const torus = new THREE.Mesh(new THREE.TorusGeometry(task.r, 0.028, 8, 40), campMat(c, 0.95));
+    const halo  = new THREE.Mesh(new THREE.TorusGeometry(task.r, 0.075, 8, 40), campMat(c, 0.16));
+    if(task.ax==='x'){ torus.rotation.y = Math.PI/2; halo.rotation.y = Math.PI/2; }
+    g.add(torus, halo);
+    g.position.set(task.x, task.y, task.z);
+    g.userData.parts = [torus.material, halo.material];
+    g.userData.pulse = [torus, halo];
+    const beam = campBeam(task.x, task.y, task.z, c);
+    campGroup.add(beam); g.userData.beam = beam;
+  }else if(task.t==='land'){
+    const ring = new THREE.Mesh(new THREE.RingGeometry(task.r*0.82, task.r, 40), campMat(c, 0.85));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(task.r*0.82, 40), campMat(c, 0.14));
+    ring.rotation.x = -Math.PI/2; disc.rotation.x = -Math.PI/2;
+    ring.position.y = 0.012; disc.position.y = 0.010;
+    g.add(ring, disc);
+    g.position.set(task.x, 0, task.z);
+    g.userData.parts = [ring.material, disc.material];
+    g.userData.pulse = [ring, disc];
+  }else if(task.t==='face'){
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,2.2,8), campMat(c, 0.5));
+    post.position.y = 1.1;
+    const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15,1), campMat(c, 0.9));
+    bulb.position.y = 2.3;
+    g.add(post, bulb);
+    g.position.set(task.x, 0, task.z);
+    g.userData.parts = [post.material, bulb.material];
+    g.userData.pulse = [bulb];
+  }else if(task.t==='goal'){
+    // 真實電子球門本來就在場上，只放一個指示光柱標出要穿哪一邊
+    const ring = task.side==='W' ? ringWest : ringEast;
+    const beam = campBeam(ring.x, RING.y, 0, c);
+    g.add(beam);
+    g.userData.parts = [beam.material];
+    g.userData.pulse = [];
+  }
+  campGroup.add(g);
+  return g;
+}
+function campSetMarker(g, st){
+  if(!g) return;
+  const hex = CAMP_COL[st];
+  const k = st==='done' ? 0.40 : st==='act' ? 1.45 : 0.70;   // 現正進行的目標要明顯最亮
+  g.userData.parts.forEach(m=>{
+    m.color.set(campSRGB(hex));
+    m.opacity = Math.min(1, (m.userData.op0!==undefined ? m.userData.op0 : m.opacity) * k);
+  });
+  if(g.userData.beam){
+    const bm = g.userData.beam.material;
+    bm.color.set(campSRGB(hex));
+    bm.opacity = Math.min(1, (bm.userData.op0!==undefined ? bm.userData.op0 : 0.25) * k);
+  }
+  g.visible = true;
+  g.userData.state = st;
+  g.scale.setScalar(1);
+}
+function campBuildPole(p){
+  const h = FIELD.h;
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(POLE_R, POLE_R, h, 14),
+    new THREE.MeshStandardMaterial({color:campSRGB(0xff9d3c), emissive:campSRGB(0xff6a00),
+      emissiveIntensity:0.55, roughness:0.55, metalness:0.1}));
+  m.position.set(p.x, h/2, p.z);
+  m.castShadow = true;
+  campGroup.add(m);
+  occluders.push(m);     // 沿用場地既有的「擋到視線就淡到 22%」機制（updateOccluders）
+  return m;
+}
+function campClearScene(){
+  campPoles.forEach(p=>{                       // 柱子離場時要從遮擋清單移除，否則材質被 dispose 後仍被 raycast
+    const i = occluders.indexOf(p.mesh);
+    if(i >= 0) occluders.splice(i, 1);
+  });
+  while(campGroup.children.length){
+    const o = campGroup.children.pop();
+    o.traverse(n=>{
+      if(n.geometry) n.geometry.dispose();
+      if(n.material) (Array.isArray(n.material)?n.material:[n.material]).forEach(mm=>mm.dispose());
+    });
+    campGroup.remove(o);
+  }
+}
+
+// ---------- 闖關：狀態、存檔、關卡流程 ----------
+let campLevel = null, campTasks = [], campMarkers = [], campPoles = [];
+let campIdx = 0, campTime = 0, campHits = 0, campHold = 0, campHitCd = 0, campDone = false;
+const campPrevPos = V3(0,0,0), campPrevVel = V3(0,0,0);
+let campPrevDist = 0, campSave = {};
+
+function campLoad(){ try{ campSave = JSON.parse(localStorage.getItem(CAMP_SAVE_KEY) || '{}') || {}; }
+                     catch(e){ campSave = {}; } }
+function campStore(){ try{ localStorage.setItem(CAMP_SAVE_KEY, JSON.stringify(campSave)); }catch(e){} }
+const campStars = id => campSave[id] | 0;
+const campUnlocked = id => id===1 || campStars(id-1) > 0;
+const campTotalStars = () => CAMP_LEVELS.reduce((s,L)=>s+campStars(L.id), 0);
+campLoad();
+
+function campRefreshMarkers(){
+  campMarkers.forEach((g,i)=>campSetMarker(g, i<campIdx ? 'done' : (i===campIdx ? 'act' : 'pend')));
+}
+function campBuildLevel(){
+  campClearScene();
+  campTasks = campLevel.tasks;
+  campMarkers = campTasks.map(t=>campBuildMarker(t));
+  campPoles = (campLevel.poles||[]).map(p=>({x:p.x, z:p.z, mesh:campBuildPole(p)}));
+  campIdx=0; campTime=0; campHits=0; campHold=0; campHitCd=0; campDone=false;
+  drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });   // 只留玩家機（同練習模式）
+  campPrevPos.copy(player.pos); campPrevVel.copy(player.vel); campPrevDist = player.disturb;
+  campRefreshMarkers();
+  campUpdateHUD();
+  flashMsg(campLevel.no + '　' + campLevel.name, '#ffd75a', 1.8);
+}
+function campStart(id){
+  const L = CAMP_LEVELS[id-1];
+  if(!L || !campUnlocked(id)) return;
+  if(NET.connected) netTeardown();
+  ['netPanel','campPanel','overlay','campResult','scoreboard','practiceHUD']
+    .forEach(k=>document.getElementById(k).style.display='none');
+  document.getElementById('campHUD').style.display = 'block';
+  mode = 'campaign';
+  sfx.init();
+  camMode = 0;
+  document.querySelector('#telemetry b').textContent = '你的 Striker（闖關）';
+  campLevel = L;
+  campBuildLevel();
+  setState('play');
+}
+function campRestart(){ if(campLevel){ document.getElementById('campResult').style.display='none';
+                                       campBuildLevel(); setState('play'); } }
+// 離開闖關模式時的還原（其餘 5 台機恢復顯示、場上道具清掉、HUD 切回去）
+function campExitCleanup(){
+  campClearScene();
+  campLevel = null; campTasks = []; campMarkers = []; campPoles = [];
+  document.getElementById('campHUD').style.display = 'none';
+  document.getElementById('campResult').style.display = 'none';
+  drones.forEach(d=>setDroneVisible(d, true));
+}
+
+// ---------- 闖關：每個子步長的判定 ----------
+function campTaskDone(task, h){
+  const p = player.pos;
+  if(task.t==='hover'){
+    const d = Math.hypot(p.x-task.x, p.y-task.y, p.z-task.z);
+    campHold = d < task.r ? campHold + h : Math.max(0, campHold - h*1.6);
+    return campHold >= task.hold;
+  }
+  if(task.t==='wp') return Math.hypot(p.x-task.x, p.y-task.y, p.z-task.z) < task.r;
+  if(task.t==='gate'){
+    const tol = task.r - DRONE_R*0.5;
+    if(task.ax==='x'){
+      if((campPrevPos.x-task.x)*(p.x-task.x) >= 0) return false;
+      return Math.hypot(p.y-task.y, p.z-task.z) < tol;
+    }
+    if((campPrevPos.z-task.z)*(p.z-task.z) >= 0) return false;
+    return Math.hypot(p.y-task.y, p.x-task.x) < tol;
+  }
+  if(task.t==='land'){
+    const flat = Math.hypot(p.x-task.x, p.z-task.z);
+    const down = p.y <= DRONE_R+0.03 && Math.abs(player.vel.y) < 0.9 && player.vel.length() < 0.7;
+    campHold = (flat < task.r && down) ? campHold + h : Math.max(0, campHold - h*2);
+    return campHold >= 0.8;
+  }
+  if(task.t==='face'){
+    // fwd = (sin(yaw),0,cos(yaw))，所以「對準 (x,z)」的目標 yaw = atan2(dx, dz)
+    const want = Math.atan2(task.x - p.x, task.z - p.z);
+    const err = Math.abs(angDiff(want, player.yaw));
+    campHold = err < task.tol*Math.PI/180 ? campHold + h : Math.max(0, campHold - h*1.6);
+    return campHold >= task.hold;
+  }
+  if(task.t==='goal'){
+    const ring = task.side==='W' ? ringWest : ringEast;
+    if((campPrevPos.x-ring.x)*(p.x-ring.x) >= 0) return false;
+    return Math.hypot(p.y-ring.y, p.z-ring.z) < RING.R - DRONE_R + 0.05;   // 同 checkGoals 的判定
+  }
+  return false;
+}
+function campCollidePoles(){
+  const minD = POLE_R + DRONE_R;
+  for(const p of campPoles){
+    const dx = player.pos.x - p.x, dz = player.pos.z - p.z;
+    const d = Math.hypot(dx, dz);
+    if(d < minD && d > 1e-5){
+      const nx = dx/d, nz = dz/d;
+      player.pos.x = p.x + nx*minD; player.pos.z = p.z + nz*minD;
+      const vn = player.vel.x*nx + player.vel.z*nz;
+      if(vn < 0){
+        player.vel.x -= nx*vn*1.5; player.vel.z -= nz*vn*1.5;   // 恢復係數 0.5
+        player.disturb = Math.min(1, player.disturb + Math.min(0.6, -vn*0.12));
+        if(-vn > 1.0) sfx.hit(Math.min(1, -vn/8));
+      }
+    }
+  }
+}
+function campApplyWind(h, t){
+  const w = campLevel && campLevel.wind;
+  if(!w) return;
+  // 風以「加速度」形式加在速度上：與既有阻力平衡後會產生穩定漂移，不動 step() 裡調校過的物理
+  const gx = w.gust ? Math.sin(t*0.70)*Math.sin(t*1.90+1.3)*w.gust : 0;
+  const gz = w.gust ? Math.sin(t*0.55+2.1)*Math.sin(t*1.40)*w.gust : 0;
+  player.vel.x += (w.x + gx)*h;
+  player.vel.z += (w.z + gz)*h;
+}
+function campDetectHit(h){
+  campHitCd = Math.max(0, campHitCd - h);
+  if(campHitCd > 0){ campPrevDist = player.disturb; return; }
+  let hit = player.disturb - campPrevDist > 0.02;      // 球門框／柱子／高速撞牆都會抬高 disturb
+  const bx = FIELD.hx-DRONE_R-0.004, bz = FIELD.hz-DRONE_R-0.004;
+  if(!hit && Math.abs(player.pos.x) >= bx && Math.abs(campPrevVel.x) > 1.0) hit = true;
+  if(!hit && Math.abs(player.pos.z) >= bz && Math.abs(campPrevVel.z) > 1.0) hit = true;
+  if(!hit && player.pos.y <= DRONE_R+0.004 && campPrevVel.y < -1.2) hit = true;
+  if(!hit && player.pos.y >= FIELD.h-DRONE_R-0.004 && campPrevVel.y > 1.0) hit = true;
+  campPrevDist = player.disturb;
+  if(hit){ campHits++; campHitCd = 0.55; flashMsg('💥 碰撞 ' + campHits, '#f87171', 0.5); }
+}
+function campStep(h, t){
+  if(campDone || state !== 'play') return;
+  campTime += h;
+  campDetectHit(h);
+  if(campLevel.limit && campTime >= campLevel.limit){ campFinish(false); return; }
+  const task = campTasks[campIdx];
+  if(!task) return;
+  if(campTaskDone(task, h)){
+    campHold = 0;
+    campSetMarker(campMarkers[campIdx], 'done');
+    campIdx++;
+    if(campIdx >= campTasks.length){ campFinish(true); return; }
+    campSetMarker(campMarkers[campIdx], 'act');
+    if(task.t==='wp') sfx.hit(0.2); else sfx.goal();
+    flashMsg('✓ ' + campIdx + ' / ' + campTasks.length, '#7dffa9', 0.7);
+  }
+}
+
+// ---------- 闖關：HUD、結算、關卡列表 ----------
+function campUpdateHUD(){
+  if(!campLevel) return;
+  document.getElementById('campTitle').textContent = campLevel.no + '　' + campLevel.name;
+  document.getElementById('campBrief').textContent = campLevel.brief;
+  document.getElementById('campDots').innerHTML =
+    campTasks.map((_,i)=> i < campIdx ? '<b>●</b>' : '○').join('');
+  document.getElementById('campTime').textContent = campTime.toFixed(1);
+  document.getElementById('campHits').textContent = campHits;
+  const wrap = document.getElementById('campLimitWrap');
+  if(campLevel.limit){
+    wrap.style.display = '';
+    const left = Math.max(0, campLevel.limit - campTime);
+    const el = document.getElementById('campLimit');
+    el.textContent = left.toFixed(1);
+    el.className = left <= 10 ? 'danger' : '';
+  }else wrap.style.display = 'none';
+}
+function campAnimate(t){
+  if(mode !== 'campaign') return;
+  const g = campMarkers[campIdx];
+  if(g && g.userData.state === 'act') g.scale.setScalar(1 + Math.sin(t*4.2)*0.07);
+}
+function campFinish(ok){
+  campDone = true;
+  setState('over');
+  let stars = 0;
+  if(ok){
+    stars = 1;                                                   // 1★＝完成
+    if(campTime <= campLevel.par) stars = 2;                     // 2★＝再加上時間達標
+    if(stars === 2 && campHits <= campLevel.maxHit) stars = 3;   // 3★＝再加上碰撞達標
+    if(stars > campStars(campLevel.id)){ campSave[campLevel.id] = stars; campStore(); }
+    sfx.goal();
+  }
+  const ttl = document.getElementById('campResultTitle');
+  ttl.textContent = ok ? '關卡完成！' : '時間到';
+  ttl.className = ok ? '' : 'fail';
+  document.getElementById('campResultSub').textContent = campLevel.no + '　' + campLevel.name;
+  document.getElementById('campStars').innerHTML =
+    [0,1,2].map(i=> i < stars ? '<b>★</b>' : '★').join('');
+  document.getElementById('campStats').innerHTML =
+    '<em>用時</em>' + campTime.toFixed(1) + ' s　<span style="color:#7c88a8">2★ 標準 ≤ ' + campLevel.par + ' s</span><br>' +
+    '<em>碰撞</em>' + campHits + ' 次　<span style="color:#7c88a8">3★ 標準 ≤ ' + campLevel.maxHit + ' 次</span>' +
+    (ok ? '' : '<br><span style="color:#f87171">未能在 ' + campLevel.limit + ' 秒內完成</span>');
+  const nid = campLevel.id + 1;
+  const nb = document.getElementById('btnCampNext');
+  nb.style.display = (stars > 0 && nid <= CAMP_LEVELS.length) ? '' : 'none';
+  nb.dataset.next = nid;
+  document.getElementById('campResult').style.display = 'flex';
+}
+function campBuildList(){
+  const host = document.getElementById('campList');
+  host.innerHTML = CAMP_CHAPTERS.map(ch=>{
+    const cells = CAMP_LEVELS.filter(L=>L.ch===ch.n).map(L=>{
+      const st = campStars(L.id), lk = !campUnlocked(L.id);
+      const stars = [0,1,2].map(i=> i < st ? '<b>★</b>' : '☆').join('');
+      return '<div class="campCell' + (lk?' locked':'') + (st>0?' done':'') + '" data-id="' + L.id + '">' +
+             '<div class="n">' + (lk?'🔒 ':'') + L.no + '</div>' +
+             '<div class="nm">' + L.name + '</div>' +
+             '<div class="st">' + stars + '</div></div>';
+    }).join('');
+    return '<div class="campChapter"><div class="campChTitle">' + ch.title +
+           '<span>' + ch.sub + '</span></div><div class="campGrid">' + cells + '</div></div>';
+  }).join('');
+  document.getElementById('campStarTotal').textContent = '⭐ ' + campTotalStars() + ' / ' + CAMP_STAR_TOTAL;
+  host.querySelectorAll('.campCell').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const id = +el.dataset.id;
+      if(campUnlocked(id)) campStart(id);
+    });
+  });
+}
+function campOpenPanel(){
+  document.getElementById('rulesBox').style.display = 'none';
+  document.getElementById('modesRow').style.display = 'none';
+  document.getElementById('netPanel').style.display = 'none';
+  document.getElementById('campPanel').style.display = 'block';
+  campBuildList();
+}
+function campClosePanel(){
+  document.getElementById('campPanel').style.display = 'none';
+  document.getElementById('rulesBox').style.display = 'block';
+  document.getElementById('modesRow').style.display = 'flex';
+}
+function campBackToList(){
+  campExitCleanup();
+  setState('menu');
+  document.getElementById('scoreboard').style.display = 'flex';
+  document.getElementById('overlay').style.display = 'flex';
+  campOpenPanel();
+}
+document.getElementById('btnCampaign').addEventListener('click', campOpenPanel);
+document.getElementById('btnCampBack').addEventListener('click', campClosePanel);
+document.getElementById('btnCampRetry').addEventListener('click', campRestart);
+document.getElementById('btnCampList').addEventListener('click', campBackToList);
+document.getElementById('btnCampNext').addEventListener('click', e=>campStart(+e.currentTarget.dataset.next));
+// 清除紀錄：二次點擊確認（不用 confirm()，避免瀏覽器強制彈窗打斷全螢幕遊戲）
+(function(){
+  const b = document.getElementById('btnCampReset');
+  let armed = false, tmr = null;
+  b.addEventListener('click', ()=>{
+    if(!armed){
+      armed = true; b.textContent = '再按一次確認清除';
+      clearTimeout(tmr); tmr = setTimeout(()=>{ armed=false; b.textContent='清除闖關紀錄'; }, 3500);
+      return;
+    }
+    clearTimeout(tmr); armed = false; b.textContent = '清除闖關紀錄';
+    campSave = {}; campStore(); campBuildList();
+  });
+})();
+
 function loop(){
   requestAnimationFrame(loop);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1832,6 +2403,19 @@ function loop(){
       player.step(H);
       collideRing(player, ringEast); collideRing(player, ringWest);
       checkPracticePass(H);
+      acc -= H;
+    }
+  }else if(mode==='campaign' && state==='play'){
+    // ---- 闖關模式：只有玩家機在場上，依關卡任務清單逐項判定（同練習模式不跑 AI／計分／違規） ----
+    readPlayerInput();
+    acc += dt;
+    while(acc >= H){
+      campPrevPos.copy(player.pos); campPrevVel.copy(player.vel);   // 穿越/碰撞判定需要前一子步的位置與速度
+      player.step(H);
+      collideRing(player, ringEast); collideRing(player, ringWest);
+      campCollidePoles();
+      campApplyWind(H, t);
+      campStep(H, t);
       acc -= H;
     }
   }else if(state==='play'){
@@ -1877,6 +2461,7 @@ function loop(){
 
   // 視覺
   drones.forEach(d=>d.syncMesh(t));
+  if(mode==='campaign'){ campAnimate(t); campUpdateHUD(); }
   if(ringPulse){
     // 電子球門進球燈效：綠白交替爆閃後恢復隊色
     ringPulse.t += dt;
