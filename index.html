@@ -131,6 +131,7 @@
     backdrop-filter:blur(6px);text-align:center}
   #campHUD .ttl{font-size:15px;font-weight:900;color:#ffd75a;letter-spacing:1px}
   #campHUD .brf{font-size:12.5px;color:#cdd8ee;margin-top:3px;line-height:1.5}
+  #campHUD .env{font-size:11.5px;color:#7dc4ff;margin-top:3px;letter-spacing:.5px}
   #campHUD .row{display:flex;gap:16px;justify-content:center;align-items:center;margin-top:7px;
     font-size:13px;font-variant-numeric:tabular-nums;color:#e8ecf5}
   #campHUD .row i{font-style:normal;color:#7c88a8;font-size:11px;margin-right:3px}
@@ -172,6 +173,7 @@
   .campMapCard .ico{font-size:30px;line-height:1.15}
   .campMapCard .nm{font-size:13.5px;font-weight:900;color:#e8ecf5;margin:6px 0 2px}
   .campMapCard .sb{font-size:10.5px;color:#7c88a8;line-height:1.45;min-height:30px}
+  .campMapCard .fly{font-size:10.5px;color:#7dc4ff;margin-top:4px;line-height:1.35;min-height:14px}
   .campMapCard .pg{font-size:12px;color:#ffd75a;font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums}
   .campMapCard .bar{height:4px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:6px;overflow:hidden}
   .campMapCard .bar b{display:block;height:100%;background:#ffd75a;border-radius:3px}
@@ -214,6 +216,7 @@
 <div class="hud" id="campHUD" style="display:none">
   <div class="ttl" id="campTitle">—</div>
   <div class="brf" id="campBrief">—</div>
+  <div class="env" id="campEnv">—</div>
   <div class="row">
     <span><i>進度</i><span id="campDots"></span></span>
     <span><i>時間</i><span id="campTime">0.0</span>s</span>
@@ -292,7 +295,7 @@
     </div>
     <div id="campMaps"></div>
     <div style="text-align:center;margin-top:12px;font-size:12px;color:#7c88a8">
-      每個場景都有完整 24 關，星星分開記錄
+      每個場景都有 24 關共用課程 ＋ 3 關場景專屬挑戰，航線與飛行條件各不相同，星星分開記錄
     </div>
   </div>
   <div id="campPanel" style="display:none">
@@ -610,7 +613,7 @@ adBoard(0, -FIELD.hz-0.4, 0,       '#ff5a5a', 5.5);
 //   全部程序化生成（CanvasTexture + 低面數幾何），單一 HTML 檔不依賴任何外部圖檔。
 // ============================================================
 const envGroups = {};          // sceneId -> THREE.Group（延遲建立）
-let curScene = 'arena';
+let curScene = 'sky';   // 預設場景（業主指定：不要一開場就是競技場）
 let envTime = 0;               // 給雲/水波/霓虹閃爍用的累積時間
 
 // --- 共用小工具 ---
@@ -926,20 +929,30 @@ function buildOrbit(){
 //     這樣 arena 場景的外觀與加入場景系統前完全相同。
 const SCENE_SAVE_KEY = 'hsinchuDroneSoccerSceneV1';
 const SCENES = [
-  {id:'arena',  emoji:'🏟️', name:'室內競技場', sub:'實際場地 · 觀眾看台',
-   bg:0x070a14, fog:[0x070a14,12,40],  stands:true,
-   hemi:[0x9db2ff,0x1e3320,0.65], key:[0xffffff,1.15], fill:[0xaac4ff,0.50], build:null},
   {id:'sky',    emoji:'☁️', name:'天空之城', sub:'雲海 · 浮空島 · 飛艇',
    bg:0xd6ecff, fog:[0xdcefff,26,150], stands:false, apron:false,
+   fly:{wind:{x:0,z:0},       gust:0.12, updraft:0.20, dragMul:1,    note:'微弱上升氣流'},
+   diff:{parMul:1.20, hitAdd:1},
    hemi:[0xffffff,0xbcd8f5,1.05], key:[0xfff4dc,1.35], fill:[0xcfe4f7,0.55], build:buildSkyCity},
+  {id:'arena',  emoji:'🏟️', name:'室內競技場', sub:'實際場地 · 觀眾看台',
+   bg:0x070a14, fog:[0x070a14,12,40],  stands:true,
+   fly:{wind:{x:0,z:0},       gust:0,    updraft:0,    dragMul:1,    note:'無風（標準室內場地）'},
+   diff:{parMul:1.00, hitAdd:0},
+   hemi:[0x9db2ff,0x1e3320,0.65], key:[0xffffff,1.15], fill:[0xaac4ff,0.50], build:null},
   {id:'meadow', emoji:'🌿', name:'草原湖畔', sub:'遠山 · 湖面反光 · 樹林',
    bg:0xd3e7f0, fog:[0xd8e9f0,32,170], stands:false, apron:false,
+   fly:{wind:{x:-0.25,z:0.42},gust:0.15, updraft:0,    dragMul:1,    note:'穩定側風'},
+   diff:{parMul:0.92, hitAdd:0},
    hemi:[0xeaf6ff,0x4d9040,0.95], key:[0xfff2d6,1.50], fill:[0xbfe0f0,0.45], build:buildMeadow},
   {id:'neon',   emoji:'🌃', name:'霓虹夜城', sub:'夜空 · 霓虹天際線',
    bg:0x06070f, fog:[0x0b0d20,18,90],  stands:false, apron:false,
+   fly:{wind:{x:0.10,z:-0.12},gust:0.75, updraft:0,    dragMul:1,    note:'大樓陣風（忽強忽弱）'},
+   diff:{parMul:0.85, hitAdd:-1},
    hemi:[0x5a6bff,0x1a0f2e,0.40], key:[0xd8e6ff,0.85], fill:[0xff5ab8,0.45], build:buildNeonCity},
   {id:'orbit',  emoji:'🛰️', name:'軌道太空站', sub:'星空 · 地球 · 太陽',
    bg:0x000005, fog:[0x000008,80,400], stands:false, apron:false,
+   fly:{wind:{x:0,z:0},       gust:0.08, updraft:0,    dragMul:0.45, note:'真空慣性・煞不住'},
+   diff:{parMul:0.80, hitAdd:-1},
    hemi:[0x8fa8d0,0x101828,0.35], key:[0xffffff,1.10], fill:[0x5f7fb0,0.25], build:buildOrbit},
 ];
 const sceneById = id => SCENES.find(s=>s.id===id) || SCENES[0];
@@ -980,7 +993,7 @@ function updateSceneBar(){
     b.classList.toggle('on', b.dataset.id === curScene));
 }
 buildSceneBar();
-setScene((()=>{ try{ return localStorage.getItem(SCENE_SAVE_KEY) || 'arena'; }catch(e){ return 'arena'; } })());
+setScene((()=>{ try{ return localStorage.getItem(SCENE_SAVE_KEY) || SCENES[0].id; }catch(e){ return SCENES[0].id; } })());
 
 // ---------- 圓形球門框 ----------
 function makeGoalRing(x, color){
@@ -2346,6 +2359,7 @@ const CAMP_CHAPTERS = [
   {n:2, title:'第二章　航線與精準', sub:'路徑飛行 · 高度變換 · 精準降落'},
   {n:3, title:'第三章　穿環技術', sub:'單環 · 連環 · S 型 · 限時'},
   {n:4, title:'第四章　比賽技能', sub:'射門 · 回防解鎖 · 繞桿 · 側風'},
+  {n:5, title:'第五章　場景挑戰', sub:'只有這個場景才有的關卡'},
 ];
 // 任務建構子（座標單位：公尺，場地 x∈[-3,3]、z∈[-1.5,1.5]、y∈[0,3]）
 const HV=(x,y,z,r,hold)=>({t:'hover',x,y,z,r,hold});          // 懸停圈內停留 hold 秒
@@ -2360,7 +2374,7 @@ const CIRCLE=(cx,y,cz,rr,n,ph=0)=>Array.from({length:n},(_,i)=>{
   return WP(cx+Math.cos(a)*rr, y, cz+Math.sin(a)*rr, 0.36);
 });
 
-const CAMP_LEVELS = [
+const CAMP_BASE = [
   // ---- 第一章　基礎操控 ----
   {ch:1, name:'起飛練習', brief:'平穩起飛，把機體停進 1.5 m 高的懸停圈，停滿 3 秒。',
    par:20, maxHit:2, tasks:[HV(1.3,1.5,0,0.5,3)]},
@@ -2373,14 +2387,14 @@ const CAMP_LEVELS = [
   {ch:1, name:'左右側移練習', brief:'一樣不要轉向——用 A／D 側飛左右平移通過航點。',
    par:32, maxHit:2, tasks:[WP(1.3,1.4,1.15), WP(1.3,1.4,-1.15), WP(1.3,1.4,1.15)]},
   {ch:1, name:'轉向對準練習', brief:'原地旋轉（← →），讓機頭依序對準三座信標並穩住。',
-   par:36, maxHit:1, tasks:[FC(-2.2,0), FC(2.6,0), FC(0,1.4)]},
+   par:36, maxHit:1, tasks:[FC(-2.4,0.7), FC(2.7,-0.8), FC(0.2,1.6)]},
   // ---- 第二章　航線與精準 ----
   {ch:2, name:'對角線飛行練習', brief:'同時改變高度與左右位置，走出一條真正的對角線。',
    par:36, maxHit:2, tasks:[WP(2.4,0.6,1.1), WP(0.2,2.3,-1.1), WP(2.4,0.6,1.1)]},
   {ch:2, name:'矩形航線練習', brief:'沿矩形四角依序飛完一圈，四個轉角都要收得住。',
    par:42, maxHit:2, tasks:[WP(2.4,1.4,1.0), WP(0.3,1.4,1.0), WP(0.3,1.4,-1.0), WP(2.4,1.4,-1.0), WP(2.4,1.4,1.0)]},
   {ch:2, name:'圓形航線練習', brief:'繞場中央飛一個圓，速度盡量平均、不要忽快忽慢。',
-   par:46, maxHit:2, tasks:CIRCLE(1.2,1.5,0,1.0,8,Math.PI/2)},
+   par:46, maxHit:2, tasks:CIRCLE(1.2,1.5,0,1.0,8,Math.PI/2), gen:()=>campGenCircle()},
   {ch:2, name:'高度變換練習', brief:'在高低航點之間交替飛行，專心練油門的加減。',
    par:42, maxHit:2, tasks:[WP(2.3,2.4,0), WP(1.3,0.55,0), WP(0.3,2.4,0), WP(1.3,0.55,0)]},
   {ch:2, name:'精準降落練習', brief:'飛過航點後，降落在對角那塊比較小的停機坪上。',
@@ -2388,18 +2402,22 @@ const CAMP_LEVELS = [
   {ch:2, name:'8 字飛行', brief:'繞兩個圓心畫出一個 8 字，交叉點要維持住高度。',
    par:52, maxHit:3,
    tasks:[WP(2.0,1.5,0.9), WP(2.6,1.5,0), WP(2.0,1.5,-0.9), WP(1.2,1.5,0),
-          WP(0.4,1.5,0.9), WP(-0.2,1.5,0), WP(0.4,1.5,-0.9), WP(1.2,1.5,0)]},
+          WP(0.4,1.5,0.9), WP(-0.2,1.5,0), WP(0.4,1.5,-0.9), WP(1.2,1.5,0)],
+   gen:()=>campGenFigure8()},
   // ---- 第三章　穿環技術 ----
-  {ch:3, name:'穿越練習', brief:'對準己方顏色的紅色電子球門，穩穩地穿過去一次。',
-   par:22, maxHit:1, tasks:[GL('W')]},
-  {ch:3, name:'連續穿環', brief:'紅框 → 藍框 → 紅框，連續穿越三次不落地。',
-   par:40, maxHit:2, tasks:[GL('W'), GL('E'), GL('W')]},
+  {ch:3, name:'穿越練習', brief:'先飛到助跑點對正球門，再穩穩地穿過紅色電子球門一次。',
+   par:24, maxHit:1, tasks:[WP(1.5,1.6,0.55,0.42), GL('W')]},
+  {ch:3, name:'連續穿環', brief:'紅框 → 折返點 → 藍框 → 折返點 → 紅框，連續穿越三次不落地。',
+   par:44, maxHit:2,
+   tasks:[GL('W'), WP(0.1,1.6,0.85,0.42), GL('E'), WP(0.1,1.6,-0.85,0.42), GL('W')]},
   {ch:3, name:'高低穿梭', brief:'三道光環一高一低交替——進環前先把高度修好再進去。',
    par:40, maxHit:2, tasks:[GT(0.6,0.75,0), GT(-0.7,2.2,0), GT(0.6,0.75,0)]},
   {ch:3, name:'S 型穿越', brief:'三道光環左右錯開，用側飛畫出 S 型路線穿過去。',
    par:40, maxHit:2, tasks:[GT(0.9,1.5,0.85), GT(-0.3,1.5,-0.85), GT(-1.5,1.5,0.85)]},
-  {ch:3, name:'限時穿環挑戰', brief:'45 秒內完成四次穿框——這關開始要講速度了。',
-   par:36, maxHit:3, limit:45, tasks:[GL('W'), GL('E'), GL('W'), GL('E')]},
+  {ch:3, name:'限時穿環挑戰', brief:'60 秒內走完折返路線並完成四次穿框——這關開始要講速度了。',
+   par:46, maxHit:3, limit:60,
+   tasks:[GL('W'), WP(0.3,1.7,0.8,0.44), GL('E'), WP(0.3,1.3,-0.8,0.44),
+          GL('W'), WP(0.3,1.7,0.8,0.44), GL('E')]},
   {ch:3, name:'障礙穿梭', brief:'場上立起三根柱子，撞到會失控翻滾——從光環之間鑽過去。',
    par:40, maxHit:2, tasks:[GT(1.0,1.5,0.8), GT(-0.6,1.5,-0.8)],
    poles:[{x:1.9,z:0}, {x:0.2,z:0.75}, {x:-1.4,z:-0.6}]},
@@ -2423,8 +2441,7 @@ const CAMP_LEVELS = [
    poles:[{x:1.55,z:0.55}, {x:0.35,z:-0.6}, {x:-1.0,z:0.5}],
    tasks:[GT(1.6,1.5,0.75), WP(0.2,2.0,-0.9), GL('W'), WP(2.5,1.3,0,0.5), GL('W')]},
 ];
-CAMP_LEVELS.forEach((L,i)=>{ L.id = i+1; L.no = L.ch + '-' + (i+1 - CAMP_LEVELS.findIndex(x=>x.ch===L.ch)); });
-const CAMP_STAR_TOTAL = CAMP_LEVELS.length*3;
+CAMP_BASE.forEach((L,i)=>{ L.id = i+1; L.no = L.ch + '-' + (i+1 - CAMP_BASE.findIndex(x=>x.ch===L.ch)); });
 
 // ---------- 闖關：場景物件（光環／航點／停機坪／信標／柱子） ----------
 const CAMP_COL = { pend:0x46557f, act:0x7dffa9, done:0xffd75a };
@@ -2544,13 +2561,122 @@ function campClearScene(){
   }
 }
 
+
+
+// ---------- 場景專屬關卡（第五章）：只有該場景才有，針對該場景的飛行條件設計 ----------
+// raw:true → 不套用 campXfTask 的場景變形（這些座標本來就是為該場景手寫的）
+const CAMP_EXTRA = [
+  // ☁️ 天空之城：微弱上升氣流
+  {ch:5, only:'sky', raw:true, name:'氣流懸停', brief:'上升氣流會一直把你往上帶——用油門壓住，在窄圈裡停滿 8 秒。',
+   par:32, maxHit:1, tasks:[HV(1.3,1.9,0,0.30,8)]},
+  {ch:5, only:'sky', raw:true, name:'島間長程', brief:'高空長距離往返，一趟高一趟低，順著氣流調整推力。',
+   par:52, maxHit:3, tasks:[WP(2.5,2.4,0.9), WP(-2.5,2.4,-0.9), WP(2.5,1.0,-0.9), WP(-2.5,1.0,0.9)]},
+  {ch:5, only:'sky', raw:true, name:'雲隙穿降', brief:'從最高的光環一路往下鑽，最後精準降落在雲端平台上。',
+   par:48, maxHit:2, tasks:[GT(1.2,2.4,0.6), GT(-0.2,1.6,-0.6), GT(-1.6,0.9,0.6), LD(-2.4,0,0.34)]},
+  // 🏟️ 室內競技場：無風，純技術考核
+  {ch:5, only:'arena', raw:true, name:'連續射門考核', brief:'60 秒內完成三次得分——每次得分後都要飛回己方半場解鎖。',
+   par:46, maxHit:2, limit:60,
+   tasks:[GL('W'), WP(2.4,1.4,0,0.5), GL('W'), WP(2.4,1.4,0,0.5), GL('W')]},
+  {ch:5, only:'arena', raw:true, name:'定點精準考核', brief:'八個小目標圈，圈比平常小很多——這關考的是穩，不是快。',
+   par:56, maxHit:2,
+   tasks:[WP(2.3,1.2,0.8,0.24), WP(1.4,2.0,-0.8,0.24), WP(0.5,1.0,0.8,0.24), WP(-0.4,2.0,-0.8,0.24),
+          WP(-1.3,1.2,0.8,0.24), WP(-2.2,2.0,-0.8,0.24), WP(-1.3,0.8,0,0.24), WP(1.3,1.6,0,0.24)]},
+  {ch:5, only:'arena', raw:true, name:'全場計時賽', brief:'70 秒：光環、繞桿、射門一次跑完，這是競技場的畢業考。',
+   par:58, maxHit:3, limit:70,
+   poles:[{x:1.7,z:0.5},{x:0.1,z:-0.55},{x:-1.4,z:0.5}],
+   tasks:[GT(2.2,1.5,0.75), WP(0.6,2.1,-0.85), GT(-1.0,1.2,0.8), GL('W'), WP(2.4,1.4,0,0.5), GL('W')]},
+  // 🌿 草原湖畔：穩定側風
+  {ch:5, only:'meadow', raw:true, name:'側風懸停', brief:'側風會一直把你往同一邊推——持續側飛修正，在窄圈裡停滿 8 秒。',
+   par:34, maxHit:1, tasks:[HV(1.3,1.4,0,0.28,8)]},
+  {ch:5, only:'meadow', raw:true, name:'逆風直線', brief:'兩條直線來回：一趟順風、一趟逆風，感受一下差多少。',
+   par:54, maxHit:3, tasks:[WP(-2.5,1.4,1.1), WP(2.5,1.4,1.1), WP(-2.5,1.4,-1.1), WP(2.5,1.4,-1.1)]},
+  {ch:5, only:'meadow', raw:true, name:'側風降落考核', brief:'側風中連續兩次精準降落——落地前要先把橫向速度殺掉。',
+   par:52, maxHit:2, tasks:[LD(-2.2,0.9,0.30), WP(0,1.7,0), LD(2.2,-0.9,0.30)]},
+  // 🌃 霓虹夜城：大樓陣風
+  {ch:5, only:'neon', raw:true, name:'陣風穩定', brief:'陣風忽強忽弱、方向會變——不要過度修正，在窄圈裡撐 9 秒。',
+   par:36, maxHit:1, tasks:[HV(1.3,1.9,0,0.26,9)]},
+  {ch:5, only:'neon', raw:true, name:'亂流穿環', brief:'55 秒內在陣風中來回穿五道光環，進環前要預判被吹偏的量。',
+   par:46, maxHit:3, limit:55,
+   tasks:[GT(1.4,1.9,0.7), GT(-0.2,1.9,-0.7), GT(-1.7,1.9,0.7), GT(-0.2,1.9,-0.7), GT(1.4,1.9,0.7)]},
+  {ch:5, only:'neon', raw:true, name:'夜城綜合考核', brief:'80 秒：陣風 ＋ 柱子 ＋ 光環 ＋ 兩次射門，夜城的畢業考。',
+   par:64, maxHit:4, limit:80,
+   poles:[{x:1.9,z:-0.5},{x:0.3,z:0.6},{x:-1.2,z:-0.5}],
+   tasks:[GT(2.3,2.0,-0.7), WP(0.7,1.1,0.9), GT(-1.1,2.0,-0.8), GL('W'), WP(2.4,1.5,0,0.5), GL('W')]},
+  // 🛰️ 軌道太空站：真空慣性
+  {ch:5, only:'orbit', raw:true, name:'慣性煞車', brief:'衝到場地另一端，然後在指定點「停住」——沒有空氣幫你煞車，要提早反推。',
+   par:36, maxHit:2, tasks:[WP(-2.4,1.7,0,0.40), HV(2.2,1.7,0,0.34,4)]},
+  {ch:5, only:'orbit', raw:true, name:'無阻力繞行', brief:'大範圍繞行一圈——真空中一旦偏出去就很難拉回來，轉彎要提早。',
+   par:56, maxHit:3,
+   tasks:[WP(2.5,1.7,0.9), WP(1.0,2.3,1.1), WP(-1.0,1.7,1.1), WP(-2.5,1.1,0.9),
+          WP(-2.5,1.7,-0.9), WP(-1.0,2.3,-1.1), WP(1.0,1.7,-1.1), WP(2.5,1.1,-0.9)]},
+  {ch:5, only:'orbit', raw:true, name:'對接考核', brief:'從對角高點滑過來，用最低速度輕輕停在小停機坪上——這關等於太空對接。',
+   par:48, maxHit:1, tasks:[WP(-2.3,2.2,0.9,0.36), LD(2.3,-0.9,0.28)]},
+];
+CAMP_EXTRA.forEach((L,i)=>{ L.id = CAMP_BASE.length + 1 + i; });
+SCENES.forEach(S=>{
+  CAMP_EXTRA.filter(L=>L.only===S.id).forEach((L,i)=>{ L.no = '5-' + (i+1); });
+});
+// 目前場景實際會看到的關卡清單＝共用 24 關 ＋ 該場景專屬關卡
+const campListFor = sid => CAMP_BASE.concat(CAMP_EXTRA.filter(L=>L.only===sid));
+const campList = () => campListFor(campSceneId);
+
+// ---------- 場景佈局（同一套 24 課的技能順序不變，但每個場景的實際航線不同） ----------
+// 業主要求「每個場景的關卡不要只是換背景」。這裡不是單純鏡射：
+//   mz  左右鏡射（航線改走另一側，S 型／繞桿的蛇行方向會相反）
+//   yb  整體高度偏移（配合該場景的飛行條件：有上升氣流的放高、側風強的壓低）
+//   sc  航線尺度（緊湊 ↔ 寬幅；目標圈大小刻意不縮放，難度由星等門檻控制）
+//   cir 圓形／8 字這類「圖形航線」專用：半徑、航點數、繞行方向
+// 目標圈/光環的半徑不跟著 sc 變，否則會變成「場景越大越好過」，那是意外的難度洩漏。
+const LAYOUT = {
+  sky:    {mz: 1, yb: 0.30, sc:1.08, ft:18, cir:{r:1.00, n: 8, dir: 1}, name:'高空寬鬆'},
+  arena:  {mz: 1, yb: 0.00, sc:1.00, ft:14, cir:{r:1.00, n: 8, dir: 1}, name:'標準（基準佈局）'},
+  meadow: {mz:-1, yb:-0.12, sc:1.18, ft:13, cir:{r:1.20, n: 6, dir:-1}, name:'低空寬幅・反向'},
+  neon:   {mz:-1, yb: 0.38, sc:0.82, ft:11, cir:{r:0.78, n:10, dir: 1}, name:'高空緊湊・反向'},
+  orbit:  {mz: 1, yb: 0.18, sc:1.25, ft:12, cir:{r:1.30, n: 6, dir:-1}, name:'大範圍・反向'},
+};
+const campLayout = () => LAYOUT[campSceneId] || LAYOUT.arena;
+const CX = clamp, XB = 2.62, ZB = 1.16, YLO = 0.5, YHI = 2.68;   // 變形後的安全邊界
+function campXfTask(t){
+  const P = campLayout();
+  const o = Object.assign({}, t);
+  // 對準用的信標本來就立在場外（機頭要朝向它），邊界放寬，不要被夾進場內擋路
+  const bx = t.t==='face' ? 3.5 : XB, bz = t.t==='face' ? 2.3 : ZB;
+  if(o.x !== undefined) o.x = CX(o.x * P.sc, -bx, bx);
+  if(o.z !== undefined) o.z = CX(o.z * P.mz * P.sc, -bz, bz);
+  if(o.y !== undefined) o.y = CX(o.y + P.yb, YLO, YHI);
+  if(o.t === 'face' && P.ft) o.tol = P.ft;      // 對準容差也依場景收緊
+  return o;                       // goal 任務沒有座標，原樣通過（射門一定是打己方顏色的框）
+}
+function campXfPole(q){
+  const P = campLayout();
+  return {x: CX(q.x * P.sc, -XB, XB), z: CX(q.z * P.mz * P.sc, -ZB, ZB)};
+}
+// 圖形航線（圓形、8 字）依場景重新生成，不是把同一個圓搬過去
+function campGenCircle(){
+  const P = campLayout(), c = P.cir;
+  const y = CX(1.5 + P.yb, YLO, YHI);
+  return Array.from({length:c.n}, (_,i)=>{
+    const a = Math.PI/2 + c.dir * i/c.n * Math.PI*2;
+    return WP(CX(1.2 + Math.cos(a)*c.r, -XB, XB), y, CX(Math.sin(a)*c.r*0.92, -ZB, ZB), 0.36);
+  });
+}
+function campGenFigure8(){
+  const P = campLayout(), c = P.cir;
+  const y = CX(1.5 + P.yb, YLO, YHI), r = c.r*0.78;
+  const lobe = (cx, sgn) => Array.from({length:4}, (_,i)=>{
+    const a = Math.PI/2 + sgn * c.dir * i/4 * Math.PI*2;
+    return WP(CX(cx + Math.cos(a)*r, -XB, XB), y, CX(Math.sin(a)*r*0.9, -ZB, ZB), 0.36);
+  });
+  return lobe(2.0, 1).concat(lobe(0.4, -1));
+}
+
 // ---------- 闖關：狀態、存檔、關卡流程 ----------
 let campLevel = null, campTasks = [], campMarkers = [], campPoles = [];
 let campIdx = 0, campTime = 0, campHits = 0, campHold = 0, campHitCd = 0, campDone = false;
 const campPrevPos = V3(0,0,0), campPrevVel = V3(0,0,0);
 let campPrevDist = 0, campSave = {};
 
-let campSceneId = 'arena';        // 目前正在闖的場景（＝Strike 的「地圖」）
+let campSceneId = SCENES[0].id;   // 目前正在闖的場景（＝Strike 的「地圖」）；預設＝場景表第一個
 function campLoad(){
   let raw = {};
   try{ raw = JSON.parse(localStorage.getItem(CAMP_SAVE_KEY) || '{}') || {}; }catch(e){ raw = {}; }
@@ -2561,20 +2687,35 @@ function campLoad(){
 }
 function campStore(){ try{ localStorage.setItem(CAMP_SAVE_KEY, JSON.stringify(campSave)); }catch(e){} }
 const campStars = id => (campSave[campSceneId] && campSave[campSceneId][id]) | 0;
-const campUnlocked = id => id===1 || campStars(id-1) > 0;
-const campSceneStars = sid => CAMP_LEVELS.reduce((n,L)=>n + ((campSave[sid] && campSave[sid][L.id]) | 0), 0);
+// 解鎖是「依該場景清單的前後順序」，不是用 id−1（場景專屬關卡的 id 不連號）
+function campUnlocked(id){
+  const L = campList(), i = L.findIndex(x=>x.id===id);
+  if(i < 0) return false;
+  return i === 0 || campStars(L[i-1].id) > 0;
+}
+const campSceneStars = sid => campListFor(sid).reduce((n,L)=>n + ((campSave[sid] && campSave[sid][L.id]) | 0), 0);
+const campSceneMax   = sid => campListFor(sid).length * 3;
 const campTotalStars = () => campSceneStars(campSceneId);
 const campGrandTotal = () => SCENES.reduce((n,S)=>n + campSceneStars(S.id), 0);
+const campGrandMax   = () => SCENES.reduce((n,S)=>n + campSceneMax(S.id), 0);
 campLoad();
 
+// 星等門檻依場景縮放（場景表越後面越嚴，見 SCENES 的 diff）
+function campDiff(){ return sceneById(campSceneId).diff || {parMul:1, hitAdd:0}; }
+function campPar(L){ return Math.round((L || campLevel).par * campDiff().parMul); }
+function campMaxHit(L){ return Math.max(0, (L || campLevel).maxHit + campDiff().hitAdd); }
 function campRefreshMarkers(){
   campMarkers.forEach((g,i)=>campSetMarker(g, i<campIdx ? 'done' : (i===campIdx ? 'act' : 'pend')));
 }
 function campBuildLevel(){
   campClearScene();
-  campTasks = campLevel.tasks;
+  // 依場景套用佈局：有 gen() 的關卡（圖形航線）整個重新生成，其餘走 campXfTask 變形
+  campTasks = campLevel.gen ? campLevel.gen()
+            : campLevel.raw ? campLevel.tasks           // 場景專屬關卡：座標已是為該場景手寫，不再變形
+            : campLevel.tasks.map(campXfTask);
   campMarkers = campTasks.map(t=>campBuildMarker(t));
-  campPoles = (campLevel.poles||[]).map(p=>({x:p.x, z:p.z, mesh:campBuildPole(p)}));
+  campPoles = (campLevel.poles||[]).map(q=>campLevel.raw ? q : campXfPole(q))
+                                   .map(q=>({x:q.x, z:q.z, mesh:campBuildPole(q)}));
   campIdx=0; campTime=0; campHits=0; campHold=0; campHitCd=0; campDone=false;
   drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });   // 只留玩家機（同練習模式）
   campPrevPos.copy(player.pos); campPrevVel.copy(player.vel); campPrevDist = player.disturb;
@@ -2583,7 +2724,7 @@ function campBuildLevel(){
   flashMsg(campLevel.no + '　' + campLevel.name, '#ffd75a', 1.8);
 }
 function campStart(id){
-  const L = CAMP_LEVELS[id-1];
+  const L = campList().find(x=>x.id===id);
   if(!L || !campUnlocked(id)) return;
   if(NET.connected) netTeardown();
   setScene(campSceneId);                      // 闖關的場景＝目前選的地圖
@@ -2664,14 +2805,33 @@ function campCollidePoles(){
     }
   }
 }
-function campApplyWind(h, t){
+// 場景飛行條件（每個場景一組）＋ 關卡自己的風，兩者相加。
+// 全部以「加速度」形式加在速度上，不動 step() 裡調校過的物理。
+function campEnvFly(){ return sceneById(campSceneId).fly || {}; }
+function campApplyEnv(h, t){
+  const S = campEnvFly();
   const w = campLevel && campLevel.wind;
-  if(!w) return;
-  // 風以「加速度」形式加在速度上：與既有阻力平衡後會產生穩定漂移，不動 step() 裡調校過的物理
-  const gx = w.gust ? Math.sin(t*0.70)*Math.sin(t*1.90+1.3)*w.gust : 0;
-  const gz = w.gust ? Math.sin(t*0.55+2.1)*Math.sin(t*1.40)*w.gust : 0;
-  player.vel.x += (w.x + gx)*h;
-  player.vel.z += (w.z + gz)*h;
+  const bx = (S.wind ? S.wind.x : 0) + (w ? w.x : 0);
+  const bz = (S.wind ? S.wind.z : 0) + (w ? w.z : 0);
+  const gu = (S.gust || 0) + (w && w.gust ? w.gust : 0);
+  if(bx || bz || gu){
+    const gx = gu ? Math.sin(t*0.70)*Math.sin(t*1.90+1.3)*gu : 0;
+    const gz = gu ? Math.sin(t*0.55+2.1)*Math.sin(t*1.40)*gu : 0;
+    player.vel.x += (bx + gx)*h;
+    player.vel.z += (bz + gz)*h;
+  }
+  // 上升氣流（天空之城）：機體會持續被托高，要靠油門壓住
+  if(S.updraft) player.vel.y += S.updraft*(0.75 + 0.25*Math.sin(t*0.9))*h;
+  // 低阻力（太空站的真空慣性）：step() 已扣掉全額空氣阻力，這裡把「不該扣的那部分」沿速度方向加回去，
+  // 等效於阻力係數乘上 dragMul —— 鬆桿後幾乎不減速，煞車與轉向都要提早很多。
+  const dm = S.dragMul === undefined ? 1 : S.dragMul;
+  if(dm !== 1){
+    const sp = player.vel.length();
+    if(sp > 1e-4){
+      const back = (1 - dm) * (DRAG_K1*sp + DRAG_K2*sp*sp) / MASS * h;
+      player.vel.addScaledVector(player.vel.clone().multiplyScalar(1/sp), back);
+    }
+  }
 }
 function campDetectHit(h){
   campHitCd = Math.max(0, campHitCd - h);
@@ -2708,6 +2868,10 @@ function campUpdateHUD(){
   if(!campLevel) return;
   document.getElementById('campTitle').textContent = campLevel.no + '　' + campLevel.name;
   document.getElementById('campBrief').textContent = campLevel.brief;
+  const SC = sceneById(campSceneId);
+  document.getElementById('campEnv').textContent =
+    SC.emoji + ' ' + SC.name + '　飛行條件：' + ((SC.fly && SC.fly.note) || '無風') +
+    '　航線：' + campLayout().name;
   document.getElementById('campDots').innerHTML =
     campTasks.map((_,i)=> i < campIdx ? '<b>●</b>' : '○').join('');
   document.getElementById('campTime').textContent = campTime.toFixed(1);
@@ -2732,8 +2896,8 @@ function campFinish(ok){
   let stars = 0;
   if(ok){
     stars = 1;                                                   // 1★＝完成
-    if(campTime <= campLevel.par) stars = 2;                     // 2★＝再加上時間達標
-    if(stars === 2 && campHits <= campLevel.maxHit) stars = 3;   // 3★＝再加上碰撞達標
+    if(campTime <= campPar()) stars = 2;                         // 2★＝再加上時間達標（門檻依場景縮放）
+    if(stars === 2 && campHits <= campMaxHit()) stars = 3;       // 3★＝再加上碰撞達標
     if(stars > campStars(campLevel.id)){ campSave[campSceneId][campLevel.id] = stars; campStore(); }
     sfx.goal();
   }
@@ -2744,19 +2908,20 @@ function campFinish(ok){
   document.getElementById('campStars').innerHTML =
     [0,1,2].map(i=> i < stars ? '<b>★</b>' : '★').join('');
   document.getElementById('campStats').innerHTML =
-    '<em>用時</em>' + campTime.toFixed(1) + ' s　<span style="color:#7c88a8">2★ 標準 ≤ ' + campLevel.par + ' s</span><br>' +
-    '<em>碰撞</em>' + campHits + ' 次　<span style="color:#7c88a8">3★ 標準 ≤ ' + campLevel.maxHit + ' 次</span>' +
+    '<em>用時</em>' + campTime.toFixed(1) + ' s　<span style="color:#7c88a8">2★ 標準 ≤ ' + campPar() + ' s</span><br>' +
+    '<em>碰撞</em>' + campHits + ' 次　<span style="color:#7c88a8">3★ 標準 ≤ ' + campMaxHit() + ' 次</span>' +
     (ok ? '' : '<br><span style="color:#f87171">未能在 ' + campLevel.limit + ' 秒內完成</span>');
-  const nid = campLevel.id + 1;
+  const LS = campList(), ni = LS.findIndex(x=>x.id===campLevel.id) + 1;
   const nb = document.getElementById('btnCampNext');
-  nb.style.display = (stars > 0 && nid <= CAMP_LEVELS.length) ? '' : 'none';
-  nb.dataset.next = nid;
+  nb.style.display = (stars > 0 && ni < LS.length) ? '' : 'none';
+  nb.dataset.next = ni < LS.length ? LS[ni].id : campLevel.id;
   document.getElementById('campResult').style.display = 'flex';
 }
 function campBuildList(){
   const host = document.getElementById('campList');
   host.innerHTML = CAMP_CHAPTERS.map(ch=>{
-    const cells = CAMP_LEVELS.filter(L=>L.ch===ch.n).map(L=>{
+    const LS = campList();
+    const cells = LS.filter(L=>L.ch===ch.n).map(L=>{
       const st = campStars(L.id), lk = !campUnlocked(L.id);
       const stars = [0,1,2].map(i=> i < st ? '<b>★</b>' : '☆').join('');
       return '<div class="campCell' + (lk?' locked':'') + (st>0?' done':'') + '" data-id="' + L.id + '">' +
@@ -2768,7 +2933,7 @@ function campBuildList(){
            '<span>' + ch.sub + '</span></div><div class="campGrid">' + cells + '</div></div>';
   }).join('');
   document.getElementById('campSceneName').textContent = sceneById(campSceneId).emoji + ' ' + sceneById(campSceneId).name;
-  document.getElementById('campStarTotal').textContent = '⭐ ' + campTotalStars() + ' / ' + CAMP_STAR_TOTAL;
+  document.getElementById('campStarTotal').textContent = '⭐ ' + campTotalStars() + ' / ' + campSceneMax(campSceneId);
   host.querySelectorAll('.campCell').forEach(el=>{
     el.addEventListener('click', ()=>{
       const id = +el.dataset.id;
@@ -2779,15 +2944,16 @@ function campBuildList(){
 function campBuildMaps(){
   const host = document.getElementById('campMaps');
   host.innerHTML = SCENES.map(S=>{
-    const st = campSceneStars(S.id), pct = Math.round(st/CAMP_STAR_TOTAL*100);
+    const st = campSceneStars(S.id), mx = campSceneMax(S.id), pct = Math.round(st/mx*100);
     return '<div class="campMapCard' + (S.id===campSceneId ? ' cur' : '') + '" data-id="' + S.id + '">' +
            '<div class="ico">' + S.emoji + '</div><div class="nm">' + S.name + '</div>' +
            '<div class="sb">' + S.sub + '</div>' +
-           '<div class="pg">⭐ ' + st + ' / ' + CAMP_STAR_TOTAL + '</div>' +
+           '<div class="fly">' + ((S.fly && S.fly.note) || '無風') + '</div>' +
+           '<div class="pg">⭐ ' + st + ' / ' + mx + '</div>' +
            '<div class="bar"><b style="width:' + pct + '%"></b></div></div>';
   }).join('');
   document.getElementById('campMapTotal').textContent =
-    '⭐ ' + campGrandTotal() + ' / ' + (CAMP_STAR_TOTAL*SCENES.length);
+    '⭐ ' + campGrandTotal() + ' / ' + campGrandMax();
   host.querySelectorAll('.campMapCard').forEach(el=>{
     el.addEventListener('click', ()=>{
       campSceneId = el.dataset.id;
@@ -2884,7 +3050,7 @@ function loop(){
       player.step(H);
       collideRing(player, ringEast); collideRing(player, ringWest);
       campCollidePoles();
-      campApplyWind(H, t);
+      campApplyEnv(H, t);
       campStep(H, t);
       acc -= H;
     }
