@@ -1,2506 +1,482 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>無人機足球模擬器 — Drone Soccer Simulator</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#315b4c">
+<title>彌勒山12人小組勤務安排</title>
+
+<!-- Google Visualization Query：直接讀取已「發布到網路」的 Google 試算表 -->
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+
 <style>
-  html,body{margin:0;padding:0;overflow:hidden;background:#06080f;font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif;user-select:none}
-  #c{display:block}
-  .hud{position:fixed;color:#e8ecf5;text-shadow:0 0 6px rgba(0,0,0,.8);z-index:10;pointer-events:none}
-  #scoreboard{top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:stretch;gap:10px;
-    background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:14px;padding:8px 12px;backdrop-filter:blur(6px)}
-  .sb-panel{display:flex;flex-direction:column;align-items:center;border-radius:10px;padding:6px 12px;min-width:182px}
-  .sb-blue{background:rgba(29,78,216,.18)}
-  .sb-red{background:rgba(185,28,28,.18)}
-  .sb-name{font-size:13px;font-weight:900;letter-spacing:3px}
-  .sb-blue .sb-name{color:#60a5fa}.sb-red .sb-name{color:#f87171}
-  .sb-big{font-size:42px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;transition:transform .12s}
-  .sb-blue .sb-big{color:#60a5fa;text-shadow:0 0 30px rgba(96,165,250,.55)}
-  .sb-red .sb-big{color:#f87171;text-shadow:0 0 30px rgba(248,113,113,.55)}
-  .sb-big.pop{transform:scale(1.25)}
-  .calc{display:flex;align-items:stretch;gap:3px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);
-    border-radius:8px;padding:3px;margin-top:6px}
-  .cc{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;padding:2px 6px;min-width:34px}
-  .cc b{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;color:#fff;line-height:1.1}
-  .cc span{font-size:8px;color:#f1f5f9;white-space:nowrap;margin-top:1px}
-  .cc.g{background:rgba(96,165,250,.2);border:1px solid rgba(96,165,250,.4)}
-  .cc.f{background:rgba(251,146,60,.18);border:1px solid rgba(251,146,60,.4)}
-  .cc.r{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}
-  .calc i{display:flex;align-items:center;font-style:normal;color:#64748b;font-weight:700;font-size:12px}
-  .sb-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 4px}
-  #timer{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:2px;color:#e2e8f0;transition:color .3s}
-  #timer.warn{color:#fbbf24}
-  #timer.danger{color:#f87171;animation:pulse .8s infinite}
-  .sb-vs{font-size:18px;font-weight:900;color:#3a3a5c}
-  #msg{top:22%;left:50%;transform:translateX(-50%);font-size:52px;font-weight:900;letter-spacing:4px;
-    opacity:0;transition:opacity .25s;text-align:center;white-space:nowrap}
-  #telemetry{right:16px;bottom:16px;background:rgba(8,12,24,.7);border:1px solid rgba(120,160,255,.2);
-    border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.7;font-variant-numeric:tabular-nums;min-width:170px}
-  #telemetry b{color:#9fc1ff}
-  #armBadge{display:inline-block;padding:1px 8px;border-radius:6px;font-weight:700}
-  .armed{background:#1d5c2f;color:#7dffa9}.disarmed{background:#5c1d1d;color:#ff9d9d}
-  #help{left:16px;bottom:16px;background:rgba(8,12,24,.7);border:1px solid rgba(120,160,255,.2);
-    border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.75;opacity:.92}
-  #help b{color:#9fc1ff;display:inline-block;min-width:64px}
-  #overlay{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(20,30,60,.92),rgba(4,6,12,.97));
-    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;color:#fff;cursor:pointer;
-    overflow-y:auto;padding:24px 0}
-  #overlay h1{font-size:44px;margin:0 0 6px;letter-spacing:2px;
-    background:linear-gradient(90deg,#ff5a5a,#ffd75a,#5aa0ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-  #overlay h2{font-weight:400;font-size:16px;color:#aab8d8;margin:0 0 26px}
-  #overlay .rules{background:rgba(255,255,255,.05);border:1px solid rgba(120,160,255,.25);border-radius:14px;
-    padding:18px 30px;font-size:14px;line-height:2;color:#cdd8ee;max-width:560px}
-  #overlay .rules b{color:#ffd75a}
-  #overlay .modes{margin-top:30px;display:flex;flex-wrap:wrap;gap:18px;justify-content:center;max-width:640px}
-  .modeBtn{padding:14px 34px;font-size:18px;font-weight:700;border-radius:12px;cursor:pointer;
-    border:2px solid rgba(120,160,255,.45);background:rgba(20,30,60,.6);color:#e8ecf5;
-    transition:all .15s;font-family:inherit}
-  .modeBtn:hover{transform:scale(1.06);border-color:#7dffa9;color:#7dffa9;box-shadow:0 0 18px rgba(125,255,169,.25)}
-  .modeBtn:disabled{opacity:.35;cursor:default;transform:none;box-shadow:none;border-color:rgba(120,160,255,.45);color:#e8ecf5}
-  /* 連線對戰按鈕：閃亮強調（跑馬燈漸層邊框＋呼吸光暈＋掃光），跟其餘模式按鈕做出區隔 */
-  #btnNet{position:relative;overflow:hidden;border:2px solid transparent;
-    background:linear-gradient(rgba(20,30,60,.85),rgba(20,30,60,.85)) padding-box,
-      linear-gradient(90deg,#ffd75a,#7dffa9,#5aa0ff,#ffd75a) border-box;
-    background-size:100% 100%, 300% 100%;
-    text-shadow:0 0 10px rgba(255,230,150,.65);
-    animation:netBorderShift 4s linear infinite, netGlowPulse 2.2s ease-in-out infinite}
-  #btnNet:hover{transform:scale(1.08);
-    animation:netBorderShift 1.6s linear infinite, netGlowPulse 1s ease-in-out infinite}
-  #btnNet::after{content:'';position:absolute;top:0;left:-60%;width:35%;height:100%;
-    background:linear-gradient(120deg,transparent,rgba(255,255,255,.65),transparent);
-    transform:skewX(-20deg);animation:netShine 2.8s ease-in-out infinite;pointer-events:none}
-  @keyframes netBorderShift{to{background-position:0 0, 300% 0}}
-  @keyframes netGlowPulse{
-    0%,100%{box-shadow:0 0 10px rgba(255,215,90,.35),0 0 24px rgba(125,255,169,.22)}
-    50%{box-shadow:0 0 22px rgba(255,215,90,.7),0 0 40px rgba(125,255,169,.5)}
+:root{
+  --bg:#f4f6f3;--ink:#17201c;--muted:#4f5d55;--line:#c8d0cc;
+  --brand:#e8a76f;--brand-dark:#d98b4f;--brand-soft:#fff1e4;
+  --warn-bg:#fff3e6;--warn-line:#efc39f;--warn-ink:#7b4c26;
+  --accent:#c66b3d;--today:#fff0dc;--today-head:#f4c18f;
+  --shadow:0 10px 28px rgba(32,58,48,.08)
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink)}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+
+.notice{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:10px;min-height:64px;padding:7px 12px;background:var(--warn-bg);border-bottom:1px solid var(--warn-line);color:var(--warn-ink)}
+.notice-icon{font-size:18px;flex:0 0 auto}
+.notice-window{position:relative;height:50px;flex:1;overflow:hidden}
+.notice-item{position:absolute;inset:0;display:flex;align-items:center;font-size:18px;line-height:1.65;font-weight:900;opacity:0;transform:translateY(110%);transition:transform .55s ease,opacity .42s ease;white-space:normal}
+.notice-item.show{opacity:1;transform:translateY(0)}
+.notice-item.out{opacity:0;transform:translateY(-110%)}
+
+.hero{background:linear-gradient(135deg,#d98b4f,#efb27e);color:#fff;padding:18px 14px 15px}
+.hero-inner{max-width:1500px;margin:0 auto}
+h1{margin:0;font-size:clamp(30px,4.5vw,42px);line-height:1.2}
+.sub{margin-top:6px;font-size:18px;opacity:.96}
+.sync{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:15px;opacity:.94}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#ffd0aa;box-shadow:0 0 0 3px rgba(255,208,170,.18)}
+.wrap{max-width:1500px;margin:0 auto;padding:10px 10px 22px}
+.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:9px}
+button{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);padding:11px 16px;border-radius:12px;font-weight:900;font-size:17px;cursor:pointer}
+.hint{margin-left:0;color:var(--muted);font-size:15px}
+.shell{background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);overflow:hidden}
+.scroll{overflow:auto;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 150px);overscroll-behavior:contain}
+table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;table-layout:fixed;background:#fff}
+th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+tr>*:last-child{border-right:0}
+tbody tr:last-child>*{border-bottom:0}
+.corner,.row-label{position:static;width:58px;min-width:58px;max-width:58px;background:#f8faf8;font-weight:900}
+.group-row th{position:sticky;top:0;z-index:20;height:44px;padding:7px 8px;background:var(--brand-soft);color:#8a5128;font-size:16px;font-weight:900;vertical-align:middle}
+
+.date-row th{position:sticky;top:44px;z-index:19;height:64px;padding:7px 8px;background:#edf2ef;font-size:23px;font-weight:900;white-space:nowrap;vertical-align:middle}
+
+.time-row th{position:sticky;top:108px;z-index:18;height:88px;padding:8px 7px;background:#fbfcfb;color:#b85e34;font-size:16px;line-height:1.55;font-weight:900;white-space:normal;overflow:visible;vertical-align:middle}
+.time-row .corner{color:var(--ink)}
+.day-col{width:170px;min-width:170px;max-width:170px}
+.today-col{background:var(--today)!important}
+.date-row .today-col{background:var(--today-head)!important;color:#78451f}
+.today-mark{display:block;margin-top:2px;font-size:10px;color:#7a4a24;font-weight:900}
+tbody td{height:60px;padding:9px 8px;background:#fff;font-size:22px;line-height:1.3;word-break:break-word}
+tbody tr:nth-child(even) td:not(.today-col){background:#fbfcfb}
+.person{font-size:22px;font-weight:900}.empty{color:#c9d0cc}.group-start{border-left:3px solid #e3b38a!important}
+.notes-row td{height:auto;padding:8px;text-align:left;background:#fbf9f1;color:#625c4f;font-size:16px;line-height:1.6}
+.notes-row .row-label{text-align:center;background:#f4f2eb;color:var(--ink)}
+.status{padding:42px 18px;text-align:center;color:var(--muted)}
+.error-title{font-weight:900;color:#8f3f34;margin-bottom:7px}
+.footer{padding:9px 6px 0;text-align:center;color:var(--muted);font-size:15px}
+
+@media(max-width:640px){
+  .notice{min-height:72px;padding:8px 10px}
+  .notice-window{height:56px}
+  .notice-item{font-size:17px;line-height:1.65}
+
+  .hero{padding:16px 12px 14px}
+  h1{font-size:28px;line-height:1.25}
+  .sub{font-size:17px}
+  .sync{font-size:14px}
+  .wrap{padding:8px 6px 16px}
+
+  .toolbar{gap:10px}
+  button{font-size:17px;padding:11px 15px}
+  .hint{width:100%;margin-left:0;font-size:14px;line-height:1.5}
+
+  .shell{border-radius:10px}
+  .scroll{max-height:calc(100vh - 150px)}
+
+  .corner,.row-label{
+    position:static;
+    width:52px;min-width:52px;max-width:52px;
+    font-size:15px
   }
-  @keyframes netShine{0%{left:-60%}55%,100%{left:130%}}
-  #netPanel{margin-top:26px;width:600px;max-width:90vw}
-  #netCodeInput{width:130px;text-align:center;font-size:22px;letter-spacing:5px;text-transform:uppercase;
-    padding:9px 6px;border-radius:8px;border:1px solid #3a3f5c;background:#0e1220;color:#fff;font-family:inherit}
-  #netCodeInput::placeholder{letter-spacing:2px;font-size:13px;color:#5c6488}
-  .netBtn{padding:10px 18px;font-size:14px}
-  #netLobby{margin-top:18px;background:rgba(255,255,255,.04);border:1px solid rgba(120,160,255,.2);
-    border-radius:12px;padding:16px 20px}
-  #netLobbyHead{text-align:center;margin-bottom:12px;font-size:13px;color:#aab8d8}
-  #netLobbyHead b{color:#7dffa9;letter-spacing:5px;font-size:16px}
-  .netSlotRow{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;margin-bottom:5px}
-  .netSlotRow.t-red{background:rgba(185,28,28,.12)} .netSlotRow.t-blue{background:rgba(29,78,216,.12)}
-  .netSlotName{width:110px;font-size:13px;font-weight:700;letter-spacing:1px}
-  .t-red .netSlotName{color:#f87171} .t-blue .netSlotName{color:#60a5fa}
-  .netSlotOcc{flex:1;font-size:13px;color:#cdd8ee}
-  .netSlotOcc.ai{color:#6b7290;font-style:italic}
-  .netSlotOcc.me{color:#ffd75a;font-weight:700}
-  .netBtnSmall{padding:5px 14px;font-size:12px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:700;
-    border:1px solid rgba(125,255,169,.5);background:rgba(125,255,169,.1);color:#7dffa9;transition:all .12s}
-  .netBtnSmall:hover{background:rgba(125,255,169,.25)}
-  .netBtnSmall.leave{border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.1);color:#f87171}
-  .netBtnSmall.leave:hover{background:rgba(248,113,113,.25)}
-  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
-  #vignette{position:fixed;inset:0;pointer-events:none;z-index:5;
-    background:radial-gradient(ellipse at center,transparent 62%,rgba(0,0,0,.45) 100%)}
-  #credit{bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;
-    color:#8a94ad;letter-spacing:1px;opacity:.85}
-  #overlay .credit{margin-top:18px;font-size:13px;color:#8a94ad;letter-spacing:1px}
-  /* ---------- 闖關模式（2026-08-26 新增） ---------- */
-  #btnCampaign{border-color:rgba(255,215,90,.6);color:#ffd75a}
-  #btnCampaign:hover{border-color:#ffd75a;color:#fff;box-shadow:0 0 18px rgba(255,215,90,.35)}
-  #campPanel{margin-top:24px;width:720px;max-width:92vw}
-  #campHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-  #campStarTotal{font-size:15px;color:#ffd75a;font-weight:900;letter-spacing:1px}
-  .campChapter{background:rgba(255,255,255,.04);border:1px solid rgba(120,160,255,.2);
-    border-radius:12px;padding:12px 16px;margin-bottom:12px}
-  .campChTitle{font-size:14px;font-weight:900;color:#9fc1ff;letter-spacing:2px;margin-bottom:10px}
-  .campChTitle span{font-weight:400;color:#7c88a8;letter-spacing:0;margin-left:8px;font-size:12px}
-  .campGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}
-  .campCell{border-radius:9px;padding:7px 6px;cursor:pointer;text-align:center;min-width:0;
-    border:1px solid rgba(120,160,255,.3);background:rgba(20,30,60,.6);transition:all .13s}
-  .campCell:hover{transform:translateY(-2px);border-color:#7dffa9;box-shadow:0 0 14px rgba(125,255,169,.22)}
-  .campCell .n{font-size:11px;color:#7c88a8;font-variant-numeric:tabular-nums}
-  .campCell .nm{font-size:12.5px;font-weight:700;color:#e8ecf5;margin:1px 0 3px;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis}
-  .campCell .st{font-size:12px;letter-spacing:2px;color:#4d5578}
-  .campCell .st b{color:#ffd75a;font-weight:400}
-  .campCell.locked{opacity:.38;cursor:not-allowed;border-color:rgba(120,160,255,.15)}
-  .campCell.locked:hover{transform:none;border-color:rgba(120,160,255,.15);box-shadow:none}
-  .campCell.done{border-color:rgba(255,215,90,.45)}
-  /* 闖關進行中 HUD */
-  #campHUD{top:12px;left:50%;transform:translateX(-50%);min-width:430px;max-width:92vw;
-    background:rgba(7,7,26,.86);border:1px solid #1e1e40;border-radius:14px;padding:9px 18px;
-    backdrop-filter:blur(6px);text-align:center}
-  #campHUD .ttl{font-size:15px;font-weight:900;color:#ffd75a;letter-spacing:1px}
-  #campHUD .brf{font-size:12.5px;color:#cdd8ee;margin-top:3px;line-height:1.5}
-  #campHUD .row{display:flex;gap:16px;justify-content:center;align-items:center;margin-top:7px;
-    font-size:13px;font-variant-numeric:tabular-nums;color:#e8ecf5}
-  #campHUD .row i{font-style:normal;color:#7c88a8;font-size:11px;margin-right:3px}
-  #campDots{letter-spacing:3px;font-size:15px;color:#3a4160}
-  #campDots b{color:#7dffa9;font-weight:400}
-  #campLimit{color:#fbbf24}
-  #campLimit.danger{color:#f87171;animation:pulse .8s infinite}
-  /* 過關 / 失敗結算 */
-  #campResult{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
-    background:radial-gradient(ellipse at 50% 45%,rgba(20,30,60,.9),rgba(4,6,12,.96))}
-  #campResultBox{background:rgba(12,16,32,.95);border:1px solid rgba(120,160,255,.32);border-radius:18px;
-    padding:30px 44px;text-align:center;min-width:340px}
-  #campResultBox h3{margin:0 0 4px;font-size:30px;letter-spacing:3px;color:#7dffa9}
-  #campResultBox h3.fail{color:#f87171}
-  #campResultSub{font-size:13.5px;color:#aab8d8;margin-bottom:16px}
-  #campStars{font-size:46px;letter-spacing:10px;color:#2e3450;margin-bottom:12px}
-  #campStars b{color:#ffd75a;font-weight:400;text-shadow:0 0 22px rgba(255,215,90,.6)}
-  #campStats{font-size:13px;color:#cdd8ee;line-height:1.9;margin-bottom:20px;font-variant-numeric:tabular-nums}
-  #campStats em{font-style:normal;color:#7c88a8;margin-right:4px}
-  #campResultBtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-  #campResultBtns .modeBtn{padding:10px 20px;font-size:14px}
+
+  .day-col{
+    width:154px;min-width:154px;max-width:154px
+  }
+
+  .group-row th{
+    height:42px;padding:6px 4px;font-size:15px
+  }
+
+  .date-row th{
+    top:42px;height:60px;padding:7px 5px;font-size:21px
+  }
+
+  .time-row th{
+    top:102px;height:86px;padding:8px 5px;font-size:16px;line-height:1.55;overflow:visible
+  }
+
+  tbody td{
+    height:56px;padding:8px 5px;font-size:20px
+  }
+
+  .person{font-size:20px;font-weight:900}
+  .notes-row td{font-size:15px;line-height:1.6}
+  .footer{font-size:13px;line-height:1.5}
+}
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="vignette"></div>
 
-<div class="hud" id="scoreboard">
-  <div class="sb-panel sb-blue">
-    <div class="sb-name">藍隊 BLUE</div>
-    <div class="sb-big" id="blueScore">0</div>
-    <div class="calc">
-      <div class="cc g"><b id="bG">0</b><span>得分</span></div><i>−</i>
-      <div class="cc f"><b id="bO">0</b><span>進攻違規</span></div><i>−</i>
-      <div class="cc f"><b id="bD">0</b><span>防守違規</span></div><i>=</i>
-      <div class="cc r"><b id="bF">0</b><span>最終</span></div>
-    </div>
-  </div>
-  <div class="sb-mid"><div id="timer">3:00</div><div class="sb-vs">:</div></div>
-  <div class="sb-panel sb-red">
-    <div class="sb-name">紅隊 RED</div>
-    <div class="sb-big" id="redScore">0</div>
-    <div class="calc">
-      <div class="cc g"><b id="rG">0</b><span>得分</span></div><i>−</i>
-      <div class="cc f"><b id="rO">0</b><span>進攻違規</span></div><i>−</i>
-      <div class="cc f"><b id="rD">0</b><span>防守違規</span></div><i>=</i>
-      <div class="cc r"><b id="rF">0</b><span>最終</span></div>
-    </div>
-  </div>
-</div>
-<div class="hud" id="msg"></div>
-<div class="hud" id="practiceHUD" style="display:none;top:12px;left:50%;transform:translateX(-50%);
-  background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:14px;padding:10px 26px;
-  text-align:center;font-size:14px;color:#cdd8ee;letter-spacing:1px">
-  🎯 練習模式　穿越次數<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
-</div>
-<div class="hud" id="campHUD" style="display:none">
-  <div class="ttl" id="campTitle">—</div>
-  <div class="brf" id="campBrief">—</div>
-  <div class="row">
-    <span><i>進度</i><span id="campDots"></span></span>
-    <span><i>時間</i><span id="campTime">0.0</span>s</span>
-    <span><i>碰撞</i><span id="campHits">0</span></span>
-    <span id="campLimitWrap" style="display:none"><i>限時</i><span id="campLimit">0.0</span>s</span>
-  </div>
-</div>
-<div class="hud" id="credit">新竹市無人機創新科技協會©</div>
-<div class="hud" id="netBadge" style="display:none;top:12px;right:16px;background:rgba(8,12,24,.7);
-  border:1px solid rgba(120,160,255,.25);border-radius:10px;padding:6px 12px;font-size:12px;color:#9fc1ff"></div>
-<div class="hud" id="telemetry">
-  <b>你的 Striker（紅）</b><br>
-  速度 <span id="tSpd">0.0</span> m/s<br>
-  高度 <span id="tAlt">0.0</span> m<br>
-  推力 <span id="tThr">100</span> %<br>
-  得分權 <span id="armBadge" class="armed">已解鎖</span><br>
-  搖桿 <span id="tPad" style="color:#fbbf24">未偵測</span>
-</div>
-<div class="hud" id="help">
-  <b>W / S</b> 前傾 / 後傾<br>
-  <b>A / D</b> 左 / 右側飛<br>
-  <b>← / →</b> 機頭旋轉<br>
-  <b>↑ / ↓</b> 上升 / 下降<br>
-  <b>C</b> 視角（追視/機載/全場）<br>
-  <b>P</b> 暫停&nbsp;<b>R</b> 重來&nbsp;<b>M</b> 模式選單<br>
-  <b>🎮 搖桿</b> 左桿=油門/旋轉、右桿=前後/側飛<br>
-  <b>&nbsp;</b> △視角&nbsp;OPTIONS暫停&nbsp;SHARE重賽
-</div>
-
-<div id="overlay">
-  <h1>無人機足球競賽</h1>
-  <h2>真實物理模擬 · 6×3×3 m 室內競技場 · 3 v 3</h2>
-  <div class="rules" id="rulesBox">
-    <b>規則：</b>只有 <b>Striker</b>（機身下方<b>垂掛紅色識別緞帶</b>）穿過<b>己方顏色的懸吊式電子球門</b>才得分（紅隊攻紅框、藍隊攻藍框），進球時球門亮燈顯示。<br>
-    得分後 Striker 必須<b>飛回己方半場</b>重新解鎖得分權。<br>
-    衝撞是合法戰術——但被撞會暫時失控翻滾！一節 <b>3 分鐘</b>。<br>
-    <b>違規扣分：</b>非 Striker 穿框＝進攻違規；於己方球門區逗留逾 3 秒＝防守違規（守門）。<br>
-    <b>最終分數 ＝ 得分 − 進攻違規 − 防守違規</b>，最終分數高者勝。<br>
-    玩家模式中你操控<b>紅隊 Striker</b>；示範賽則由 AI 全自動對戰。
-  </div>
-  <div class="modes" id="modesRow">
-    <button class="modeBtn" id="btnPlayer">🎮 玩家 vs AI</button>
-    <button class="modeBtn" id="btnPractice">🎯 穿越圓環練習</button>
-    <button class="modeBtn" id="btnCampaign">🏆 闖關模式</button>
-    <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
-    <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
-  </div>
-  <div id="netPanel" style="display:none">
-    <div style="text-align:center;margin-bottom:12px">
-      <button class="netBtnSmall" id="btnNetBack">‹ 返回選單</button>
-    </div>
-    <div id="netJoinRow" style="display:flex;gap:10px;justify-content:center;align-items:center">
-      <input id="netCodeInput" maxlength="6" placeholder="輸入房號">
-      <button class="modeBtn netBtn" id="btnNetJoin">加入房間</button>
-      <button class="modeBtn netBtn" id="btnNetCreate">建立新房間</button>
-    </div>
-    <div id="netMsg" style="text-align:center;color:#fbbf24;font-size:13px;margin-top:8px;min-height:16px"></div>
-    <div id="netLobby" style="display:none">
-      <div id="netLobbyHead">房號 <b id="netRoomCodeShow"></b>　<span id="netStatus"></span></div>
-      <div id="netSlots"></div>
-      <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center">
-        <button class="modeBtn netBtn" id="btnNetStart" style="display:none">開始比賽</button>
-        <button class="netBtnSmall leave" id="btnNetLeave">離開房間</button>
-      </div>
-      <div id="netWaitMsg" style="text-align:center;color:#aab8d8;font-size:13px;margin-top:6px"></div>
-    </div>
-  </div>
-  <div id="campPanel" style="display:none">
-    <div id="campHead">
-      <button class="netBtnSmall" id="btnCampBack">‹ 返回選單</button>
-      <div id="campStarTotal">⭐ 0 / 72</div>
-    </div>
-    <div id="campList"></div>
-    <div style="text-align:center;margin-top:10px">
-      <button class="netBtnSmall leave" id="btnCampReset">清除闖關紀錄</button>
-    </div>
-  </div>
-  <div class="credit">新竹市無人機創新科技協會©</div>
-</div>
-
-<div id="campResult">
-  <div id="campResultBox">
-    <h3 id="campResultTitle">關卡完成</h3>
-    <div id="campResultSub">—</div>
-    <div id="campStars">☆☆☆</div>
-    <div id="campStats">—</div>
-    <div id="campResultBtns">
-      <button class="modeBtn" id="btnCampRetry">↻ 重玩</button>
-      <button class="modeBtn" id="btnCampNext">下一關 ›</button>
-      <button class="modeBtn" id="btnCampList">關卡列表</button>
-    </div>
+<div class="notice" id="notice" hidden>
+  <div class="notice-icon">🔔</div>
+  <div class="notice-window">
+    <div class="notice-item show" id="noticeA"></div>
+    <div class="notice-item" id="noticeB"></div>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script type="module">
-/* ============================================================
-   無人機足球模擬器 — 新竹市無人機創新科技協會©
-   真實世界導向：四軸飛行動力學 + 剛體碰撞 + FIDA 規則
-   ============================================================ */
+<section class="hero">
+  <div class="hero-inner">
+    <h1 id="title">9/27(日)~10/4(日) 彌勒山12人小組</h1>
+    <div class="sub" id="subtitle">9/27（日）～10/4（日）</div>
+    <div class="sync">
+      <span><span class="dot"></span><span id="syncText">正在連線 Google 試算表…</span></span>
+      <span id="updated"></span>
+    </div>
+  </div>
+</section>
 
-// ---------- 連線對戰：Trystero (Nostr 配對訊號策略，僅用於 WebRTC 配對，
-//            比賽資料為瀏覽器對瀏覽器直連、端對端加密，不經過任何中繼) ----------
-// 2026-07-22 改用 Nostr 策略，勿改回 Firebase 策略——除錯過程：
-//   1. jsdelivr 的 /+esm 打包 @trystero-p2p/firebase 時，會把 @firebase/app、
-//      @firebase/database、@firebase/component 各自拆成獨立副本，導致 Firebase SDK
-//      內部的 component registry 對不上，joinRoom() 直接同步丟出例外「Service
-//      database is not available」——按鈕點下去畫面完全沒反應，只有主控台看得到。
-//      改用 esm.sh 的打包方式解決了這個例外（它會正確去重共用依賴）。
-//   2. 但即使不再丟例外，實測開兩個分頁互連，Firebase 策略仍會卡在「雙方都寫入
-//      Realtime Database 的 presence 資料、但誰也沒發現對方」，onPeerJoin 永遠不觸發
-//      （用 REST 直接讀資料庫確認雙方 peerId 都有寫進同一個房間路徑，純粹是 Trystero
-//      Firebase 策略本身在配對階段卡住，不是規則權限或程式碼呼叫方式的問題）。
-//   3. 換成 Nostr 策略（Trystero 預設、官方 README 列為最推薦的策略，比原本考慮的
-//      BitTorrent 更穩定）用同樣方式實測：兩分頁 10 秒內互相發現、makeAction 訊息
-//      雙向送達都正常。因此改用 Nostr，且不再需要任何 Firebase 專案/帳號設定。
-import {joinRoom, selfId} from 'https://esm.sh/trystero/nostr';
-const NET_APP_ID = 'hsinchu-drone-soccer-net-v1';   // 純字串即可，不需要任何外部帳號/網址
+<main class="wrap">
+  <div class="shell">
+    <div class="scroll" id="tableScroll">
+      <div id="content" class="status">正在讀取勤務表…</div>
+    </div>
+  </div>
+  <div class="footer">每 30 秒自動同步 Google 試算表；內容有變更才更新。｜已採大字、高對比版面。</div>
+</main>
 
-// ---------- 物理常數（真實單位：公尺、秒、公斤） ----------
-const G = 9.81;                 // 重力加速度
-const MASS = 0.25;              // 20cm 級（Class 20）無人機足球整備重量 kg
-const DRONE_R = 0.10;           // 球形護籠半徑（直徑 20cm）
-const MAX_TILT = 30 * Math.PI/180;   // 最大傾角（競技角度模式）
-const TILT_RATE = 5.5;          // 傾角響應速率 (rad/s)
-const YAW_RATE = 2.6;           // 偏航角速度 (rad/s)
-const THR_RANGE = 0.65;         // 推力調節幅度（懸停推力 ±65%）
-const DRAG_K1 = 0.14, DRAG_K2 = 0.10;  // 線性 + 平方空氣阻力（小機體）
-// 2026-07-22 業主反映操作「太絲滑、難控」（鬆桿/反打後動量還在，一直漂移）：
-// 阻力係數由 0.05/0.05 調高到 0.14/0.10，鬆桿減速更明顯；同架構下最高水平速度
-// 約從 6.3 m/s 降到 4.2 m/s（半油門+全傾角時，見下方 step() 的推力/阻力平衡）。
-// 這是全域參數，AI 飛手共用同一套 step()，衝刺絕對速度會等比例變慢，但 aiThink/flyToward
-// 的 skill、aggro、maxV 倍率差異（見下方「AI 設計」相關常數）仍保留，攻防相對強弱不受影響；
-// 若之後覺得比賽整體變慢、衝刺不夠猛，優先調高 Striker 衝刺的 maxV 倍率，不要把阻力調回去。
-const REST_DRONE = 0.55;        // 機體互撞恢復係數
-const REST_WALL = 0.42;         // 撞牆/網恢復係數
-const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
-const RING = { R: 0.26, tube: 0.04, y: 1.6, x: 2.2 }; // 球門框內徑開口
-// 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
-// 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
-// 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
-// 如果還想再大，直接調這個數字即可；但別把 tube（框管粗細）也跟著放大，視覺上會太粗。
-const MATCH_TIME = 180;         // 一節 3 分鐘
-
-// ---------- 基本工具 ----------
-const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-const lerp = (a,b,t)=>a+(b-a)*t;
-const V3 = (x,y,z)=>new THREE.Vector3(x,y,z);
-const UP = V3(0,1,0);
-
-// ---------- 渲染器與場景 ----------
-const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputEncoding = THREE.sRGBEncoding;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070a14);
-scene.fog = new THREE.Fog(0x070a14, 12, 40);
-
-const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.05, 200);
-camera.position.set(0,3.5,6.5);
-
-addEventListener('resize',()=>{
-  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-});
-
-// ---------- 燈光 ----------
-scene.add(new THREE.HemisphereLight(0x9db2ff, 0x1e3320, 0.65));
-const key = new THREE.SpotLight(0xffffff, 1.15, 90, 0.7, 0.45);
-key.position.set(4, 10, 5); key.castShadow = true;
-key.shadow.mapSize.set(2048,2048); key.shadow.bias = -0.0005;
-scene.add(key);
-const fill = new THREE.SpotLight(0xaac4ff, 0.5, 90, 0.8, 0.5);
-fill.position.set(-5, 8, -4); scene.add(fill);
-
-// ---------- 場地：EVA 拼接軟墊地板（依實際場地照片：綠底＋紅藍色塊） ----------
-function makePitchTexture(){
-  const cv = document.createElement('canvas'); cv.width=2048; cv.height=1024;
-  const g = cv.getContext('2d');
-  const TX = 2048/12, TY = 1024/6;     // 50cm 拼接墊：12×6 塊（場地 6×3m）
-  // 純綠底拼接墊（業主指定：不要紅藍色塊）
-  for(let ix=0; ix<12; ix++)for(let iy=0; iy<6; iy++){
-    g.fillStyle = (ix+iy)%2 ? '#2f9e44' : '#2a9340';
-    g.fillRect(ix*TX, iy*TY, TX+1, TY+1);
-    // 拼接縫與墊面微光
-    g.strokeStyle='rgba(0,0,0,.20)'; g.lineWidth=3;
-    g.strokeRect(ix*TX+1.5, iy*TY+1.5, TX-3, TY-3);
-    g.strokeStyle='rgba(255,255,255,.06)'; g.lineWidth=1;
-    g.strokeRect(ix*TX+5, iy*TY+5, TX-10, TY-10);
-  }
-  // 場線
-  g.strokeStyle='rgba(255,255,255,.9)'; g.lineWidth=6;
-  g.strokeRect(14,14,2020,996);                                       // 邊線
-  g.beginPath(); g.moveTo(1024,14); g.lineTo(1024,1010); g.stroke();  // 中心線
-  g.beginPath(); g.arc(1024,512,120,0,Math.PI*2); g.stroke();         // 中圈
-  // 預備起飛線：距短邊 1.25m（規則：起始區 1~1.5m），黃色實線橫貫全寬
-  g.fillStyle='rgba(255,220,60,.95)';
-  g.fillRect(Math.round(2048/6*1.25)-14, 14, 28, 996);
-  g.fillRect(2048-Math.round(2048/6*1.25)-14, 14, 28, 996);
-  return new THREE.CanvasTexture(cv);
-}
-const pitchTex = makePitchTexture(); pitchTex.encoding = THREE.sRGBEncoding;
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(FIELD.hx*2, FIELD.hz*2),
-  new THREE.MeshStandardMaterial({map:pitchTex, roughness:.9, metalness:0})
-);
-floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
-
-// 場外暗色地面
-const apron = new THREE.Mesh(new THREE.PlaneGeometry(120,120),
-  new THREE.MeshStandardMaterial({color:0x10141f, roughness:1}));
-apron.rotation.x = -Math.PI/2; apron.position.y = -0.02; scene.add(apron);
-
-// ---------- 場地：安全網牆 ----------
-function makeNetTexture(){
-  const cv = document.createElement('canvas'); cv.width=cv.height=128;
-  const g = cv.getContext('2d');
-  g.clearRect(0,0,128,128);
-  g.strokeStyle='rgba(240,244,250,.95)'; g.lineWidth=2;
-  g.beginPath(); g.moveTo(0,0); g.lineTo(0,128); g.moveTo(0,0); g.lineTo(128,0); g.stroke();
-  const t = new THREE.CanvasTexture(cv);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return t;
-}
-const netTex = makeNetTexture();
-function netWall(w,h,rx,ry,px,py,pz,repX,repY){
-  const tex = netTex.clone(); tex.needsUpdate=true;
-  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(repX,repY);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h),
-    new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:.2, side:THREE.DoubleSide, depthWrite:false}));
-  m.rotation.x = rx; m.rotation.y = ry; m.position.set(px,py,pz);
-  scene.add(m);
-}
-netWall(FIELD.hx*2, FIELD.h, 0, 0,          0, FIELD.h/2, -FIELD.hz, FIELD.hx*4, FIELD.h*2); // 後牆
-netWall(FIELD.hx*2, FIELD.h, 0, 0,          0, FIELD.h/2,  FIELD.hz, FIELD.hx*4, FIELD.h*2); // 前牆
-netWall(FIELD.hz*2, FIELD.h, 0, Math.PI/2, -FIELD.hx, FIELD.h/2, 0, FIELD.hz*4, FIELD.h*2); // 左牆
-netWall(FIELD.hz*2, FIELD.h, 0, Math.PI/2,  FIELD.hx, FIELD.h/2, 0, FIELD.hz*4, FIELD.h*2); // 右牆
-netWall(FIELD.hx*2, FIELD.hz*2, Math.PI/2, 0, 0, FIELD.h, 0, FIELD.hx*4, FIELD.hz*4);        // 天花網
-
-// ---------- 充氣管框架（依實際場地照片：藍半場藍管、紅半場紅管、中央白柱） ----------
-const TUBE_R = 0.13;                       // 充氣管半徑（粗管，PVC 充氣感）
-const VINYL = { blue:0x1f66cc, red:0xcf3434, white:0xece8dc };
-const capMats = {};                        // 端帽材質快取（同色共用）
-function vinylCapMat(hex){
-  if(!capMats[hex]) capMats[hex] = new THREE.MeshStandardMaterial({
-    color:new THREE.Color(hex).convertSRGBToLinear(), roughness:.42, metalness:0});  // sRGB 輸出下保持飽和
-  return capMats[hex];
-}
-const occluders = [];   // 會遮擋視線的場地元件（材質各自獨立，可單獨淡出）
-function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
-  // 平滑 PVC 充氣管（業主指定：不要一節一節的縫線感）
-  const a=V3(x1,y1,z1), b=V3(x2,y2,z2), d=b.clone().sub(a);
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),18,1), vinylCapMat(hex).clone());
-  m.position.copy(a).add(d.clone().multiplyScalar(.5));
-  m.quaternion.setFromUnitVectors(UP, d.clone().normalize());
-  m.castShadow = true; scene.add(m); occluders.push(m);
-  // 球形充氣接頭（轉角圓潤）
-  [a,b].forEach(p=>{
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(r,14,10), vinylCapMat(hex).clone());
-    cap.position.copy(p); cap.castShadow = true; scene.add(cap); occluders.push(cap);
-  });
-}
-{
-  const xo = FIELD.hx + TUBE_R, zo = FIELD.hz + TUBE_R;  // 管中心在網外側
-  const yb = TUBE_R, yt = FIELD.h, ym = FIELD.h*0.5;
-  [-zo, zo].forEach(z=>{
-    [yb, yt].forEach(y=>{                                   // 底/頂長邊：半藍半紅
-      airTube(-xo, y, z, 0, y, z, VINYL.blue);
-      airTube(  0, y, z, xo, y, z, VINYL.red);
-    });
-  });
-  airTube(-xo, ym, -zo, 0, ym, -zo, VINYL.blue);            // 後牆中段橫管（照片）
-  airTube(  0, ym, -zo, xo, ym, -zo, VINYL.red);
-  [[-xo, VINYL.blue],[xo, VINYL.red]].forEach(([x,c])=>{    // 短邊：底/頂/中段
-    [yb, yt, ym].forEach(y=> airTube(x, y, -zo, x, y, zo, c));
-    [-zo, zo].forEach(z=> airTube(x, yb, z, x, yt, z, c));  // 四角直柱
-  });
-  [-zo, zo].forEach(z=> airTube(0, yb, z, 0, yt, z, VINYL.white)); // 中央白柱（紅藍分界）
-  airTube(0, yt, -zo, 0, yt, zo, VINYL.white);              // 頂部中央白橫管
-}
-
-// ---------- 觀眾席與廣告板（氛圍） ----------
-function makeCrowdFrames(){
-  // 固定同一群觀眾的座位與衣色，畫出多張不同姿勢影格 → 輪播即是同一群人在動
-  const rows=[];
-  for(let row=0; row<4; row++){
-    const y0=20+row*44, ppl=[];
-    for(let x=8; x<1024; x+=12+Math.random()*5){
-      ppl.push({x, hue:Math.random()*360, lt:38+Math.random()*30,
-        skin:`hsl(${28+Math.random()*22},45%,${52+Math.random()*22}%)`,
-        energy:Math.random()});                  // 有人安靜、有人激動
-    }
-    rows.push({y0, ppl});
-  }
-  const frames=[];
-  for(let f=0; f<3; f++){
-    const cv=document.createElement('canvas'); cv.width=1024; cv.height=192;
-    const g=cv.getContext('2d');
-    g.fillStyle='#0b0e18'; g.fillRect(0,0,1024,192);
-    for(const {y0,ppl} of rows){
-      g.fillStyle='rgba(0,0,0,.35)'; g.fillRect(0,y0+22,1024,18);
-      for(const p of ppl){
-        const hot = p.energy>0.6;
-        const y = y0 - (hot && Math.random()<0.6 ? Math.random()*4 : 0);  // 起身跳動
-        g.fillStyle=`hsl(${p.hue},55%,${p.lt}%)`;
-        g.fillRect(p.x-4, y+7, 9, 15);                       // 身體
-        if(hot && Math.random()<0.55){                       // 舉手歡呼
-          g.fillRect(p.x-7, y-3, 3, 9); g.fillRect(p.x+5, y-3, 3, 9);
-        }
-        g.fillStyle=p.skin;
-        g.beginPath(); g.arc(p.x, y+2, 4.2, 0, Math.PI*2); g.fill();
-      }
-    }
-    frames.push(new THREE.CanvasTexture(cv));
-  }
-  return frames;
-}
-const crowdMats = [];      // {mat, frames, fi, ft} 影格輪播
-const flashSprites = [];   // 觀眾手機閃光燈
-function buildStand(px, pz, ry, w){
-  const grp = new THREE.Group();
-  grp.position.set(px, 0, pz); grp.rotation.y = ry;   // 面向場內
-  for(let tier=0; tier<2; tier++){     // 低矮兩層：觀眾是點綴，不搶場地的鏡頭
-    const frames = makeCrowdFrames();
-    const mat = new THREE.MeshBasicMaterial({map:frames[0], color:0xa8b0c8});
-    crowdMats.push({mat, frames, fi:0, ft:Math.random()*0.3});
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.25), mat);
-    p.position.set(0, 0.95 + tier*1.0, -tier*0.95);
-    p.rotation.x = -0.28;
-    grp.add(p);
-    const base = new THREE.Mesh(new THREE.BoxGeometry(w, 0.4+tier*0.95, 0.95),
-      new THREE.MeshStandardMaterial({color:0x12182a, roughness:1}));
-    base.position.set(0, (0.4+tier*0.95)/2, -tier*0.95 - 0.18);
-    grp.add(base);
-    for(let i=0;i<3;i++){   // 隨機手機閃光
-      const sm = new THREE.SpriteMaterial({color:0xffffff, transparent:true, opacity:0,
-        blending:THREE.AdditiveBlending, depthWrite:false});
-      const sp = new THREE.Sprite(sm);
-      sp.scale.set(0.14,0.14,1);
-      sp.position.set((Math.random()-0.5)*w*0.9,
-        0.95+tier*1.0+(Math.random()-0.5)*0.7, -tier*0.95+0.06);
-      grp.add(sp);
-      flashSprites.push({m:sm, t:Math.random()*4});
-    }
-  }
-  scene.add(grp);
-}
-// 四面看台環繞點綴
-buildStand(0, -(FIELD.hz+1.6), 0,            8);
-buildStand(0,  (FIELD.hz+1.6), Math.PI,      8);
-buildStand( (FIELD.hx+1.6), 0, -Math.PI/2,   5);
-buildStand(-(FIELD.hx+1.6), 0,  Math.PI/2,   5);
-// 廣告板
-function adBoard(px,pz,ry,color,w){
-  const cv=document.createElement('canvas'); cv.width=512; cv.height=64;
-  const g=cv.getContext('2d'); g.fillStyle='#0a0e18'; g.fillRect(0,0,512,64);
-  g.fillStyle=color; g.font='bold 38px Arial'; g.textAlign='center';
-  g.fillText('新竹市無人機創新科技協會©', 256, 45);
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,0.7),
-    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv)}));
-  m.position.set(px,0.36,pz); m.rotation.y=ry; scene.add(m);
-}
-adBoard(0,  FIELD.hz+0.4, Math.PI, '#5aa0ff', 5.5);
-adBoard(0, -FIELD.hz-0.4, 0,       '#ff5a5a', 5.5);
-
-// ---------- 圓形球門框 ----------
-function makeGoalRing(x, color){
-  const grp = new THREE.Group();
-  const torus = new THREE.Mesh(
-    new THREE.TorusGeometry(RING.R + RING.tube, RING.tube, 16, 48),  // RING.R 為內徑開口
-    new THREE.MeshStandardMaterial({color:0x222630, emissive:color, emissiveIntensity:2.8, roughness:.4})
-  );
-  torus.rotation.y = Math.PI/2;
-  grp.add(torus);
-  // 2026-07-22 拿掉：原本內圈光膜（disc，填滿開口）+ 外圈光暈（halo，蓋到開口邊緣一點）
-  // 業主反映「穿越環不要有半透明的部分」——那層霧會擋住開口，瞄準穿框時看不清楚實際邊界，
-  // 勿再加回蓋住開口的半透明物件；框本身 emissiveIntensity:2.8 已經夠亮夠顯眼，不需要額外光膜。
-  // 懸吊織帶：球門以白色吊帶自頂部框架垂吊（照片實景，非固定桿）
-  const strapMat = new THREE.MeshStandardMaterial({color:0xe9e5d8, roughness:.85, side:THREE.DoubleSide});
-  const ceilY = FIELD.h - RING.y;          // 群組座標中的頂部高度
-  [[0.12,0.35],[-0.12,-0.35]].forEach(([z0,z1])=>{
-    const a = V3(0, RING.R+RING.tube*2-0.02, z0), b = V3(0, ceilY, z1);
-    const dvec = b.clone().sub(a);
-    const strap = new THREE.Mesh(
-      new THREE.BoxGeometry(0.045, dvec.length(), 0.008), strapMat);
-    strap.position.copy(a).add(dvec.clone().multiplyScalar(0.5));
-    strap.quaternion.setFromUnitVectors(UP, dvec.clone().normalize());
-    grp.add(strap);
-  });
-  const lamp = new THREE.PointLight(color, 1.7, 7);
-  grp.add(lamp);
-  grp.position.set(x, RING.y, 0);
-  scene.add(grp);
-  return {grp, torus, lamp, x, y:RING.y, z:0, color, baseColor:color};
-}
-// 業主指定：藍場（−x）放紅色球門環、紅場（+x）放藍色球門環
-// → 各隊攻「己方顏色的框」＝深入敵方半場得分（紅隊家在 +x、攻 −x 紅框；藍隊家在 −x、攻 +x 藍框）
-const ringEast = makeGoalRing( RING.x, 0x1166ff);  // 紅場上的藍框：藍隊進攻目標
-const ringWest = makeGoalRing(-RING.x, 0xff1133);  // 藍場上的紅框：紅隊進攻目標
-
-// ---------- 無人機模型 ----------
-// LED 光暈貼圖（徑向漸層，加法混合 → 過曝爆亮感）
-const glowTex = (()=>{
-  const cv=document.createElement('canvas'); cv.width=cv.height=64;
-  const g=cv.getContext('2d');
-  const gr=g.createRadialGradient(32,32,0,32,32,32);
-  gr.addColorStop(0,'rgba(255,255,255,1)');
-  gr.addColorStop(0.22,'rgba(255,255,255,.9)');
-  gr.addColorStop(0.55,'rgba(255,255,255,.28)');
-  gr.addColorStop(1,'rgba(255,255,255,0)');
-  g.fillStyle=gr; g.fillRect(0,0,64,64);
-  return new THREE.CanvasTexture(cv);
-})();
-function buildDroneMesh(teamColor, isStriker){
-  const grp = new THREE.Group();
-  // 球形護籠（測地線網格）
-  const cage = new THREE.LineSegments(
-    new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(DRONE_R, 2)),
-    new THREE.LineBasicMaterial({color:teamColor, transparent:true, opacity: isStriker?0.95:0.55})
-  );
-  grp.add(cage);
-  // 環形燈：WS2812B LED 燈條 12 顆（白，赤道）＋深色燈條基座
-  const strip = new THREE.Mesh(
-    new THREE.TorusGeometry(DRONE_R, 0.011, 8, 40),
-    new THREE.MeshStandardMaterial({color:0x15171c, roughness:.6}));
-  strip.rotation.x = Math.PI/2; grp.add(strip);
-  const ledGeo = new THREE.SphereGeometry(0.0085, 8, 6);
-  // 燈珠核心用 MeshBasicMaterial（不受光照、永遠全亮 → LED 自發光感）
-  const ledCore = new THREE.Color(teamColor).lerp(new THREE.Color(0xffffff), 0.45);
-  const ledMat = new THREE.MeshBasicMaterial({color:ledCore});
-  const ringGlowMat = new THREE.SpriteMaterial({map:glowTex, color:teamColor,
-    transparent:true, opacity:0.85, blending:THREE.AdditiveBlending, depthWrite:false});
-  for(let k=0; k<12; k++){
-    const a = k/12*Math.PI*2;
-    const px = new THREE.Mesh(ledGeo, ledMat);
-    px.position.set(Math.sin(a)*(DRONE_R+0.006), 0, Math.cos(a)*(DRONE_R+0.006));
-    grp.add(px);
-    const sp = new THREE.Sprite(ringGlowMat);   // 每顆燈珠帶光暈
-    sp.scale.set(0.05,0.05,1); sp.position.copy(px.position); grp.add(sp);
-  }
-  // 尾燈：WS2812B 4 顆（黃色、特別明亮），與環形燈同在最大球徑赤道上（local −z 為機尾）
-  const tailGeo = new THREE.SphereGeometry(0.011, 8, 6);   // 燈珠略大
-  const tailMat = new THREE.MeshBasicMaterial({color:0xffe855});
-  const tailGlowMat = new THREE.SpriteMaterial({map:glowTex, color:0xffdd22,
-    transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
-  for(let k=0; k<4; k++){
-    const a = Math.PI + (k-1.5)/3*(Math.PI/3.5);   // 機尾 180°±26° 扇形展開
-    const tl = new THREE.Mesh(tailGeo, tailMat);
-    tl.position.set(Math.sin(a)*(DRONE_R+0.008), 0, Math.cos(a)*(DRONE_R+0.008));
-    grp.add(tl);
-    const sp = new THREE.Sprite(tailGlowMat);   // 尾燈光暈更大更亮
-    sp.scale.set(0.1,0.1,1); sp.position.copy(tl.position); grp.add(sp);
-  }
-  const tailGlow = new THREE.PointLight(0xffdd22, 1.1, 1.5);   // 黃色點光源照亮周圍
-  tailGlow.position.set(0, 0, -DRONE_R*0.9); grp.add(tailGlow);
-  // 機身
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.028,0.05),
-    new THREE.MeshStandardMaterial({color:0x14161c, roughness:.6, metalness:.4}));
-  grp.add(body);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.018,12,8),
-    new THREE.MeshStandardMaterial({color:0x0a0c10, roughness:.3, metalness:.6}));
-  dome.position.y = 0.02; grp.add(dome);
-  // 四支機臂與旋翼
-  const props = [];
-  const armMat = new THREE.MeshStandardMaterial({color:0x23262e, roughness:.7});
-  const propMat = new THREE.MeshBasicMaterial({color:0x99a2b8, transparent:true, opacity:.55, side:THREE.DoubleSide});
-  [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([sx,sz])=>{
-    const ax = sx*0.046, az = sz*0.046;
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.062,0.008,0.012), armMat);
-    arm.position.set(ax/2, 0.005, az/2);
-    arm.rotation.y = Math.atan2(-az,ax);
-    grp.add(arm);
-    const prop = new THREE.Mesh(new THREE.CircleGeometry(0.028, 14), propMat);
-    prop.rotation.x = -Math.PI/2;
-    prop.position.set(ax, 0.016, az);
-    grp.add(prop); props.push(prop);
-  });
-  // Striker 識別緞帶：垂掛於機體下方的紅色緞帶（隨飛行飄動）
-  let ribbon = null, ribbonGeo = null;
-  if(isStriker){
-    ribbonGeo = new THREE.PlaneGeometry(0.035, 0.22, 1, 7);
-    ribbonGeo.translate(0, -0.11, 0);   // 以頂端為固定點
-    ribbon = new THREE.Mesh(ribbonGeo,
-      new THREE.MeshStandardMaterial({color:0xcc1122, emissive:0x990011,
-        emissiveIntensity:0.8, side:THREE.DoubleSide, roughness:.6}));
-    ribbon.rotation.order = 'YXZ';
-    scene.add(ribbon);   // 獨立於機身：緞帶受重力下垂，不隨機身翻轉
-    const beacon = new THREE.PointLight(0xff2233, 0.5, 1.8);
-    grp.add(beacon);
-  }
-  grp.traverse(o=>{ if(o.isMesh) o.castShadow = true; });
-  scene.add(grp);
-  return {grp, props, ledGlow:ringGlowMat, cage, ribbon, ribbonGeo};  // ledGlow 供 Striker 呼吸燈用
-}
-
-// ---------- 無人機物理實體 ----------
-class Drone{
-  constructor(team, role, spawn, yaw0){
-    this.team = team;               // 'red' | 'blue'
-    this.role = role;               // 'striker' | 'defender' | 'harasser'
-    this.attackDir = team==='red' ? -1 : 1;   // 紅隊攻 −x 紅框、藍隊攻 +x 藍框（框在敵方半場）
-    this.color = team==='red' ? 0xff4455 : 0x3388ff;
-    this.spawn = spawn.clone(); this.yaw0 = yaw0;
-    this.mesh = buildDroneMesh(this.color, role==='striker');
-    this.pos = spawn.clone(); this.vel = V3(0,0,0);
-    this.yaw = yaw0;
-    this.tiltP = 0; this.tiltR = 0;           // 實際傾角狀態（pitch/roll 比例）
-    this.input = {pitch:0, roll:0, yawRate:0, throttle:0};
-    this.disturb = 0;               // 0~1 被撞失控程度
-    this.wobblePhase = Math.random()*10;
-    this.canScore = true;           // 得分權（回防解鎖）
-    this.prevX = this.pos.x;
-    this.propSpin = 0;
-    this.aiErr = V3(0,0,0); this.aiErrT = 0;
-    this.zoneT = 0; this.zoneWarned = false; this.backoffT = 0;
-    this.skill = 0.85 + Math.random()*0.3;   // AI 個性：技術
-    this.aggro = 0.7 + Math.random()*0.6;    // AI 個性：侵略性
-    if(role==='striker'){                    // 兩隊前鋒固定高技術：雙方進攻同樣犀利
-      this.skill = 1.08 + Math.random()*0.07;  // （隨機 skill 曾使某隊前鋒明顯偏弱）
-      this.aggro = 1.1 + Math.random()*0.2;
-    }
-    this.strat = 0; this.stratT = Math.random()*2;
-    this.atkOffY = 0; this.atkOffZ = 0;
-    this.dash = false; this.dashT = 0;   // 鎖定衝刺狀態
-    this.isPlayer = false;
-    this.thrustN = MASS*G;
-  }
-  reset(){
-    this.pos.copy(this.spawn); this.vel.set(0,0,0);
-    this.yaw = this.yaw0; this.tiltP=this.tiltR=0;
-    this.disturb=0; this.canScore=true; this.prevX=this.pos.x;
-    this.zoneT=0; this.zoneWarned=false; this.backoffT=0;
-    this.strat=0; this.stratT=Math.random()*1.5;
-    this.dash=false; this.dashT=0;
-    this.input={pitch:0,roll:0,yawRate:0,throttle:0};
-  }
-  // ---- 四軸飛行動力學 ----
-  step(h){
-    const auth = 1 - 0.78*this.disturb;       // 被撞後控制權下降
-    // 傾角朝指令值收斂（一階響應，模擬飛控角度模式）
-    this.tiltP += clamp(this.input.pitch*auth - this.tiltP, -TILT_RATE*h, TILT_RATE*h);
-    this.tiltR += clamp(this.input.roll*auth  - this.tiltR, -TILT_RATE*h, TILT_RATE*h);
-    this.yaw += this.input.yawRate*auth*h;
-
-    const fwd  = V3(Math.sin(this.yaw),0,Math.cos(this.yaw));
-    const right= V3(-Math.cos(this.yaw),0,Math.sin(this.yaw));
-    // 傾斜方向與角度
-    const tx = fwd.x*this.tiltP + right.x*this.tiltR;
-    const tz = fwd.z*this.tiltP + right.z*this.tiltR;
-    const tMag = Math.min(1, Math.hypot(tx,tz));
-    const tiltAng = tMag*MAX_TILT;
-    let thrustDir = UP.clone();
-    if(tMag>1e-4){
-      const dx = tx/tMag, dz = tz/tMag;
-      thrustDir.set(Math.sin(tiltAng)*dx, Math.cos(tiltAng), Math.sin(tiltAng)*dz);
-    }
-    // 推力（含高度輔助：自動補償傾斜損失，如真實飛控之定高模式）
-    const thr = clamp(this.input.throttle*auth, -1, 1);
-    this.thrustN = MASS*G*(1+THR_RANGE*thr)/Math.max(Math.cos(tiltAng),0.55);
-    // 失控時推力紊亂
-    if(this.disturb>0.05) this.thrustN *= 1 + (Math.random()-0.5)*0.55*this.disturb;
-
-    // 合力 → 加速度
-    const acc = thrustDir.multiplyScalar(this.thrustN/MASS);
-    acc.y -= G;
-    const sp = this.vel.length();
-    if(sp>1e-4){
-      const dragA = (DRAG_K1*sp + DRAG_K2*sp*sp)/MASS;
-      acc.addScaledVector(this.vel.clone().normalize(), -dragA);
-    }
-    this.prevX = this.pos.x;
-    this.vel.addScaledVector(acc, h);
-    this.pos.addScaledVector(this.vel, h);
-
-    // 地板
-    if(this.pos.y < DRONE_R){
-      this.pos.y = DRONE_R;
-      if(this.vel.y < 0){
-        if(this.vel.y < -2.5) this.disturb = Math.min(1, this.disturb + (-this.vel.y)*0.07);
-        this.vel.y = -this.vel.y*0.35;
-        if(Math.abs(this.vel.y)<0.4) this.vel.y=0;
-      }
-      this.vel.x *= 1-Math.min(1,3.2*h); this.vel.z *= 1-Math.min(1,3.2*h); // 地面摩擦
-    }
-    // 天花網
-    if(this.pos.y > FIELD.h-DRONE_R){
-      this.pos.y = FIELD.h-DRONE_R;
-      if(this.vel.y>0) this.vel.y = -this.vel.y*REST_WALL;
-    }
-    // 四面網牆
-    const bx = FIELD.hx-DRONE_R, bz = FIELD.hz-DRONE_R;
-    if(Math.abs(this.pos.x)>bx){
-      const hit = Math.abs(this.vel.x);
-      this.pos.x = Math.sign(this.pos.x)*bx;
-      this.vel.x = -this.vel.x*REST_WALL; this.vel.y*=0.92; this.vel.z*=0.92;
-      if(hit>2) this.disturb = Math.min(1,this.disturb+hit*0.05);
-    }
-    if(Math.abs(this.pos.z)>bz){
-      const hit = Math.abs(this.vel.z);
-      this.pos.z = Math.sign(this.pos.z)*bz;
-      this.vel.z = -this.vel.z*REST_WALL; this.vel.y*=0.92; this.vel.x*=0.92;
-      if(hit>2) this.disturb = Math.min(1,this.disturb+hit*0.05);
-    }
-    // 失控衰減（飛控重新穩定）
-    this.disturb = Math.max(0, this.disturb - h*0.85);
-    this.propSpin += (6 + this.thrustN*2.2)*h*Math.PI*2*0.3;
-  }
-  // ---- 視覺同步 ----
-  syncMesh(t){
-    this.mesh.grp.position.copy(this.pos);
-    const fwd  = V3(Math.sin(this.yaw),0,Math.cos(this.yaw));
-    const right= V3(-Math.cos(this.yaw),0,Math.sin(this.yaw));
-    const tx = fwd.x*this.tiltP + right.x*this.tiltR;
-    const tz = fwd.z*this.tiltP + right.z*this.tiltR;
-    const tMag = Math.min(1, Math.hypot(tx,tz));
-    const ang = tMag*MAX_TILT;
-    let dir = UP.clone();
-    if(tMag>1e-4) dir.set(Math.sin(ang)*tx/tMag, Math.cos(ang), Math.sin(ang)*tz/tMag);
-    const qTilt = new THREE.Quaternion().setFromUnitVectors(UP, dir);
-    const qYaw  = new THREE.Quaternion().setFromAxisAngle(UP, this.yaw);
-    this.mesh.grp.quaternion.copy(qTilt).multiply(qYaw);
-    // 被撞翻滾搖晃
-    if(this.disturb>0.02){
-      const w = this.disturb;
-      const qW = new THREE.Quaternion().setFromEuler(new THREE.Euler(
-        Math.sin(t*21+this.wobblePhase)*w*0.9,
-        Math.sin(t*17+this.wobblePhase*2)*w*0.7,
-        Math.cos(t*23+this.wobblePhase)*w*0.9));
-      this.mesh.grp.quaternion.multiply(qW);
-    }
-    this.mesh.props.forEach((p,i)=>{ p.rotation.z = this.propSpin*(i%2?1:-1); });
-    // Striker LED 與識別帶呼吸 / 得分權指示
-    if(this.role==='striker'){
-      // 得分權指示：環形燈光暈呼吸（解鎖時亮且呼吸、未解鎖時暗）
-      this.mesh.ledGlow.opacity = this.canScore ? 0.78 + Math.sin(t*6)*0.2 : 0.3;
-      if(this.mesh.ribbon){
-        const r = this.mesh.ribbon, vh = Math.hypot(this.vel.x, this.vel.z);
-        r.position.set(this.pos.x, this.pos.y - DRONE_R + 0.02, this.pos.z);
-        r.rotation.y = Math.atan2(this.vel.x, this.vel.z);
-        r.rotation.x = clamp(vh*0.28, 0, 1.25);            // 飛行時被氣流往後吹起
-        r.scale.y = clamp((this.pos.y-DRONE_R+0.02)/0.22, 0.15, 1); // 貼地時縮攏
-        const pa = this.mesh.ribbonGeo.attributes.position;
-        for(let i=0;i<pa.count;i++){
-          const y = pa.getY(i);
-          pa.setZ(i, Math.sin(t*9 + y*24 + this.wobblePhase)*0.013*(-y/0.22)*(1+vh*0.5));
-        }
-        pa.needsUpdate = true;
-        r.material.emissiveIntensity = this.canScore ? 0.9 : 0.25;
-      }
-    }
-  }
-}
-
-// ---------- 建立 3v3 ----------
-const drones = [];
-// 紅隊家＝紅場（+x），機頭朝 −x；藍隊家＝藍場（−x），機頭朝 +x
-const player = new Drone('red','striker', V3(1.3,DRONE_R,0),  -Math.PI/2);
-player.isPlayer = true;
-drones.push(player);
-drones.push(new Drone('red','defender',  V3(2.4,DRONE_R, 0.9), -Math.PI/2));
-drones.push(new Drone('red','harasser',  V3(2.4,DRONE_R,-0.9), -Math.PI/2));
-drones.push(new Drone('blue','striker',  V3(-1.3,DRONE_R,0),  Math.PI/2));
-drones.push(new Drone('blue','defender', V3(-2.4,DRONE_R, 0.9), Math.PI/2));
-drones.push(new Drone('blue','harasser', V3(-2.4,DRONE_R,-0.9), Math.PI/2));
-const blueStriker = drones[3];
-
-// ---------- 機體互撞（等質量球體衝量） ----------
-function collideDrones(){
-  for(let i=0;i<drones.length;i++)for(let j=i+1;j<drones.length;j++){
-    const a=drones[i], b=drones[j];
-    const d = b.pos.clone().sub(a.pos);
-    const dist = d.length();
-    if(dist<1e-5 || dist >= DRONE_R*2) continue;
-    const n = d.multiplyScalar(1/dist);
-    // 分離
-    const push = (DRONE_R*2-dist)/2;
-    a.pos.addScaledVector(n,-push); b.pos.addScaledVector(n,push);
-    // 衝量
-    const vn = a.vel.clone().sub(b.vel).dot(n);
-    if(vn>0){
-      const imp = n.clone().multiplyScalar(vn*(1+REST_DRONE)/2);
-      a.vel.sub(imp); b.vel.add(imp);
-      const k = Math.min(1, vn*0.16);
-      a.disturb = Math.min(1, a.disturb+k);
-      b.disturb = Math.min(1, b.disturb+k);
-      if(vn>1.2) sfx.hit(Math.min(1,vn/8));
-    }
-  }
-}
-
-// ---------- 球門框（圓環剛體）碰撞 ----------
-function collideRing(d, ring){
-  const rel = V3(d.pos.x-ring.x, d.pos.y-ring.y, d.pos.z-ring.z);
-  const radial = Math.hypot(rel.y, rel.z);
-  if(radial<1e-4) return;
-  // 圓環上最近點（圓環中心線半徑 = 內徑 + 管徑）
-  const RC = RING.R + RING.tube;
-  const P = V3(ring.x, ring.y+rel.y/radial*RC, ring.z+rel.z/radial*RC);
-  const diff = d.pos.clone().sub(P);
-  const dist = diff.length();
-  const minD = DRONE_R + RING.tube;
-  if(dist<minD && dist>1e-5){
-    const n = diff.multiplyScalar(1/dist);
-    d.pos.copy(P).addScaledVector(n, minD);
-    const vn = d.vel.dot(n);
-    if(vn<0){
-      d.vel.addScaledVector(n, -vn*(1+0.5));
-      d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
-      if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
-    }
-  }
-}
-
-// ---------- 計分與違規（最終分 = 得分 − 進攻違規 − 防守違規） ----------
-const score = {red:{g:0,o:0,d:0}, blue:{g:0,o:0,d:0}};
-const finalScore = t => score[t].g - score[t].o - score[t].d;
-const FOUL_ZONE = 1.0;     // 己方球門禁區半徑 m
-const FOUL_TIME = 3.0;     // 逗留逾此秒數 → 防守違規（守門）
-
-// 廣播/播放比賽事件（進球、違規、開賽…）：本地立即播放視覺/音效，
-// 連線對戰時房主同步 fxAct 廣播給其他人（target 省略＝全體，指定則只給該玩家）
-function netBroadcastFx(data, target){
-  if(mode!=='net' || !NET.isHost) return;
-  if(target===selfId) return;   // 目標就是房主自己，已在本地播放過，不需再送一次
-  NET.actions.fxAct.send(data, target?{target}:undefined);
-}
-function playFx(data){
-  if(data.type==='goal'){
-    flashMsg('GOAL!  '+(data.team==='red'?'紅隊得分':'藍隊得分'),
-      data.team==='red' ? '#ff5a5a' : '#5aa0ff', 2.2);
-    ringPulse = {ring: data.ring==='E'?ringEast:ringWest, t:0};
-    sfx.goal(); sfx.cheer();
-  }else if(data.type==='foulAtk'){
-    flashMsg((data.team==='red'?'紅隊':'藍隊')+'進攻違規 −1（非 Striker 穿框）', '#fb923c', 1.8);
-    sfx.foul();
-  }else if(data.type==='foulDef'){
-    flashMsg((data.team==='red'?'紅隊':'藍隊')+'防守違規 −1（守門逗留）', '#fbbf24', 1.8);
-    sfx.foul();
-  }else if(data.type==='unlock'){
-    flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
-  }else if(data.type==='zoneWarn'){
-    flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
-  }else if(data.type==='start'){
-    flashMsg('比賽開始！', '#ffe680', 1.5);
-    sfx.whistle();
-  }else if(data.type==='warn30'){
-    sfx.warn();
-  }else if(data.type==='end'){
-    sfx.buzzer();
-    const rF = finalScore('red'), bF = finalScore('blue');
-    const res = rF>bF ? '紅隊獲勝！🏆' : bF>rF ? '藍隊獲勝！🏆' : '平手！';
-    flashMsg('最終 ' + bF + ' : ' + rF + '　' + res + '（按 R 重賽）',
-      rF>bF ? '#f87171' : bF>rF ? '#60a5fa' : '#ffe680', 9999);
-  }
-}
-function fireFx(data, targetPeer){ playFx(data); netBroadcastFx(data, targetPeer); }
-
-function checkGoals(){
-  drones.forEach((d,i)=>{
-    const atkRing = d.attackDir>0 ? ringEast : ringWest;   // 進攻己方顏色的框
-    // Striker 回防解鎖
-    if(d.role==='striker' && !d.canScore
-       && Math.sign(d.pos.x||1)!==Math.sign(atkRing.x) && Math.abs(d.pos.x)>0.4){
-      d.canScore = true;
-      if(d.isPlayer && mode==='player') flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
-      else if(mode==='net' && NET.slotOwners[i]) fireFx({type:'unlock'}, NET.slotOwners[i]);
-    }
-    // 穿越框平面偵測
-    const crossed = (d.prevX-atkRing.x)*(d.pos.x-atkRing.x) < 0;
-    if(!crossed) return;
-    const radial = Math.hypot(d.pos.y-atkRing.y, d.pos.z-atkRing.z);
-    const through = radial < RING.R - DRONE_R + 0.05;  // 護籠有彈性，判定稍寬
-    const rightWay = Math.sign(d.pos.x-d.prevX) === Math.sign(d.attackDir);
-    if(!through || !rightWay) return;
-    if(d.role==='striker'){
-      if(!d.canScore) return;
-      score[d.team].g++;
-      d.canScore = false;
-      updateScore(true, d.team);
-      fireFx({type:'goal', team:d.team, ring: atkRing===ringEast?'E':'W'});
-    }else{
-      // 非 Striker 穿框 → 進攻違規（僅 Striker 可進攻得分）
-      score[d.team].o++;
-      updateScore();
-      fireFx({type:'foulAtk', team:d.team});
-    }
-  });
-}
-
-// 防守違規：於己方球門禁區逗留逾時（守門）
-function updateFouls(dt){
-  drones.forEach((d,i)=>{
-    const ownRing = d.attackDir>0 ? ringWest : ringEast;  // 己方防守的框（自家半場）
-    const dist = Math.sqrt(
-      (d.pos.x-ownRing.x)**2 + (d.pos.y-ownRing.y)**2 + (d.pos.z-ownRing.z)**2);
-    if(dist < FOUL_ZONE){
-      d.zoneT += dt;
-      if(d.isPlayer && mode==='player' && d.zoneT>1.5 && !d.zoneWarned){
-        d.zoneWarned = true;
-        flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
-      }else if(mode==='net' && d.zoneT>1.5 && !d.zoneWarned && NET.slotOwners[i]){
-        d.zoneWarned = true;
-        fireFx({type:'zoneWarn'}, NET.slotOwners[i]);
-      }
-      if(d.zoneT > FOUL_TIME){
-        score[d.team].d++;
-        d.zoneT = 0; d.zoneWarned = false; d.backoffT = 2.5;
-        updateScore();
-        fireFx({type:'foulDef', team:d.team});
-      }
-    }else{
-      d.zoneT = 0; d.zoneWarned = false;
-    }
-    d.backoffT = Math.max(0, d.backoffT - dt);
-  });
-}
-
-function updateScore(pop, team){
-  const $ = id => document.getElementById(id);
-  $('blueScore').textContent = score.blue.g;
-  $('redScore').textContent  = score.red.g;
-  $('bG').textContent = score.blue.g; $('bO').textContent = score.blue.o;
-  $('bD').textContent = score.blue.d; $('bF').textContent = finalScore('blue');
-  $('rG').textContent = score.red.g;  $('rO').textContent = score.red.o;
-  $('rD').textContent = score.red.d;  $('rF').textContent = finalScore('red');
-  if(pop){
-    const el = $(team==='red' ? 'redScore' : 'blueScore');
-    el.classList.add('pop'); setTimeout(()=>el.classList.remove('pop'), 180);
-  }
-}
-let ringPulse = null;
-
-// ---------- 練習模式：獨立於比賽／AI對戰／連線對戰，只有玩家機在場上，
-//            無比分／時間／AI 對手，穿越任一球門環即計數，方便一開始先熟悉操作 ----------
-let practiceCount = 0;
-let practiceCooldown = {E:0, W:0};
-function setDroneVisible(d, vis){    // 機身 group 之外，Striker 的緞帶是獨立場景物件，要一起藏/顯
-  d.mesh.grp.visible = vis;
-  if(d.mesh.ribbon) d.mesh.ribbon.visible = vis;
-}
-function updatePracticeHUD(){
-  const el = document.getElementById('practiceCountEl');
-  if(el) el.textContent = practiceCount;
-}
-function checkPracticePass(dt){
-  practiceCooldown.E = Math.max(0, practiceCooldown.E - dt);
-  practiceCooldown.W = Math.max(0, practiceCooldown.W - dt);
-  const d = player;
-  [['E', ringEast], ['W', ringWest]].forEach(([key, ring])=>{
-    if(practiceCooldown[key] > 0) return;
-    const crossed = (d.prevX-ring.x)*(d.pos.x-ring.x) < 0;   // 穿越框平面偵測（同比賽模式判定邏輯）
-    if(!crossed) return;
-    const radial = Math.hypot(d.pos.y-ring.y, d.pos.z-ring.z);
-    const through = radial < RING.R - DRONE_R + 0.05;
-    if(!through) return;
-    practiceCooldown[key] = 0.6;   // 短冷卻，避免貼著框平面晃動時重複計數
-    practiceCount++;
-    flashMsg('✓ 穿越成功！第 ' + practiceCount + ' 次', '#7dffa9', 1.1);
-    sfx.goal();
-    ringPulse = {ring, t:0};
-    updatePracticeHUD();
-  });
-}
-function restartPractice(){
-  drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });   // 只留玩家機，其餘 5 台隱藏、不參與模擬
-  practiceCount = 0; practiceCooldown = {E:0, W:0};
-  updatePracticeHUD();
-  setState('play');
-}
-function startPractice(){
-  if(NET.connected) netTeardown();          // 若切自連線模式，順便離開連線房間
-  document.getElementById('netPanel').style.display = 'none';
-  mode = 'practice';
-  campExitCleanup();                        // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
-  document.getElementById('campPanel').style.display = 'none';
-  document.getElementById('overlay').style.display = 'none';
-  sfx.init();
-  camMode = 0;
-  document.querySelector('#telemetry b').textContent = '你的 Striker（練習）';
-  document.getElementById('scoreboard').style.display = 'none';
-  document.getElementById('practiceHUD').style.display = 'block';
-  restartPractice();
-}
-document.getElementById('btnPractice').addEventListener('click', startPractice);
-
-// ---------- AI 飛手 ----------
-function angDiff(a,b){ let d=a-b; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; return d; }
-function flyToward(d, target, maxV, dt){
-  // 人為反應誤差（每 0.45 秒更新，模擬真實飛手）
-  d.aiErrT -= dt;
-  if(d.aiErrT<=0){
-    d.aiErrT = 0.45;
-    d.aiErr.set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.2,(Math.random()-0.5)*0.3);
-  }
-  const errS = d.dash ? 0.2 : 1;   // 衝刺時全神貫注，誤差大減
-  const tx = target.x+d.aiErr.x*errS, ty = target.y+d.aiErr.y*errS, tz = target.z+d.aiErr.z*errS;
-  // 期望速度 → 期望加速度 → 反解傾角與推力
-  const dvx = clamp((tx-d.pos.x)*1.9, -maxV, maxV);
-  const dvz = clamp((tz-d.pos.z)*1.9, -maxV, maxV);
-  const dvy = clamp((ty-d.pos.y)*2.3, -3.2, 3.2);
-  const ax = (dvx-d.vel.x)*1.35, az = (dvz-d.vel.z)*1.35, ay = (dvy-d.vel.y)*1.6;
-  const fwd  = {x:Math.sin(d.yaw), z:Math.cos(d.yaw)};
-  const right= {x:-Math.cos(d.yaw), z:Math.sin(d.yaw)};
-  const aF = ax*fwd.x+az*fwd.z, aR = ax*right.x+az*right.z;
-  d.input.pitch = clamp(Math.atan2(aF,G)/MAX_TILT, -1, 1);
-  d.input.roll  = clamp(Math.atan2(aR,G)/MAX_TILT, -1, 1);
-  d.input.throttle = clamp(ay/(THR_RANGE*G), -1, 1);
-  // 朝目標轉向
-  const desYaw = Math.atan2(tx-d.pos.x, tz-d.pos.z);
-  d.input.yawRate = clamp(angDiff(desYaw,d.yaw)*3, -YAW_RATE, YAW_RATE);
-}
-function aiThink(d, dt){
-  const enemyStriker = d.team==='red' ? blueStriker : player;
-  const ownRing  = d.attackDir>0 ? ringWest : ringEast;
-  const atkRing  = d.attackDir>0 ? ringEast : ringWest;
-  d.stratT -= dt;
-  let target, maxV = 3.5*d.skill;
-  if(d.role==='striker'){
-    // 每隔幾秒換一條進攻路線（高度與側向偏移），動作不重複
-    if(d.stratT<=0){
-      d.stratT = 2.5 + Math.random()*2;
-      d.atkOffY = (Math.random()-0.5)*0.8;
-      d.atkOffZ = (Math.random()-0.5)*1.4;
-    }
-    if(d.canScore){
-      const appX = atkRing.x - d.attackDir*1.3;
-      const radial = Math.hypot(d.pos.y-atkRing.y, d.pos.z-atkRing.z);
-      // 對準後「鎖定衝刺」：一路衝到穿框為止，不中途放棄
-      // （進攻強化：對準容差較寬、衝刺更難被撞停 → 進球率高、比賽有看頭）
-      if(!d.dash && radial<0.22 && Math.abs(d.pos.x-appX)<0.9){
-        d.dash = true; d.dashT = 1.4;
-      }
-      if(d.dash){
-        d.dashT -= dt;
-        const crossedPlane = (d.pos.x-atkRing.x)*d.attackDir > 0;
-        if(d.dashT<=0 || crossedPlane || d.disturb>0.65) d.dash = false;
-        else for(const o of drones){   // 正前方被堵死 → 放棄改道
-          if(o.team===d.team) continue;
-          const ahead = (o.pos.x-d.pos.x)*d.attackDir;
-          if(ahead>0.05 && ahead<0.45
-             && Math.hypot(o.pos.y-d.pos.y, o.pos.z-d.pos.z)<0.22){
-            d.dash = false; d.stratT = 0;   // 重選進攻路線
-          }
-        }
-      }
-      if(d.dash){
-        target = V3(atkRing.x + d.attackDir*0.8, atkRing.y, atkRing.z);  // 全速穿框
-        maxV = 5.6*d.skill;
-      }else{
-        // 變化路線進場：遠處先繞偏移點，接近後才收斂對準框心
-        const far = Math.abs(d.pos.x-appX) > 1.2;
-        target = V3(appX,
-          clamp(atkRing.y + (far? d.atkOffY:0), 0.5, FIELD.h-0.5),
-          clamp(atkRing.z + (far? d.atkOffZ:0), -FIELD.hz+0.4, FIELD.hz-0.4));
-        maxV = 3.9*d.skill;
-        // 前方有敵機擋路 → 側向與垂直閃避
-        for(const o of drones){
-          if(o.team===d.team) continue;
-          const ahead = (o.pos.x-d.pos.x)*d.attackDir;
-          if(ahead>0.1 && ahead<1.2
-             && Math.abs(o.pos.z-d.pos.z)<0.5 && Math.abs(o.pos.y-d.pos.y)<0.5){
-            target.z = clamp(target.z + (d.pos.z>=o.pos.z?0.8:-0.8), -FIELD.hz+0.4, FIELD.hz-0.4);
-            target.y = clamp(o.pos.y + (d.pos.y>=o.pos.y?0.6:-0.6), 0.5, FIELD.h-0.5);
-          }
-        }
-      }
-    }else{
-      target = V3(-d.attackDir*1.5, 1.0+Math.abs(d.atkOffY), clamp(d.atkOffZ,-1,1)); // 回防解鎖
-      maxV = 4.6*d.skill;   // 快速解鎖、立刻再進攻
-    }
-  }else if(d.role==='defender'){
-    // 預判攔截：依敵方 Striker 速度推算進攻點，鏡射到自家框前卡位
-    const ex = enemyStriker.pos, ev = enemyStriker.vel;
-    const lead = 0.15*d.aggro;   // 預判較短：防守弱於進攻（業主指定，比賽才有看頭）
-    const py = clamp(ex.y+ev.y*lead, 0.5, FIELD.h-0.5);
-    const pz = clamp(ex.z+ev.z*lead, -FIELD.hz+0.4, FIELD.hz-0.4);
-    const exDist = Math.sqrt((ex.x-ownRing.x)**2+(ex.y-ownRing.y)**2+(ex.z-ownRing.z)**2);
-    let guard = Math.max(FOUL_ZONE+0.25, Math.min(1.8, exDist*0.45)); // 守在禁區外緣
-    if(d.zoneT>FOUL_TIME*0.65 || d.backoffT>0) guard = FOUL_ZONE+0.85; // 預防守門違規，主動退出
-    const dir = V3(ex.x-ownRing.x, py-ownRing.y, pz-ownRing.z);
-    const dl = Math.max(dir.length(),0.01); dir.multiplyScalar(1/dl);
-    target = V3(ownRing.x+dir.x*guard,
-      clamp(ownRing.y+dir.y*guard,0.5,FIELD.h-0.5), ownRing.z+dir.z*guard);
-    maxV = 2.8*d.skill;   // 明顯比 Striker 慢：攔得到位置但常追不上衝刺
-  }else{
-    // harasser 狀態機：纏鬥 → 全速衝撞 → 撤回喘息（合法戰術）
-    const distE = d.pos.distanceTo(enemyStriker.pos);
-    if(d.strat===0){ // 纏鬥：在敵 Striker 側後方盤旋伺機
-      if(d.stratT<=0){
-        if(distE<1.3){ d.strat=1; d.stratT=0.8; }   // 較少出手衝撞
-        else d.stratT = 0.55;
-      }
-      target = V3(enemyStriker.pos.x - d.attackDir*0.9,
-                  clamp(enemyStriker.pos.y+0.3, 0.5, FIELD.h-0.5),
-                  enemyStriker.pos.z + (d.aggro-1)*0.8);
-      maxV = 3.6*d.skill;
-    }else if(d.strat===1){ // 衝撞！
-      if(d.stratT<=0 || d.disturb>0.4){ d.strat=2; d.stratT=1.0+Math.random()*0.8; }
-      target = V3(enemyStriker.pos.x + enemyStriker.vel.x*0.3,
-                  enemyStriker.pos.y + enemyStriker.vel.y*0.3,
-                  enemyStriker.pos.z + enemyStriker.vel.z*0.3);
-      maxV = 4.2*d.aggro;   // 撞擊較軟，Striker 較不易被撞停
-    }else{ // 撤回喘息（較久，給進攻方表演空間）
-      if(d.stratT<=0){ d.strat=0; d.stratT=1.4+Math.random()*1.8; }
-      target = V3(-d.attackDir*0.5, 1.3, -enemyStriker.pos.z*0.5);
-      maxV = 3.0;
-    }
-  }
-  // 與隊友保持間距
-  for(const o of drones){
-    if(o===d || o.team!==d.team) continue;
-    const sep = d.pos.clone().sub(o.pos);
-    const L = sep.length();
-    if(L<0.45 && L>1e-4) target.addScaledVector(sep.normalize(), (0.45-L)*1.5);
-  }
-  target.x = clamp(target.x, -FIELD.hx+0.4, FIELD.hx-0.4);
-  target.y = clamp(target.y, 0.35, FIELD.h-0.4);
-  target.z = clamp(target.z, -FIELD.hz+0.4, FIELD.hz-0.4);
-  flyToward(d, target, maxV, dt);
-}
-
-// ---------- 玩家輸入 ----------
-const keys = {};
-addEventListener('keydown', e=>{
-  keys[e.code]=true;
-  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-  if(e.code==='KeyC') camMode=(camMode+1)%3;
-  if(mode==='net'){
-    // 連線對戰：比賽流程只能由房主操作（P/R），避免雙方狀態互相搶權；
-    // M 一律代表「離開房間」返回選單（房主離開時其他人也會收到斷線通知）
-    if(NET.isHost){
-      if(e.code==='KeyP' && state==='play') setState('pause');
-      else if(e.code==='KeyP' && state==='pause') setState('play');
-      if(e.code==='KeyR' && state!=='menu') restart();
-    }else if((e.code==='KeyP'||e.code==='KeyR') && state!=='menu'){
-      flashMsg('只有房主可以操作暫停／重賽', '#fbbf24', 1.2);
-    }
-    if(e.code==='KeyM' && state!=='menu') netLeave();
-    return;
-  }
-  if(e.code==='KeyP' && state==='play') setState('pause');
-  else if(e.code==='KeyP' && state==='pause') setState('play');
-  if(e.code==='KeyR' && state!=='menu'){
-    if(mode==='practice') restartPractice();
-    else if(mode==='campaign') campRestart();
-    else restart();
-  }
-  if(e.code==='KeyM' && state!=='menu'){   // 返回模式選單
-    setState('menu');
-    campExitCleanup();                               // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
-    drones.forEach(d=>setDroneVisible(d,true));      // 若剛才在練習模式，恢復其餘 5 台機顯示
-    document.getElementById('scoreboard').style.display='flex';
-    document.getElementById('practiceHUD').style.display='none';
-    document.getElementById('campPanel').style.display='none';
-    document.getElementById('overlay').style.display='flex';
-    document.getElementById('netPanel').style.display='none';
-    document.getElementById('rulesBox').style.display='block';
-    document.getElementById('modesRow').style.display='flex';
-  }
-});
-addEventListener('keyup', e=>{ keys[e.code]=false; });
-
-// ---------- 搖桿支援（PS4/Xbox，Gamepad API；模式二：左桿=油門/旋轉、右桿=前後/側飛） ----------
-let padIndex = null;
-const padPrev = {};
-addEventListener('gamepadconnected', e=>{
-  if(!e.gamepad) return;
-  padIndex = e.gamepad.index;
-  flashMsg('🎮 搖桿已連接', '#7dffa9', 2.2);
-});
-addEventListener('gamepaddisconnected', e=>{
-  if(e.gamepad && padIndex===e.gamepad.index) padIndex = null;
-  flashMsg('搖桿已中斷，改用鍵盤', '#fbbf24', 2);
-});
-const padDZ = v => Math.abs(v)<0.13 ? 0 : (v-Math.sign(v)*0.13)/0.87;  // 搖桿死區
-function getPad(){
-  // 有些情況（搖桿在開頁前就已連線）瀏覽器不會發 gamepadconnected 事件 → 每幀掃描補偵測
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  if(padIndex!==null && pads[padIndex]) return pads[padIndex];
-  for(const g of pads){
-    if(g && g.connected){
-      padIndex = g.index;
-      flashMsg('🎮 搖桿已連接', '#7dffa9', 2.2);
-      return g;
-    }
-  }
-  return null;
-}
-function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
-  const gp = getPad(); if(!gp) return;
-  const btn = n=>{
-    const v = !!(gp.buttons[n] && gp.buttons[n].pressed);
-    const fired = v && !padPrev[n]; padPrev[n] = v; return fired;
-  };
-  if(mode==='net' && !NET.isHost){                      // 連線對戰非房主：只能切視角
-    if(btn(3)) camMode = (camMode+1)%3;
-    return;
-  }
-  if(btn(9)){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); } // OPTIONS=暫停
-  if(btn(3)) camMode = (camMode+1)%3;                  // △=切換視角
-  if(btn(8) && state!=='menu'){                        // SHARE=重賽
-    if(mode==='practice') restartPractice();
-    else if(mode==='campaign') campRestart();
-    else restart();
-  }
-}
-function readInputInto(i){    // i：任一 drone 的 .input（本地玩家操控用，連線對戰時也用同一套讀法）
-  i.pitch    = (keys['KeyW']?1:0) + (keys['KeyS']?-1:0);
-  i.roll     = (keys['KeyD']?1:0) + (keys['KeyA']?-1:0);
-  i.yawRate  = ((keys['ArrowLeft']?1:0) + (keys['ArrowRight']?-1:0)) * YAW_RATE;
-  i.throttle = (keys['ArrowUp']?1:0) + (keys['ArrowDown']?-1:0);
-  const gp = getPad();
-  if(gp){   // 搖桿與鍵盤可並用，疊加後夾限
-    i.yawRate  = clamp(i.yawRate  - padDZ(gp.axes[0])*YAW_RATE, -YAW_RATE, YAW_RATE);
-    i.throttle = clamp(i.throttle - padDZ(gp.axes[1]), -1, 1);
-    i.roll     = clamp(i.roll     + padDZ(gp.axes[2]), -1, 1);
-    i.pitch    = clamp(i.pitch    - padDZ(gp.axes[3]), -1, 1);
-  }
-}
-function readPlayerInput(){ readInputInto(player.input); }
-
-// ---------- 音效（WebAudio 合成） ----------
-const sfx = (()=>{
-  let ctx=null, noiseBuf=null, crowdGain=null, engines=null;
-  function init(){
-    if(ctx) return;
-    ctx = new (window.AudioContext||window.webkitAudioContext)();
-    // 觀眾人聲（低頻噪音循環，營造滿場嘈雜聲）
-    const cbuf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
-    const cd = cbuf.getChannelData(0);
-    let lastS = 0;
-    for(let i=0;i<cd.length;i++){
-      lastS = lastS*0.97 + (Math.random()*2-1)*0.03;
-      cd[i] = lastS*3;
-    }
-    const crowdSrc = ctx.createBufferSource(); crowdSrc.buffer=cbuf; crowdSrc.loop=true;
-    const cf = ctx.createBiquadFilter(); cf.type='lowpass'; cf.frequency.value=600;
-    crowdGain = ctx.createGain(); crowdGain.gain.value=0.02;
-    crowdSrc.connect(cf); cf.connect(crowdGain); crowdGain.connect(ctx.destination);
-    crowdSrc.start();
-    // 噪音 buffer（碰撞）
-    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.12, ctx.sampleRate);
-    const ch = noiseBuf.getChannelData(0);
-    for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*(1-i/ch.length);
-    // 螺旋槳氣流噪音循環（白噪音，6 台機共用同一段音源，各機再各自濾波／調音量／定位）
-    const propBuf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
-    const pd = propBuf.getChannelData(0);
-    for(let i=0;i<pd.length;i++) pd[i] = Math.random()*2-1;
-    const propSrc = ctx.createBufferSource(); propSrc.buffer=propBuf; propSrc.loop=true;
-    propSrc.start();
-    // 每台機各自一組馬達音源：雙鋸齒波些微失諧（模擬多顆馬達不完全同步的厚度）
-    // ＋濾波氣流噪音，各自經 PannerNode 依與鏡頭的相對距離／方位做距離衰減與左右定位，
-    // 讓 6 台機各自發聲、越靠近鏡頭越大聲、越遠越小聲（並帶些微左右聲道差異）
-    engines = drones.map(()=>{
-      const o1 = ctx.createOscillator(); o1.type='sawtooth'; o1.frequency.value=150;
-      const o2 = ctx.createOscillator(); o2.type='sawtooth'; o2.frequency.value=150; o2.detune.value=13;
-      const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=950;
-      const toneGain = ctx.createGain(); toneGain.gain.value=0;
-      const nf = ctx.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=1400; nf.Q.value=0.7;
-      const noiseGain = ctx.createGain(); noiseGain.gain.value=0;
-      const panner = ctx.createPanner();
-      panner.panningModel = 'equalpower';
-      panner.distanceModel = 'inverse';
-      panner.refDistance = 1.5;
-      panner.maxDistance = 16;
-      panner.rolloffFactor = 1.1;
-      o1.connect(lp); o2.connect(lp); lp.connect(toneGain); toneGain.connect(panner);
-      propSrc.connect(nf); nf.connect(noiseGain); noiseGain.connect(panner);
-      panner.connect(ctx.destination);
-      o1.start(); o2.start();
-      return {o1,o2,toneGain,nf,noiseGain,panner};
-    });
-  }
-  // 每幀呼叫：更新聽者（鏡頭）位置朝向，以及各機馬達音高/音量/空間定位
-  function updateEngines(dronesArr, listenerPos, listenerLook, playing){
-    if(!ctx || !engines) return;
-    const t0 = ctx.currentTime, TC = 0.06;
-    const lis = ctx.listener;
-    const fx = listenerLook.x-listenerPos.x, fy = listenerLook.y-listenerPos.y, fz = listenerLook.z-listenerPos.z;
-    const fl = Math.hypot(fx,fy,fz) || 1;
-    if(lis.positionX){
-      lis.positionX.setTargetAtTime(listenerPos.x, t0, TC);
-      lis.positionY.setTargetAtTime(listenerPos.y, t0, TC);
-      lis.positionZ.setTargetAtTime(listenerPos.z, t0, TC);
-      lis.forwardX.setTargetAtTime(fx/fl, t0, TC);
-      lis.forwardY.setTargetAtTime(fy/fl, t0, TC);
-      lis.forwardZ.setTargetAtTime(fz/fl, t0, TC);
-      lis.upX.setTargetAtTime(0, t0, TC); lis.upY.setTargetAtTime(1, t0, TC); lis.upZ.setTargetAtTime(0, t0, TC);
-    }else if(lis.setPosition){
-      lis.setPosition(listenerPos.x, listenerPos.y, listenerPos.z);
-      lis.setOrientation(fx/fl, fy/fl, fz/fl, 0, 1, 0);
-    }
-    dronesArr.forEach((d,i)=>{
-      const e = engines[i]; if(!e) return;
-      if(e.panner.positionX){
-        e.panner.positionX.setTargetAtTime(d.pos.x, t0, 0.03);
-        e.panner.positionY.setTargetAtTime(d.pos.y, t0, 0.03);
-        e.panner.positionZ.setTargetAtTime(d.pos.z, t0, 0.03);
-      }else if(e.panner.setPosition){
-        e.panner.setPosition(d.pos.x, d.pos.y, d.pos.z);
-      }
-      const ratio = clamp(d.thrustN/(MASS*G) - 0.4, -0.4, 1.4);
-      const freq = 130 + ratio*190;
-      e.o1.frequency.setTargetAtTime(freq, t0, TC);
-      e.o2.frequency.setTargetAtTime(freq, t0, TC);
-      e.nf.frequency.setTargetAtTime(1300+ratio*700, t0, TC);
-      const audible = playing && d.mesh.grp.visible!==false;   // 隱藏中的機（如練習模式閒置的另外 5 台）不發聲
-      e.toneGain.gain.setTargetAtTime(audible ? 0.022+Math.max(0,ratio)*0.016 : 0, t0, 0.1);
-      e.noiseGain.gain.setTargetAtTime(audible ? 0.008+Math.max(0,ratio)*0.014 : 0, t0, 0.1);
-    });
-  }
-  return {
-    init,
-    updateEngines,
-    hit(v){
-      if(!ctx) return;
-      const s=ctx.createBufferSource(); s.buffer=noiseBuf;
-      const g=ctx.createGain(); g.gain.value=0.25*v;
-      const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=600+v*1500;
-      s.connect(f); f.connect(g); g.connect(ctx.destination); s.start();
-    },
-    cheer(){   // 進球觀眾歡呼（人聲瞬間放大再緩降）
-      if(!ctx || !crowdGain) return;
-      const t0 = ctx.currentTime;
-      crowdGain.gain.cancelScheduledValues(t0);
-      crowdGain.gain.setValueAtTime(crowdGain.gain.value, t0);
-      crowdGain.gain.linearRampToValueAtTime(0.14, t0+0.15);
-      crowdGain.gain.exponentialRampToValueAtTime(0.02, t0+3.0);
-    },
-    foul(){
-      if(!ctx) return;
-      [[220,0.12,0],[165,0.22,0.14]].forEach(([f,dur,t])=>{
-        const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
-        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
-        const t0=ctx.currentTime+t;
-        g.gain.setValueAtTime(0.16,t0); g.gain.linearRampToValueAtTime(0,t0+dur);
-        o.start(t0); o.stop(t0+dur+0.05);
-      });
-    },
-    buzzer(){
-      if(!ctx) return;
-      [0,0.38,0.76].forEach(t=>{
-        const o=ctx.createOscillator(); o.type='square'; o.frequency.value=440;
-        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
-        const t0=ctx.currentTime+t;
-        g.gain.setValueAtTime(0.14,t0); g.gain.linearRampToValueAtTime(0,t0+0.28);
-        o.start(t0); o.stop(t0+0.35);
-      });
-    },
-    warn(){
-      if(!ctx) return;
-      const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=660;
-      const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
-      g.gain.setValueAtTime(0.12,ctx.currentTime);
-      g.gain.linearRampToValueAtTime(0,ctx.currentTime+0.1);
-      o.start(); o.stop(ctx.currentTime+0.15);
-    },
-    goal(){
-      if(!ctx) return;
-      [[660,0],[880,0.12],[1320,0.24]].forEach(([f,t])=>{
-        const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
-        const g=ctx.createGain(); g.gain.value=0;
-        o.connect(g); g.connect(ctx.destination);
-        const t0=ctx.currentTime+t;
-        g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(0.22,t0+0.02);
-        g.gain.exponentialRampToValueAtTime(0.001,t0+0.5);
-        o.start(t0); o.stop(t0+0.55);
-      });
-    },
-    whistle(){
-      if(!ctx) return;
-      const o=ctx.createOscillator(); o.type='square'; o.frequency.value=2200;
-      const g=ctx.createGain(); g.gain.value=0.08;
-      o.connect(g); g.connect(ctx.destination);
-      o.start(); o.stop(ctx.currentTime+0.35);
-    }
-  };
-})();
-
-// ---------- HUD ----------
-const msgEl = document.getElementById('msg');
-let msgTimer = 0;
-function flashMsg(text, color, dur){
-  msgEl.textContent = text; msgEl.style.color = color;
-  msgEl.style.opacity = 1; msgTimer = dur;
-}
-function updateHUD(){
-  const hd = camDrone();
-  if(hd){
-    document.getElementById('tSpd').textContent = hd.vel.length().toFixed(1);
-    document.getElementById('tAlt').textContent = Math.max(0,hd.pos.y-DRONE_R).toFixed(1);
-    document.getElementById('tThr').textContent = Math.round(hd.thrustN/(MASS*G)*100);
-    const badge = document.getElementById('armBadge');
-    badge.textContent = hd.canScore ? '已解鎖' : '需回防';
-    badge.className = hd.canScore ? 'armed' : 'disarmed';
-  }
-  // 搖桿即時狀態（每幀直接查詢瀏覽器，方便除錯）
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  let gpFound = null;
-  for(const g of pads) if(g && g.connected){ gpFound = g; break; }
-  const tp = document.getElementById('tPad');
-  if(gpFound){
-    tp.textContent = '✓ ' + (gpFound.id.length>22 ? gpFound.id.slice(0,22)+'…' : gpFound.id);
-    tp.style.color = '#7dffa9';
-  }else{
-    tp.textContent = '未偵測（請按搖桿任意鍵）';
-    tp.style.color = '#fbbf24';
-  }
-  // 連線對戰狀態徽章
-  if(mode==='net'){
-    const nb = document.getElementById('netBadge');
-    nb.style.display = 'block';
-    const roleTxt = NET.isHost ? '房主' : '玩家';
-    const slotTxt = NET.mySlot>=0 ? SLOT_LABELS[NET.mySlot] : '觀戰中';
-    nb.innerHTML = `房號 <b style="color:#7dffa9">${NET.roomId||''}</b>　${roleTxt}／${slotTxt}　連線人數 ${NET.peers.size+1}`;
-  }
-}
-
-// ---------- 攝影機 ----------
-let camMode = 0;  // 0 追視 1 機載 2 全場
-const camPos = V3(0,3.5,6.5), camLook = V3(0,1,0);
-// 連線對戰時鏡頭跟拍「我方配對到的機」；未配位（觀戰）則退回全場鏡頭
-function camDrone(){
-  if(mode==='net') return NET.mySlot>=0 ? drones[NET.mySlot] : null;
-  return player;
-}
-function updateCamera(dt){
-  let dp, dl;
-  const cd = camDrone();
-  if(!cd){ camMode = 2; }
-  const fwd = cd ? V3(Math.sin(cd.yaw),0,Math.cos(cd.yaw)) : V3(0,0,1);
-  if(camMode===0){          // 第三人稱追視
-    dp = cd.pos.clone().addScaledVector(fwd,-2.2).add(V3(0,1.0,0));
-    dl = cd.pos.clone().addScaledVector(fwd,1.6);
-  }else if(camMode===1){    // 機載 FPV
-    dp = cd.pos.clone().add(V3(0,0.12,0)).addScaledVector(fwd,0.15);
-    dl = cd.pos.clone().addScaledVector(fwd,4).add(V3(0,0.3,0));
-  }else{                    // 全場轉播
-    dp = V3(0, 3.6, 5.6); dl = V3(0, 0.9, 0);   // 貼近場地，場地為主角
-  }
-  const k = camMode===1 ? 1 : Math.min(1, dt*5.5);
-  camPos.lerp(dp, k); camLook.lerp(dl, k);
-  camera.position.copy(camPos); camera.lookAt(camLook);
-}
-
-// ---------- 場地遮擋自動半透明（攝影機→玩家機射線，被擋住的充氣管淡出） ----------
-const occRay = new THREE.Raycaster();
-function updateOccluders(dt){
-  let hitSet = null;
-  const cd = camDrone();
-  if(camMode !== 1 && cd){                       // FPV 視角不需要
-    const dir = cd.pos.clone().sub(camera.position);
-    const dist = dir.length();
-    if(dist > 0.3){
-      occRay.set(camera.position, dir.multiplyScalar(1/dist));
-      occRay.far = dist;
-      hitSet = new Set(occRay.intersectObjects(occluders, false).map(h=>h.object));
-    }
-  }
-  for(const o of occluders){
-    const m = o.material;
-    const tgt = (hitSet && hitSet.has(o)) ? 0.22 : 1.0;   // 遮擋時淡至 22%
-    m.opacity += (tgt - m.opacity)*Math.min(1, dt*9);     // 平滑過渡
-    const tr = m.opacity < 0.985;
-    m.transparent = tr;
-    m.depthWrite = !tr;
-  }
-}
-
-// ---------- 比賽流程 ----------
-let state = 'menu';   // menu | play | pause | over
-let timeLeft = MATCH_TIME;
-let warned30 = false;
-function setState(s){ state = s; }
-function restart(){
-  score.red = {g:0,o:0,d:0}; score.blue = {g:0,o:0,d:0}; updateScore();
-  timeLeft = MATCH_TIME; warned30 = false;
-  drones.forEach(d=>d.reset());
-  setState('play');
-  fireFx({type:'start'});
-}
-function endMatch(){
-  setState('over');
-  fireFx({type:'end'});
-}
-let mode = 'player';   // 'player' | 'demo' | 'net' | 'practice'
-function startGame(m){
-  if(NET.connected) netTeardown();          // 若切回單機模式，順便離開連線房間
-  document.getElementById('netPanel').style.display = 'none';
-  campExitCleanup();                            // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
-  document.getElementById('campPanel').style.display = 'none';
-  drones.forEach(d=>setDroneVisible(d,true));   // 若剛才在練習模式，恢復其餘 5 台機顯示
-  document.getElementById('scoreboard').style.display = 'flex';
-  document.getElementById('practiceHUD').style.display = 'none';
-  mode = m;
-  document.getElementById('overlay').style.display='none';
-  sfx.init();
-  camMode = m==='demo' ? 2 : 0;
-  document.querySelector('#telemetry b').textContent =
-    m==='demo' ? '紅隊 Striker（AI）' : '你的 Striker（紅）';
-  restart();
-}
-document.getElementById('btnPlayer').addEventListener('click', ()=>startGame('player'));
-document.getElementById('btnDemo').addEventListener('click', ()=>startGame('demo'));
-
-// ============================================================
-// 連線對戰（Host 權威模擬 + Trystero P2P）
-//   - 房主：跑完整物理／AI（如同單機），並定時廣播 snapshot 給所有人
-//   - 其他人：只送自己的操作給房主，畫面完全用收到的 snapshot 內插顯示
-//   - 這樣不需要讓每台瀏覽器的物理／AI 隨機數保持一致，最不容易兜不起來
-// ============================================================
-const SLOT_LABELS = ['紅隊 Striker','紅隊 Defender','紅隊 Harasser','藍隊 Striker','藍隊 Defender','藍隊 Harasser'];
-const shortId = id => id ? id.slice(0,5) : '';
-const NET = {
-  room: null, roomId: null, isHost: false, hostId: null,
-  slotOwners: [null,null,null,null,null,null],   // 與 drones[] 同序：peerId 或 null(=AI代打)
-  mySlot: -1,
-  peers: new Set(),
-  remoteInputs: {},           // peerId -> {pitch,roll,yawRate,throttle}（host 端使用）
-  snapPrev: null, snapCur: null,
-  actions: {},
-  connected: false,
-  lastInputSend: 0, lastSnapSend: 0,
+<script>
+const CONFIG = {
+  SPREADSHEET_ID:'1GEE-2ISgzqAca-SblK2SSu8e7a_rlwyrkjH73wiHiW4',
+  DATA_GID:'303688467',
+  SETTINGS_GID:'987654321',
+  CHECK_MS:30000,
+  NOTICE:'初步先了解能夠參與的日期，如果有不過夜，請明確告知參與的時間範圍'
 };
 
-function randomRoomCode(){
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 去掉易混淆字元
-  let s = ''; for(let i=0;i<5;i++) s += chars[Math.floor(Math.random()*chars.length)];
-  return s;
-}
+let currentData=null;
+let currentHash='';
+let timer=null;
+let noticeTimer=null;
+let noticeMessages=[];
+let noticeIndex=0;
+let querySerial=0;
 
-function netJoin(code, asHost){
-  netTeardown();
-  NET.roomId = code;
-  NET.isHost = asHost;
-  if(asHost) NET.hostId = selfId;
-  NET.room = joinRoom({appId: NET_APP_ID}, 'drone-soccer-hsinchu-' + code);
+const $=id=>document.getElementById(id);
 
-  const inputAct = NET.room.makeAction('input');
-  const snapAct  = NET.room.makeAction('snap');
-  const slotAct  = NET.room.makeAction('slots');
-  const claimAct = NET.room.makeAction('claim');
-  const helloAct = NET.room.makeAction('hello');
-  const fxAct    = NET.room.makeAction('fx');
-  const matchAct = NET.room.makeAction('match');
-  NET.actions = {inputAct, snapAct, slotAct, claimAct, helloAct, fxAct, matchAct};
-
-  NET.room.onPeerJoin = peerId=>{
-    NET.peers.add(peerId);
-    if(NET.isHost){
-      helloAct.send({isHost:true}, {target:peerId});
-      slotAct.send(NET.slotOwners, {target:peerId});
-    }
-    refreshLobbyUI();
-  };
-  NET.room.onPeerLeave = peerId=>{
-    NET.peers.delete(peerId);
-    delete NET.remoteInputs[peerId];
-    if(NET.isHost){
-      let changed = false;
-      NET.slotOwners = NET.slotOwners.map(o=> o===peerId ? (changed=true, null) : o);
-      if(changed) slotAct.send(NET.slotOwners);
-    }
-    if(peerId===NET.hostId && !NET.isHost){
-      flashMsg('房主已離線，連線對戰中止', '#f87171', 4);
-      netLeave();
-      return;
-    }
-    refreshLobbyUI();
-  };
-  helloAct.onMessage = (data,{peerId})=>{ if(data.isHost){ NET.hostId = peerId; refreshLobbyUI(); } };
-  slotAct.onMessage = data=>{
-    NET.slotOwners = data;
-    NET.mySlot = NET.slotOwners.indexOf(selfId);
-    refreshLobbyUI();
-  };
-  claimAct.onMessage = (data,{peerId})=>{ if(NET.isHost) processClaim(peerId, data.slot, data.want); };
-  inputAct.onMessage = (data,{peerId})=>{ NET.remoteInputs[peerId] = data; };
-  snapAct.onMessage = data=>{
-    NET.snapPrev = NET.snapCur; NET.snapCur = data; NET.snapCur._recv = performance.now();
-    if(mode!=='net'){ updateNetWaitStatus(); maybeEnterLiveMatch(); }   // 大廳中即時同步「比賽進行中／剩餘時間」，並視情況自動接手中途加入
-  };
-  fxAct.onMessage = data=> playFx(data);
-  matchAct.onMessage = data=>{ if(data.cmd==='start') localNetStart(); };
-
-  NET.connected = true;
-  NET.mySlot = -1;   // 尚未選位；房主/玩家都要在大廳自行點選要操控的位置
-  document.getElementById('netJoinRow').style.display = 'none';
-  document.getElementById('netLobby').style.display = 'block';
-  document.getElementById('netMsg').textContent = '';
-  document.getElementById('netRoomCodeShow').textContent = code;
-  refreshLobbyUI();
-}
-
-function netTeardown(){
-  if(NET.room){ try{ NET.room.leave(); }catch(e){} }
-  NET.room = null; NET.actions = {}; NET.peers = new Set(); NET.remoteInputs = {};
-  NET.slotOwners = [null,null,null,null,null,null];
-  NET.mySlot = -1; NET.isHost = false; NET.hostId = null; NET.connected = false;
-  NET.snapPrev = null; NET.snapCur = null;
-}
-
-function netLeave(){
-  netTeardown();
-  mode = 'player';
-  setState('menu');
-  document.getElementById('overlay').style.display = 'flex';
-  document.getElementById('netPanel').style.display = 'none';
-  document.getElementById('netJoinRow').style.display = 'flex';
-  document.getElementById('netLobby').style.display = 'none';
-  document.getElementById('netBadge').style.display = 'none';
-  document.getElementById('netCodeInput').value = '';
-  document.getElementById('rulesBox').style.display = 'block';
-  document.getElementById('modesRow').style.display = 'flex';
-}
-
-function processClaim(peerId, slot, want){    // 僅房主呼叫：唯一裁決者，避免搶位衝突
-  if(slot<0 || slot>5) return;
-  if(want){
-    if(NET.slotOwners[slot]===null){
-      NET.slotOwners = NET.slotOwners.map(o=> o===peerId ? null : o);   // 先讓出舊位置
-      NET.slotOwners[slot] = peerId;
-    }
-  }else if(NET.slotOwners[slot]===peerId){
-    NET.slotOwners[slot] = null;
-  }
-  NET.actions.slotAct && NET.actions.slotAct.send(NET.slotOwners);
-  NET.mySlot = NET.slotOwners.indexOf(selfId);
-  refreshLobbyUI();
-}
-function requestSlot(slot, want){
-  const live = netLiveState()==='play' || netLiveState()==='pause';
-  if(live){
-    if(!want){ flashMsg('比賽進行中無法離開位置', '#fbbf24', 1.2); return; }
-    if(NET.slotOwners[slot]!==null){ flashMsg('這個位置已經有人了，比賽進行中無法搶位', '#fbbf24', 1.5); return; }
-  }
-  if(NET.isHost) processClaim(selfId, slot, want);
-  else if(NET.hostId) NET.actions.claimAct.send({slot, want}, {target: NET.hostId});
-}
-
-// 比賽是否「已在進行中」：自己已進場（net 模式）就看本地權威 state；
-// 還在大廳、尚未進場的人（例如中途加入者）就看目前收到的房主最新快照
-function netLiveState(){ return mode==='net' ? state : (NET.snapCur ? NET.snapCur.state : 'menu'); }
-function netLiveTimeLeft(){ return mode==='net' ? timeLeft : (NET.snapCur ? NET.snapCur.timeLeft : 0); }
-// 大廳中（尚未進場）如果偵測到比賽已在進行、且自己已經有位置了 → 直接接手該機進場
-function maybeEnterLiveMatch(){
-  if(mode==='net' || NET.mySlot<0) return;
-  if(netLiveState()==='play' || netLiveState()==='pause') localNetEnterLive();
-}
-function updateNetWaitStatus(){
-  const el = document.getElementById('netWaitMsg');
-  if(!el || !NET.connected) return;
-  const live = netLiveState()==='play' || netLiveState()==='pause';
-  if(live){
-    const tl = Math.max(0, netLiveTimeLeft()||0);
-    const mm = Math.floor(tl/60), ss = Math.floor(tl%60);
-    const hasVacancy = NET.slotOwners.includes(null);
-    el.textContent = (netLiveState()==='pause' ? '⏸ 比賽暫停中，剩餘 ' : '⏱ 比賽進行中，剩餘 ')
-      + mm+':'+String(ss).padStart(2,'0')
-      + (hasVacancy ? '　尚有空位，可點選中途加入' : '　目前滿位，請等待比賽結束');
-    el.style.color = '#7dffa9';
-  }else{
-    el.textContent = NET.isHost ? '' : (NET.hostId ? '等待房主開始比賽…' : '');
-    el.style.color = '#aab8d8';
-  }
-}
-function refreshLobbyUI(){
-  if(!NET.connected) return;
-  const statusEl = document.getElementById('netStatus');
-  statusEl.textContent = NET.isHost ? '你是房主'
-    : (NET.hostId ? '已連線，房主 ' + shortId(NET.hostId) : '尋找房主中…');
-  const live = netLiveState()==='play' || netLiveState()==='pause';
-  const wrap = document.getElementById('netSlots');
-  wrap.innerHTML = '';
-  NET.slotOwners.forEach((owner,i)=>{
-    const row = document.createElement('div');
-    row.className = 'netSlotRow ' + (i<3 ? 't-red' : 't-blue');
-    const name = document.createElement('div');
-    name.className = 'netSlotName'; name.textContent = SLOT_LABELS[i];
-    const occ = document.createElement('div');
-    let btn = null;
-    if(owner===null){
-      occ.className = 'netSlotOcc ai'; occ.textContent = 'AI 代打';
-      btn = document.createElement('button');
-      btn.className = 'netBtnSmall'; btn.textContent = live ? '中途加入' : '坐上此位置';
-      btn.onclick = ()=> requestSlot(i, true);
-    }else if(owner===selfId){
-      occ.className = 'netSlotOcc me'; occ.textContent = '你';
-      if(!live){
-        btn = document.createElement('button');
-        btn.className = 'netBtnSmall leave'; btn.textContent = '離開位置';
-        btn.onclick = ()=> requestSlot(i, false);
-      }
-    }else{
-      occ.className = 'netSlotOcc'; occ.textContent = '玩家 ' + shortId(owner);
-    }
-    row.append(name, occ); if(btn) row.append(btn);
-    wrap.appendChild(row);
-  });
-  document.getElementById('btnNetStart').style.display = (NET.isHost && !live) ? 'inline-block' : 'none';
-  updateNetWaitStatus();
-  maybeEnterLiveMatch();
-}
-
-function netStartMatch(){
-  if(!NET.isHost) return;
-  NET.actions.matchAct.send({cmd:'start'});
-  localNetStart();
-}
-function localNetStart(){
-  mode = 'net';
-  document.getElementById('overlay').style.display = 'none';
-  sfx.init();
-  camMode = NET.mySlot>=0 ? 0 : 2;
-  document.querySelector('#telemetry b').textContent =
-    NET.mySlot>=0 ? '你的機（' + SLOT_LABELS[NET.mySlot] + '）' : '觀戰模式';
-  restart();
-}
-// 中途加入：比賽已在進行中才會走這條路（見 maybeEnterLiveMatch）。
-// 跟 localNetStart() 幾乎一樣，差別是不呼叫 restart()——比分/時間/所有機的位置
-// 直接套用目前已收到的房主快照，不能重置正在進行中的比賽。
-function localNetEnterLive(){
-  mode = 'net';
-  document.getElementById('overlay').style.display = 'none';
-  sfx.init();
-  camMode = NET.mySlot>=0 ? 0 : 2;
-  document.querySelector('#telemetry b').textContent =
-    NET.mySlot>=0 ? '你的機（' + SLOT_LABELS[NET.mySlot] + '）' : '觀戰模式';
-  flashMsg('已加入比賽中場！', '#7dffa9', 1.6);
-  applyNetSnapshotInterp();
-}
-
-// ---- 每幀：非房主送出自己的操作給房主（節流 ~30Hz） ----
-function sendMyInputToHost(){
-  if(NET.mySlot<0 || !NET.hostId) return;
-  const now = performance.now();
-  if(now - NET.lastInputSend < 33) return;
-  NET.lastInputSend = now;
-  const i = drones[NET.mySlot].input;
-  NET.actions.inputAct.send({pitch:i.pitch, roll:i.roll, yawRate:i.yawRate, throttle:i.throttle}, {target: NET.hostId});
-}
-// ---- 每幀：房主節流廣播世界快照（~24Hz），含分數／時間／狀態 ----
-function netMaybeBroadcastSnapshot(){
-  const now = performance.now();
-  if(now - NET.lastSnapSend < 42) return;
-  NET.lastSnapSend = now;
-  NET.actions.snapAct.send({
-    state, timeLeft,
-    score: {red:{...score.red}, blue:{...score.blue}},
-    drones: drones.map(d=>({
-      x:d.pos.x, y:d.pos.y, z:d.pos.z,
-      vx:d.vel.x, vy:d.vel.y, vz:d.vel.z,
-      yaw:d.yaw, tp:d.tiltP, tr:d.tiltR, dist:d.disturb, cs:d.canScore,
-      th:d.thrustN/(MASS*G)
-    }))
-  });
-}
-// ---- 每幀（非房主）：用最近兩份 snapshot 內插所有機的視覺狀態，並鏡射分數/時間/狀態 ----
-function applyNetSnapshotInterp(){
-  const cur = NET.snapCur;
-  if(!cur) return;
-  state = cur.state; timeLeft = cur.timeLeft;
-  score.red = cur.score.red; score.blue = cur.score.blue;
-  updateScore();
-  const prev = NET.snapPrev;
-  let a = 1;
-  if(prev){
-    const span = Math.max(1, cur._recv - prev._recv);
-    a = clamp((performance.now() - cur._recv) / span + 1, 0, 1.6);   // 稍微外插，減少延遲感
-  }
-  drones.forEach((d,i)=>{
-    const c = cur.drones[i], p = prev ? prev.drones[i] : c;
-    d.pos.set(lerp(p.x,c.x,a), lerp(p.y,c.y,a), lerp(p.z,c.z,a));
-    d.vel.set(lerp(p.vx,c.vx,a), lerp(p.vy,c.vy,a), lerp(p.vz,c.vz,a));
-    d.yaw = p.yaw + angDiff(c.yaw,p.yaw)*a;
-    d.tiltP = lerp(p.tp,c.tp,a); d.tiltR = lerp(p.tr,c.tr,a);
-    d.disturb = lerp(p.dist,c.dist,a);
-    d.canScore = c.cs;
-    d.thrustN = lerp(p.th,c.th,a)*MASS*G;   // 供馬達音效依推力調整音高/音量用
-    d.propSpin += 0.9;
-  });
-}
-
-document.getElementById('btnNet').addEventListener('click', ()=>{
-  document.getElementById('rulesBox').style.display = 'none';
-  document.getElementById('modesRow').style.display = 'none';
-  document.getElementById('netPanel').style.display = 'block';
-});
-document.getElementById('btnNetBack').addEventListener('click', ()=>{
-  if(NET.connected){ netLeave(); return; }
-  document.getElementById('netPanel').style.display = 'none';
-  document.getElementById('rulesBox').style.display = 'block';
-  document.getElementById('modesRow').style.display = 'flex';
-});
-document.getElementById('btnNetCreate').addEventListener('click', ()=> netJoin(randomRoomCode(), true));
-document.getElementById('btnNetJoin').addEventListener('click', ()=>{
-  const v = document.getElementById('netCodeInput').value.trim().toUpperCase();
-  if(!v){ document.getElementById('netMsg').textContent = '請輸入房號'; return; }
-  netJoin(v, false);
-});
-document.getElementById('btnNetStart').addEventListener('click', netStartMatch);
-document.getElementById('btnNetLeave').addEventListener('click', netLeave);
-
-// ---------- 主迴圈（固定步長物理） ----------
-const clock = new THREE.Clock();
-let acc = 0;
-const H = 1/120;            // 物理步長 120Hz
-
-// ============================================================
-// 闖關模式（2026-08-26 新增）
-//   業主要求：參考市售無人機教學 App 的「關卡式訓練」形式，做出自己的闖關模式。
-//   關卡內容為原創，依本模擬器的 6×3×3 m 場地、Class 20 機體與無人機足球
-//   考證課程重新設計（未複製他牌關卡資料）。
-//   - 24 關 / 4 章；每關 3 星：完成=1★、時間≤par=2★、再加碰撞≤maxHit=3★
-//   - 場上只有玩家機（同練習模式，其餘 5 台 setDroneVisible(false)、不進物理）
-//   - 進度存 localStorage（CAMP_SAVE_KEY），前一關拿到 ≥1★ 才解鎖下一關
-//   - 新增的光環／航點／停機坪／信標都是「非實體」純視覺判定，只有原本的
-//     電子球門框（collideRing）與本模式的柱子（campCollidePoles）是剛體，
-//     避免初學者一直被看不見的東西彈開而受挫。
-// ============================================================
-const CAMP_SAVE_KEY = 'hsinchuDroneSoccerCampaignV1';
-const CAMP_CHAPTERS = [
-  {n:1, title:'第一章　基礎操控', sub:'定高 · 懸停 · 平移 · 轉向'},
-  {n:2, title:'第二章　航線與精準', sub:'路徑飛行 · 高度變換 · 精準降落'},
-  {n:3, title:'第三章　穿環技術', sub:'單環 · 連環 · S 型 · 限時'},
-  {n:4, title:'第四章　比賽技能', sub:'射門 · 回防解鎖 · 繞桿 · 側風'},
-];
-// 任務建構子（座標單位：公尺，場地 x∈[-3,3]、z∈[-1.5,1.5]、y∈[0,3]）
-const HV=(x,y,z,r,hold)=>({t:'hover',x,y,z,r,hold});          // 懸停圈內停留 hold 秒
-const WP=(x,y,z,r=0.34)=>({t:'wp',x,y,z,r});                  // 觸及航點球
-const GT=(x,y,z,ax='x',r=0.42)=>({t:'gate',x,y,z,ax,r});      // 穿越光環（非實體）
-const LD=(x,z,r=0.4)=>({t:'land',x,z,r});                     // 低速降落於停機坪
-const FC=(x,z,tol=14,hold=1.4)=>({t:'face',x,z,tol,hold});    // 機頭對準信標
-const GL=(side)=>({t:'goal',side});                            // 穿越真實電子球門（W=紅框、E=藍框）
-// 圓形航線用：以 (cx,cz) 為圓心、半徑 rr、高度 y，取 n 個等分航點
-const CIRCLE=(cx,y,cz,rr,n,ph=0)=>Array.from({length:n},(_,i)=>{
-  const a = ph + i/n*Math.PI*2;
-  return WP(cx+Math.cos(a)*rr, y, cz+Math.sin(a)*rr, 0.36);
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible') refresh(false);
 });
 
-const CAMP_LEVELS = [
-  // ---- 第一章　基礎操控 ----
-  {ch:1, name:'起飛練習', brief:'平穩起飛，把機體停進 1.5 m 高的懸停圈，停滿 3 秒。',
-   par:20, maxHit:2, tasks:[HV(1.3,1.5,0,0.5,3)]},
-  {ch:1, name:'懸停練習', brief:'換成更小的懸停圈，穩住 6 秒——少修正、少漂移才是穩。',
-   par:26, maxHit:1, tasks:[HV(1.3,1.5,0,0.32,6)]},
-  {ch:1, name:'降落練習', brief:'先爬升到 2.2 m 的圈內，再輕輕降回起飛墊（下降要慢）。',
-   par:28, maxHit:1, tasks:[HV(1.3,2.2,0,0.45,1.5), LD(1.3,0,0.45)]},
-  {ch:1, name:'前後飛行練習', brief:'機頭朝向不要動，只用 W／S 前後直線往返兩個航點。',
-   par:30, maxHit:2, tasks:[WP(0.2,1.4,0), WP(2.4,1.4,0), WP(0.2,1.4,0)]},
-  {ch:1, name:'左右側移練習', brief:'一樣不要轉向——用 A／D 側飛左右平移通過航點。',
-   par:32, maxHit:2, tasks:[WP(1.3,1.4,1.15), WP(1.3,1.4,-1.15), WP(1.3,1.4,1.15)]},
-  {ch:1, name:'轉向對準練習', brief:'原地旋轉（← →），讓機頭依序對準三座信標並穩住。',
-   par:36, maxHit:1, tasks:[FC(-2.2,0), FC(2.6,0), FC(0,1.4)]},
-  // ---- 第二章　航線與精準 ----
-  {ch:2, name:'對角線飛行練習', brief:'同時改變高度與左右位置，走出一條真正的對角線。',
-   par:36, maxHit:2, tasks:[WP(2.4,0.6,1.1), WP(0.2,2.3,-1.1), WP(2.4,0.6,1.1)]},
-  {ch:2, name:'矩形航線練習', brief:'沿矩形四角依序飛完一圈，四個轉角都要收得住。',
-   par:42, maxHit:2, tasks:[WP(2.4,1.4,1.0), WP(0.3,1.4,1.0), WP(0.3,1.4,-1.0), WP(2.4,1.4,-1.0), WP(2.4,1.4,1.0)]},
-  {ch:2, name:'圓形航線練習', brief:'繞場中央飛一個圓，速度盡量平均、不要忽快忽慢。',
-   par:46, maxHit:2, tasks:CIRCLE(1.2,1.5,0,1.0,8,Math.PI/2)},
-  {ch:2, name:'高度變換練習', brief:'在高低航點之間交替飛行，專心練油門的加減。',
-   par:42, maxHit:2, tasks:[WP(2.3,2.4,0), WP(1.3,0.55,0), WP(0.3,2.4,0), WP(1.3,0.55,0)]},
-  {ch:2, name:'精準降落練習', brief:'飛過航點後，降落在對角那塊比較小的停機坪上。',
-   par:36, maxHit:1, tasks:[WP(0.5,1.8,0.95), LD(2.3,-0.95,0.3)]},
-  {ch:2, name:'8 字飛行', brief:'繞兩個圓心畫出一個 8 字，交叉點要維持住高度。',
-   par:52, maxHit:3,
-   tasks:[WP(2.0,1.5,0.9), WP(2.6,1.5,0), WP(2.0,1.5,-0.9), WP(1.2,1.5,0),
-          WP(0.4,1.5,0.9), WP(-0.2,1.5,0), WP(0.4,1.5,-0.9), WP(1.2,1.5,0)]},
-  // ---- 第三章　穿環技術 ----
-  {ch:3, name:'穿越練習', brief:'對準己方顏色的紅色電子球門，穩穩地穿過去一次。',
-   par:22, maxHit:1, tasks:[GL('W')]},
-  {ch:3, name:'連續穿環', brief:'紅框 → 藍框 → 紅框，連續穿越三次不落地。',
-   par:40, maxHit:2, tasks:[GL('W'), GL('E'), GL('W')]},
-  {ch:3, name:'高低穿梭', brief:'三道光環一高一低交替——進環前先把高度修好再進去。',
-   par:40, maxHit:2, tasks:[GT(0.6,0.75,0), GT(-0.7,2.2,0), GT(0.6,0.75,0)]},
-  {ch:3, name:'S 型穿越', brief:'三道光環左右錯開，用側飛畫出 S 型路線穿過去。',
-   par:40, maxHit:2, tasks:[GT(0.9,1.5,0.85), GT(-0.3,1.5,-0.85), GT(-1.5,1.5,0.85)]},
-  {ch:3, name:'限時穿環挑戰', brief:'45 秒內完成四次穿框——這關開始要講速度了。',
-   par:36, maxHit:3, limit:45, tasks:[GL('W'), GL('E'), GL('W'), GL('E')]},
-  {ch:3, name:'障礙穿梭', brief:'場上立起三根柱子，撞到會失控翻滾——從光環之間鑽過去。',
-   par:40, maxHit:2, tasks:[GT(1.0,1.5,0.8), GT(-0.6,1.5,-0.8)],
-   poles:[{x:1.9,z:0}, {x:0.2,z:0.75}, {x:-1.4,z:-0.6}]},
-  // ---- 第四章　比賽技能 ----
-  {ch:4, name:'動態滑行射門', brief:'從己方半場加速起跑，一路滑行直接穿過紅框得分。',
-   par:24, maxHit:1, tasks:[WP(2.5,1.6,0,0.4), GL('W')]},
-  {ch:4, name:'回防解鎖', brief:'得分後必須飛回己方半場才能再次得分——這是 FIDA 的回防規則。',
-   par:40, maxHit:2, tasks:[GL('W'), WP(2.5,1.3,0,0.5), GL('W')]},
-  {ch:4, name:'繞桿挑戰', brief:'五根柱子左右繞行，像籃球運球繞桿一樣蛇行過去。',
-   par:52, maxHit:3,
-   tasks:[WP(2.0,1.4,0.75), WP(1.1,1.4,-0.75), WP(0.2,1.4,0.75), WP(-0.7,1.4,-0.75), WP(-1.6,1.4,0.75)],
-   poles:[{x:2.45,z:0.07}, {x:1.55,z:-0.07}, {x:0.65,z:0.07}, {x:-0.25,z:-0.07}, {x:-1.15,z:0.07}]},
-  {ch:4, name:'側風體驗', brief:'場上有穩定側風，機體會被持續吹偏——用側飛一路修正回來。',
-   par:46, maxHit:3, wind:{x:0, z:1.5, gust:0.4},
-   tasks:[HV(1.3,1.6,0,0.4,4), WP(0,1.6,0), GL('W')]},
-  {ch:4, name:'強風走廊', brief:'風更強而且會來陣風——先穿過兩道光環，再精準降落。',
-   par:54, maxHit:4, wind:{x:-0.9, z:1.9, gust:1.1},
-   tasks:[GT(0.8,1.5,0), GT(-0.8,1.5,0), LD(-2.3,0,0.4)]},
-  {ch:4, name:'終極挑戰', brief:'柱子 ＋ 側風 ＋ 限時 75 秒：走完全程並完成兩次射門。',
-   par:62, maxHit:5, limit:75, wind:{x:0.6, z:-1.4, gust:0.9},
-   poles:[{x:1.55,z:0.55}, {x:0.35,z:-0.6}, {x:-1.0,z:0.5}],
-   tasks:[GT(1.6,1.5,0.75), WP(0.2,2.0,-0.9), GL('W'), WP(2.5,1.3,0,0.5), GL('W')]},
-];
-CAMP_LEVELS.forEach((L,i)=>{ L.id = i+1; L.no = L.ch + '-' + (i+1 - CAMP_LEVELS.findIndex(x=>x.ch===L.ch)); });
-const CAMP_STAR_TOTAL = CAMP_LEVELS.length*3;
+google.charts.load('current',{packages:['table']});
+google.charts.setOnLoadCallback(()=>refresh(true));
 
-// ---------- 闖關：場景物件（光環／航點／停機坪／信標／柱子） ----------
-const CAMP_COL = { pend:0x46557f, act:0x7dffa9, done:0xffd75a };
-const POLE_R = 0.07;
-const campGroup = new THREE.Group();
-scene.add(campGroup);
-const campSRGB = hex => new THREE.Color(hex).convertSRGBToLinear();
-function campMat(hex, op){
-  const m = new THREE.MeshBasicMaterial({color:campSRGB(hex), transparent:true, opacity:op,
-                                         depthWrite:false, side:THREE.DoubleSide});
-  m.userData.op0 = op;          // 記住原始不透明度：切到 done 狀態時是「絕對值變暗」而不是每次都再乘一次
-  return m;
-}
-// 由地面往上的細光柱：幫助判斷航點的水平位置（3D 空間中純球體很難目測遠近）
-function campBeam(x, y, z, hex){
-  const g = new THREE.CylinderGeometry(0.012, 0.012, Math.max(0.02,y), 6, 1, true);
-  const m = new THREE.Mesh(g, campMat(hex, 0.25));
-  m.position.set(x, y/2, z);
-  return m;
-}
-function campBuildMarker(task){
-  const g = new THREE.Group();
-  const c = CAMP_COL.pend;
-  if(task.t==='hover' || task.t==='wp'){
-    const r = task.r;
-    const wireMat = new THREE.MeshBasicMaterial({color:campSRGB(c), wireframe:true, transparent:true, opacity:0.55});
-    wireMat.userData.op0 = 0.55;
-    const wire = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), wireMat);
-    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(r*0.97, 1), campMat(c, 0.10));
-    g.add(wire, core);
-    g.position.set(task.x, task.y, task.z);
-    g.userData.parts = [wire.material, core.material];
-    g.userData.pulse = [wire, core];
-    const beam = campBeam(task.x, task.y, task.z, c);
-    beam.userData.isBeam = true;
-    campGroup.add(beam);
-    g.userData.beam = beam;
-  }else if(task.t==='gate'){
-    const torus = new THREE.Mesh(new THREE.TorusGeometry(task.r, 0.028, 8, 40), campMat(c, 0.95));
-    const halo  = new THREE.Mesh(new THREE.TorusGeometry(task.r, 0.075, 8, 40), campMat(c, 0.16));
-    if(task.ax==='x'){ torus.rotation.y = Math.PI/2; halo.rotation.y = Math.PI/2; }
-    g.add(torus, halo);
-    g.position.set(task.x, task.y, task.z);
-    g.userData.parts = [torus.material, halo.material];
-    g.userData.pulse = [torus, halo];
-    const beam = campBeam(task.x, task.y, task.z, c);
-    campGroup.add(beam); g.userData.beam = beam;
-  }else if(task.t==='land'){
-    const ring = new THREE.Mesh(new THREE.RingGeometry(task.r*0.82, task.r, 40), campMat(c, 0.85));
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(task.r*0.82, 40), campMat(c, 0.14));
-    ring.rotation.x = -Math.PI/2; disc.rotation.x = -Math.PI/2;
-    ring.position.y = 0.012; disc.position.y = 0.010;
-    g.add(ring, disc);
-    g.position.set(task.x, 0, task.z);
-    g.userData.parts = [ring.material, disc.material];
-    g.userData.pulse = [ring, disc];
-  }else if(task.t==='face'){
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,2.2,8), campMat(c, 0.5));
-    post.position.y = 1.1;
-    const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15,1), campMat(c, 0.9));
-    bulb.position.y = 2.3;
-    g.add(post, bulb);
-    g.position.set(task.x, 0, task.z);
-    g.userData.parts = [post.material, bulb.material];
-    g.userData.pulse = [bulb];
-  }else if(task.t==='goal'){
-    // 真實電子球門本來就在場上，只放一個指示光柱標出要穿哪一邊
-    const ring = task.side==='W' ? ringWest : ringEast;
-    const beam = campBeam(ring.x, RING.y, 0, c);
-    g.add(beam);
-    g.userData.parts = [beam.material];
-    g.userData.pulse = [];
-  }
-  campGroup.add(g);
-  return g;
-}
-function campSetMarker(g, st){
-  if(!g) return;
-  const hex = CAMP_COL[st];
-  const k = st==='done' ? 0.40 : st==='act' ? 1.45 : 0.70;   // 現正進行的目標要明顯最亮
-  g.userData.parts.forEach(m=>{
-    m.color.set(campSRGB(hex));
-    m.opacity = Math.min(1, (m.userData.op0!==undefined ? m.userData.op0 : m.opacity) * k);
-  });
-  if(g.userData.beam){
-    const bm = g.userData.beam.material;
-    bm.color.set(campSRGB(hex));
-    bm.opacity = Math.min(1, (bm.userData.op0!==undefined ? bm.userData.op0 : 0.25) * k);
-  }
-  g.visible = true;
-  g.userData.state = st;
-  g.scale.setScalar(1);
-}
-function campBuildPole(p){
-  const h = FIELD.h;
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(POLE_R, POLE_R, h, 14),
-    new THREE.MeshStandardMaterial({color:campSRGB(0xff9d3c), emissive:campSRGB(0xff6a00),
-      emissiveIntensity:0.55, roughness:0.55, metalness:0.1}));
-  m.position.set(p.x, h/2, p.z);
-  m.castShadow = true;
-  campGroup.add(m);
-  occluders.push(m);     // 沿用場地既有的「擋到視線就淡到 22%」機制（updateOccluders）
-  return m;
-}
-function campClearScene(){
-  campPoles.forEach(p=>{                       // 柱子離場時要從遮擋清單移除，否則材質被 dispose 後仍被 raycast
-    const i = occluders.indexOf(p.mesh);
-    if(i >= 0) occluders.splice(i, 1);
-  });
-  while(campGroup.children.length){
-    const o = campGroup.children.pop();
-    o.traverse(n=>{
-      if(n.geometry) n.geometry.dispose();
-      if(n.material) (Array.isArray(n.material)?n.material:[n.material]).forEach(mm=>mm.dispose());
-    });
-    campGroup.remove(o);
-  }
+function queryUrl(gid,range){
+  return 'https://docs.google.com/spreadsheets/d/'+CONFIG.SPREADSHEET_ID+
+         '/gviz/tq?gid='+encodeURIComponent(gid)+
+         '&range='+encodeURIComponent(range)+
+         '&headers=1'+
+         '&_='+Date.now()+'_'+(++querySerial);
 }
 
-// ---------- 闖關：狀態、存檔、關卡流程 ----------
-let campLevel = null, campTasks = [], campMarkers = [], campPoles = [];
-let campIdx = 0, campTime = 0, campHits = 0, campHold = 0, campHitCd = 0, campDone = false;
-const campPrevPos = V3(0,0,0), campPrevVel = V3(0,0,0);
-let campPrevDist = 0, campSave = {};
-
-function campLoad(){ try{ campSave = JSON.parse(localStorage.getItem(CAMP_SAVE_KEY) || '{}') || {}; }
-                     catch(e){ campSave = {}; } }
-function campStore(){ try{ localStorage.setItem(CAMP_SAVE_KEY, JSON.stringify(campSave)); }catch(e){} }
-const campStars = id => campSave[id] | 0;
-const campUnlocked = id => id===1 || campStars(id-1) > 0;
-const campTotalStars = () => CAMP_LEVELS.reduce((s,L)=>s+campStars(L.id), 0);
-campLoad();
-
-function campRefreshMarkers(){
-  campMarkers.forEach((g,i)=>campSetMarker(g, i<campIdx ? 'done' : (i===campIdx ? 'act' : 'pend')));
-}
-function campBuildLevel(){
-  campClearScene();
-  campTasks = campLevel.tasks;
-  campMarkers = campTasks.map(t=>campBuildMarker(t));
-  campPoles = (campLevel.poles||[]).map(p=>({x:p.x, z:p.z, mesh:campBuildPole(p)}));
-  campIdx=0; campTime=0; campHits=0; campHold=0; campHitCd=0; campDone=false;
-  drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });   // 只留玩家機（同練習模式）
-  campPrevPos.copy(player.pos); campPrevVel.copy(player.vel); campPrevDist = player.disturb;
-  campRefreshMarkers();
-  campUpdateHUD();
-  flashMsg(campLevel.no + '　' + campLevel.name, '#ffd75a', 1.8);
-}
-function campStart(id){
-  const L = CAMP_LEVELS[id-1];
-  if(!L || !campUnlocked(id)) return;
-  if(NET.connected) netTeardown();
-  ['netPanel','campPanel','overlay','campResult','scoreboard','practiceHUD']
-    .forEach(k=>document.getElementById(k).style.display='none');
-  document.getElementById('campHUD').style.display = 'block';
-  mode = 'campaign';
-  sfx.init();
-  camMode = 0;
-  document.querySelector('#telemetry b').textContent = '你的 Striker（闖關）';
-  campLevel = L;
-  campBuildLevel();
-  setState('play');
-}
-function campRestart(){ if(campLevel){ document.getElementById('campResult').style.display='none';
-                                       campBuildLevel(); setState('play'); } }
-// 離開闖關模式時的還原（其餘 5 台機恢復顯示、場上道具清掉、HUD 切回去）
-function campExitCleanup(){
-  campClearScene();
-  campLevel = null; campTasks = []; campMarkers = []; campPoles = [];
-  document.getElementById('campHUD').style.display = 'none';
-  document.getElementById('campResult').style.display = 'none';
-  drones.forEach(d=>setDroneVisible(d, true));
-}
-
-// ---------- 闖關：每個子步長的判定 ----------
-function campTaskDone(task, h){
-  const p = player.pos;
-  if(task.t==='hover'){
-    const d = Math.hypot(p.x-task.x, p.y-task.y, p.z-task.z);
-    campHold = d < task.r ? campHold + h : Math.max(0, campHold - h*1.6);
-    return campHold >= task.hold;
-  }
-  if(task.t==='wp') return Math.hypot(p.x-task.x, p.y-task.y, p.z-task.z) < task.r;
-  if(task.t==='gate'){
-    const tol = task.r - DRONE_R*0.5;
-    if(task.ax==='x'){
-      if((campPrevPos.x-task.x)*(p.x-task.x) >= 0) return false;
-      return Math.hypot(p.y-task.y, p.z-task.z) < tol;
-    }
-    if((campPrevPos.z-task.z)*(p.z-task.z) >= 0) return false;
-    return Math.hypot(p.y-task.y, p.x-task.x) < tol;
-  }
-  if(task.t==='land'){
-    const flat = Math.hypot(p.x-task.x, p.z-task.z);
-    const down = p.y <= DRONE_R+0.03 && Math.abs(player.vel.y) < 0.9 && player.vel.length() < 0.7;
-    campHold = (flat < task.r && down) ? campHold + h : Math.max(0, campHold - h*2);
-    return campHold >= 0.8;
-  }
-  if(task.t==='face'){
-    // fwd = (sin(yaw),0,cos(yaw))，所以「對準 (x,z)」的目標 yaw = atan2(dx, dz)
-    const want = Math.atan2(task.x - p.x, task.z - p.z);
-    const err = Math.abs(angDiff(want, player.yaw));
-    campHold = err < task.tol*Math.PI/180 ? campHold + h : Math.max(0, campHold - h*1.6);
-    return campHold >= task.hold;
-  }
-  if(task.t==='goal'){
-    const ring = task.side==='W' ? ringWest : ringEast;
-    if((campPrevPos.x-ring.x)*(p.x-ring.x) >= 0) return false;
-    return Math.hypot(p.y-ring.y, p.z-ring.z) < RING.R - DRONE_R + 0.05;   // 同 checkGoals 的判定
-  }
-  return false;
-}
-function campCollidePoles(){
-  const minD = POLE_R + DRONE_R;
-  for(const p of campPoles){
-    const dx = player.pos.x - p.x, dz = player.pos.z - p.z;
-    const d = Math.hypot(dx, dz);
-    if(d < minD && d > 1e-5){
-      const nx = dx/d, nz = dz/d;
-      player.pos.x = p.x + nx*minD; player.pos.z = p.z + nz*minD;
-      const vn = player.vel.x*nx + player.vel.z*nz;
-      if(vn < 0){
-        player.vel.x -= nx*vn*1.5; player.vel.z -= nz*vn*1.5;   // 恢復係數 0.5
-        player.disturb = Math.min(1, player.disturb + Math.min(0.6, -vn*0.12));
-        if(-vn > 1.0) sfx.hit(Math.min(1, -vn/8));
-      }
-    }
-  }
-}
-function campApplyWind(h, t){
-  const w = campLevel && campLevel.wind;
-  if(!w) return;
-  // 風以「加速度」形式加在速度上：與既有阻力平衡後會產生穩定漂移，不動 step() 裡調校過的物理
-  const gx = w.gust ? Math.sin(t*0.70)*Math.sin(t*1.90+1.3)*w.gust : 0;
-  const gz = w.gust ? Math.sin(t*0.55+2.1)*Math.sin(t*1.40)*w.gust : 0;
-  player.vel.x += (w.x + gx)*h;
-  player.vel.z += (w.z + gz)*h;
-}
-function campDetectHit(h){
-  campHitCd = Math.max(0, campHitCd - h);
-  if(campHitCd > 0){ campPrevDist = player.disturb; return; }
-  let hit = player.disturb - campPrevDist > 0.02;      // 球門框／柱子／高速撞牆都會抬高 disturb
-  const bx = FIELD.hx-DRONE_R-0.004, bz = FIELD.hz-DRONE_R-0.004;
-  if(!hit && Math.abs(player.pos.x) >= bx && Math.abs(campPrevVel.x) > 1.0) hit = true;
-  if(!hit && Math.abs(player.pos.z) >= bz && Math.abs(campPrevVel.z) > 1.0) hit = true;
-  if(!hit && player.pos.y <= DRONE_R+0.004 && campPrevVel.y < -1.2) hit = true;
-  if(!hit && player.pos.y >= FIELD.h-DRONE_R-0.004 && campPrevVel.y > 1.0) hit = true;
-  campPrevDist = player.disturb;
-  if(hit){ campHits++; campHitCd = 0.55; flashMsg('💥 碰撞 ' + campHits, '#f87171', 0.5); }
-}
-function campStep(h, t){
-  if(campDone || state !== 'play') return;
-  campTime += h;
-  campDetectHit(h);
-  if(campLevel.limit && campTime >= campLevel.limit){ campFinish(false); return; }
-  const task = campTasks[campIdx];
-  if(!task) return;
-  if(campTaskDone(task, h)){
-    campHold = 0;
-    campSetMarker(campMarkers[campIdx], 'done');
-    campIdx++;
-    if(campIdx >= campTasks.length){ campFinish(true); return; }
-    campSetMarker(campMarkers[campIdx], 'act');
-    if(task.t==='wp') sfx.hit(0.2); else sfx.goal();
-    flashMsg('✓ ' + campIdx + ' / ' + campTasks.length, '#7dffa9', 0.7);
-  }
-}
-
-// ---------- 闖關：HUD、結算、關卡列表 ----------
-function campUpdateHUD(){
-  if(!campLevel) return;
-  document.getElementById('campTitle').textContent = campLevel.no + '　' + campLevel.name;
-  document.getElementById('campBrief').textContent = campLevel.brief;
-  document.getElementById('campDots').innerHTML =
-    campTasks.map((_,i)=> i < campIdx ? '<b>●</b>' : '○').join('');
-  document.getElementById('campTime').textContent = campTime.toFixed(1);
-  document.getElementById('campHits').textContent = campHits;
-  const wrap = document.getElementById('campLimitWrap');
-  if(campLevel.limit){
-    wrap.style.display = '';
-    const left = Math.max(0, campLevel.limit - campTime);
-    const el = document.getElementById('campLimit');
-    el.textContent = left.toFixed(1);
-    el.className = left <= 10 ? 'danger' : '';
-  }else wrap.style.display = 'none';
-}
-function campAnimate(t){
-  if(mode !== 'campaign') return;
-  const g = campMarkers[campIdx];
-  if(g && g.userData.state === 'act') g.scale.setScalar(1 + Math.sin(t*4.2)*0.07);
-}
-function campFinish(ok){
-  campDone = true;
-  setState('over');
-  let stars = 0;
-  if(ok){
-    stars = 1;                                                   // 1★＝完成
-    if(campTime <= campLevel.par) stars = 2;                     // 2★＝再加上時間達標
-    if(stars === 2 && campHits <= campLevel.maxHit) stars = 3;   // 3★＝再加上碰撞達標
-    if(stars > campStars(campLevel.id)){ campSave[campLevel.id] = stars; campStore(); }
-    sfx.goal();
-  }
-  const ttl = document.getElementById('campResultTitle');
-  ttl.textContent = ok ? '關卡完成！' : '時間到';
-  ttl.className = ok ? '' : 'fail';
-  document.getElementById('campResultSub').textContent = campLevel.no + '　' + campLevel.name;
-  document.getElementById('campStars').innerHTML =
-    [0,1,2].map(i=> i < stars ? '<b>★</b>' : '★').join('');
-  document.getElementById('campStats').innerHTML =
-    '<em>用時</em>' + campTime.toFixed(1) + ' s　<span style="color:#7c88a8">2★ 標準 ≤ ' + campLevel.par + ' s</span><br>' +
-    '<em>碰撞</em>' + campHits + ' 次　<span style="color:#7c88a8">3★ 標準 ≤ ' + campLevel.maxHit + ' 次</span>' +
-    (ok ? '' : '<br><span style="color:#f87171">未能在 ' + campLevel.limit + ' 秒內完成</span>');
-  const nid = campLevel.id + 1;
-  const nb = document.getElementById('btnCampNext');
-  nb.style.display = (stars > 0 && nid <= CAMP_LEVELS.length) ? '' : 'none';
-  nb.dataset.next = nid;
-  document.getElementById('campResult').style.display = 'flex';
-}
-function campBuildList(){
-  const host = document.getElementById('campList');
-  host.innerHTML = CAMP_CHAPTERS.map(ch=>{
-    const cells = CAMP_LEVELS.filter(L=>L.ch===ch.n).map(L=>{
-      const st = campStars(L.id), lk = !campUnlocked(L.id);
-      const stars = [0,1,2].map(i=> i < st ? '<b>★</b>' : '☆').join('');
-      return '<div class="campCell' + (lk?' locked':'') + (st>0?' done':'') + '" data-id="' + L.id + '">' +
-             '<div class="n">' + (lk?'🔒 ':'') + L.no + '</div>' +
-             '<div class="nm">' + L.name + '</div>' +
-             '<div class="st">' + stars + '</div></div>';
-    }).join('');
-    return '<div class="campChapter"><div class="campChTitle">' + ch.title +
-           '<span>' + ch.sub + '</span></div><div class="campGrid">' + cells + '</div></div>';
-  }).join('');
-  document.getElementById('campStarTotal').textContent = '⭐ ' + campTotalStars() + ' / ' + CAMP_STAR_TOTAL;
-  host.querySelectorAll('.campCell').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const id = +el.dataset.id;
-      if(campUnlocked(id)) campStart(id);
-    });
-  });
-}
-function campOpenPanel(){
-  document.getElementById('rulesBox').style.display = 'none';
-  document.getElementById('modesRow').style.display = 'none';
-  document.getElementById('netPanel').style.display = 'none';
-  document.getElementById('campPanel').style.display = 'block';
-  campBuildList();
-}
-function campClosePanel(){
-  document.getElementById('campPanel').style.display = 'none';
-  document.getElementById('rulesBox').style.display = 'block';
-  document.getElementById('modesRow').style.display = 'flex';
-}
-function campBackToList(){
-  campExitCleanup();
-  setState('menu');
-  document.getElementById('scoreboard').style.display = 'flex';
-  document.getElementById('overlay').style.display = 'flex';
-  campOpenPanel();
-}
-document.getElementById('btnCampaign').addEventListener('click', campOpenPanel);
-document.getElementById('btnCampBack').addEventListener('click', campClosePanel);
-document.getElementById('btnCampRetry').addEventListener('click', campRestart);
-document.getElementById('btnCampList').addEventListener('click', campBackToList);
-document.getElementById('btnCampNext').addEventListener('click', e=>campStart(+e.currentTarget.dataset.next));
-// 清除紀錄：二次點擊確認（不用 confirm()，避免瀏覽器強制彈窗打斷全螢幕遊戲）
-(function(){
-  const b = document.getElementById('btnCampReset');
-  let armed = false, tmr = null;
-  b.addEventListener('click', ()=>{
-    if(!armed){
-      armed = true; b.textContent = '再按一次確認清除';
-      clearTimeout(tmr); tmr = setTimeout(()=>{ armed=false; b.textContent='清除闖關紀錄'; }, 3500);
-      return;
-    }
-    clearTimeout(tmr); armed = false; b.textContent = '清除闖關紀錄';
-    campSave = {}; campStore(); campBuildList();
-  });
-})();
-
-function loop(){
-  requestAnimationFrame(loop);
-  const dt = Math.min(clock.getDelta(), 0.05);
-  const t = clock.elapsedTime;
-  pollPadButtons();   // 搖桿按鍵（含暫停中可恢復）
-
-  const isNetClient = mode==='net' && !NET.isHost;
-
-  if(isNetClient){
-    // ---- 連線對戰・非房主：不跑本地物理／AI，只送輸入、鏡射房主的權威快照 ----
-    if(NET.mySlot>=0) readInputInto(drones[NET.mySlot].input);
-    sendMyInputToHost();
-    applyNetSnapshotInterp();
-    const tEl = document.getElementById('timer');
-    const mm = Math.floor(Math.max(0,timeLeft)/60), ss = Math.floor(Math.max(0,timeLeft)%60);
-    tEl.textContent = mm+':'+String(ss).padStart(2,'0');
-    tEl.className = timeLeft<=10 ? 'danger' : timeLeft<=30 ? 'warn' : '';
-  }else if(mode==='practice' && state==='play'){
-    // ---- 練習模式：只有玩家機在場上，無比分／時間／AI 對手，專心練習穿框操作 ----
-    readPlayerInput();
-    acc += dt;
-    while(acc >= H){
-      player.step(H);
-      collideRing(player, ringEast); collideRing(player, ringWest);
-      checkPracticePass(H);
-      acc -= H;
-    }
-  }else if(mode==='campaign' && state==='play'){
-    // ---- 闖關模式：只有玩家機在場上，依關卡任務清單逐項判定（同練習模式不跑 AI／計分／違規） ----
-    readPlayerInput();
-    acc += dt;
-    while(acc >= H){
-      campPrevPos.copy(player.pos); campPrevVel.copy(player.vel);   // 穿越/碰撞判定需要前一子步的位置與速度
-      player.step(H);
-      collideRing(player, ringEast); collideRing(player, ringWest);
-      campCollidePoles();
-      campApplyWind(H, t);
-      campStep(H, t);
-      acc -= H;
-    }
-  }else if(state==='play'){
-    // ---- 單機／示範賽／連線對戰房主：完整權威物理 ----
-    timeLeft -= dt;
-    if(timeLeft<=0){ timeLeft=0; endMatch(); }
-    const mm = Math.floor(timeLeft/60), ss = Math.floor(timeLeft%60);
-    const tEl = document.getElementById('timer');
-    tEl.textContent = mm+':'+String(ss).padStart(2,'0');
-    tEl.className = timeLeft<=10 ? 'danger' : timeLeft<=30 ? 'warn' : '';
-    if(timeLeft<=30 && timeLeft>0 && !warned30){ warned30=true; fireFx({type:'warn30'}); }
-
-    // 控制
-    if(mode==='player') readPlayerInput();
-    else if(mode==='net' && NET.mySlot>=0) readInputInto(drones[NET.mySlot].input);
-    drones.forEach((d,i)=>{
-      if(mode==='net'){
-        const owner = NET.slotOwners[i];
-        if(owner===null) aiThink(d, dt);                       // 空位：AI 代打
-        else if(owner!==selfId){                                // 別人的機：套用最後收到的遠端輸入
-          const ri = NET.remoteInputs[owner];
-          if(ri) Object.assign(d.input, ri);
-          else d.input = {pitch:0,roll:0,yawRate:0,throttle:0}; // 尚未收到輸入前先懸停
+function runQuery(gid,range){
+  return new Promise((resolve,reject)=>{
+    try{
+      const query=new google.visualization.Query(queryUrl(gid,range));
+      query.setQuery('select *');
+      query.send(response=>{
+        if(response.isError()){
+          reject(new Error(response.getMessage()+(response.getDetailedMessage()?'：'+response.getDetailedMessage():'')));
+          return;
         }
-        // 自己的機：input 已由上面 readInputInto 寫入
-      }else if(!d.isPlayer || mode==='demo'){
-        aiThink(d, dt);
-      }
-    });
-
-    // 物理（固定子步長，數值穩定）
-    acc += dt;
-    while(acc >= H){
-      drones.forEach(d=>d.step(H));
-      collideDrones();
-      drones.forEach(d=>{ collideRing(d, ringEast); collideRing(d, ringWest); });
-      checkGoals();
-      acc -= H;
+        resolve(dataTableToRows(response.getDataTable()));
+      });
+    }catch(err){
+      reject(err);
     }
-    updateFouls(dt);
-  }
-  if(mode==='net' && NET.isHost) netMaybeBroadcastSnapshot();   // 房主：無論何種 state 都持續廣播（暫停/賽後也同步）
-
-  // 視覺
-  drones.forEach(d=>d.syncMesh(t));
-  if(mode==='campaign'){ campAnimate(t); campUpdateHUD(); }
-  if(ringPulse){
-    // 電子球門進球燈效：綠白交替爆閃後恢復隊色
-    ringPulse.t += dt;
-    const p = Math.max(0, 1-ringPulse.t/1.6);
-    const R = ringPulse.ring;
-    R.torus.material.emissive.setHex(Math.sin(ringPulse.t*24)>0 ? 0x00ff55 : 0xffffff);
-    R.torus.material.emissiveIntensity = 2 + p*6;
-    R.lamp.color.setHex(0x00ff55);
-    R.lamp.intensity = 1.1 + p*3.5;
-    if(p<=0){
-      R.torus.material.emissive.setHex(R.baseColor);
-      R.torus.material.emissiveIntensity = 2.8;
-      R.lamp.color.setHex(R.baseColor); R.lamp.intensity = 1.7;
-      ringPulse = null;
-    }
-  }
-  // 觀眾影格輪播（同一群人換姿勢）＋律動明暗＋手機閃光
-  crowdMats.forEach((c,i)=>{
-    c.ft -= dt;
-    if(c.ft<=0){
-      c.fi = (c.fi + 1 + (Math.random()<0.5?1:0)) % c.frames.length;
-      c.mat.map = c.frames[c.fi];
-      c.ft = 0.16 + Math.random()*0.3;
-    }
-    c.mat.color.setScalar(0.66 + Math.sin(t*2.1+i*1.7)*0.04);
   });
-  for(const f of flashSprites){
-    f.t -= dt;
-    if(f.t<=0){ f.m.opacity = 0.9; f.t = 1.5 + Math.random()*5; }
-    else if(f.m.opacity>0.01) f.m.opacity *= Math.pow(0.001, dt);
-  }
-  if(msgTimer>0){ msgTimer-=dt; if(msgTimer<=0) msgEl.style.opacity=0; }
-  updateOccluders(dt);
-  updateHUD();
-  updateCamera(dt);
-  sfx.updateEngines(drones, camera.position, camLook, state==='play');   // 各機依與鏡頭的距離/方位即時調整音量與定位
-  renderer.render(scene, camera);
 }
-loop();
+
+function dataTableToRows(dt){
+  const rows=[];
+
+  // GViz 會把試算表第一列當成欄位標題，不放在資料列中。
+  // 這裡把欄位標題補回第一列，才能和原始 Google Sheet 列號完全一致。
+  const header=[];
+  for(let c=0;c<dt.getNumberOfColumns();c++){
+    header.push(String(dt.getColumnLabel(c) || ''));
+  }
+  rows.push(header);
+
+  for(let r=0;r<dt.getNumberOfRows();r++){
+    const row=[];
+    for(let c=0;c<dt.getNumberOfColumns();c++){
+      let v=dt.getFormattedValue(r,c);
+      if(v==null || v===''){
+        const raw=dt.getValue(r,c);
+        v=raw==null?'':String(raw);
+      }
+      row.push(String(v??''));
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+async function refresh(force){
+  clearTimeout(timer);
+  if(force)setSync('正在更新…');
+
+  try{
+    const dataRows=await runQuery(CONFIG.DATA_GID,'A1:I100');
+
+    let settingsRows=[];
+    try{
+      settingsRows=await runQuery(CONFIG.SETTINGS_GID,'A1:B30');
+    }catch(_){
+      // 設定頁抓不到不影響勤務表，公告使用預設文字。
+    }
+
+    const data=buildData(dataRows,settingsRows);
+    const hash=JSON.stringify(data);
+
+    if(force || hash!==currentHash){
+      currentHash=hash;
+      currentData=data;
+      render(data);
+    }else{
+      setSync('已同步');
+      $('updated').textContent='最近檢查：'+nowText();
+    }
+  }catch(err){
+    showError(err);
+  }finally{
+    timer=setTimeout(()=>refresh(false),CONFIG.CHECK_MS);
+  }
+}
+
+function buildData(rows,settingsRows){
+  if(!rows || rows.length<4) throw new Error('Google 試算表沒有回傳完整勤務資料');
+
+  const title=cell(rows,0,0)||'彌勒山12人小組勤務安排';
+  const groupRow=padSlice(rows[1]||[],1,9);
+  const dateRow=padSlice(rows[2]||[],1,9);
+  const timeRow=padSlice(rows[3]||[],1,9);
+
+  let noteIndex=rows.findIndex(r=>String(r[0]||'').trim()==='備註');
+  if(noteIndex<0)noteIndex=rows.length;
+
+  const labels=[];
+  for(let r=4;r<noteIndex;r++){
+    const x=cell(rows,r,0).trim();
+    if(x)labels.push(x);
+  }
+
+  const groups=[];
+  let currentGroup='';
+  for(let i=0;i<8;i++){
+    const g=String(groupRow[i]||'').replace(/\s+/g,' ').trim();
+    if(g)currentGroup=g;
+    groups.push(currentGroup);
+  }
+
+  const days=[];
+  for(let c=0;c<8;c++){
+    const dateText=String(dateRow[c]||'').trim();
+    if(!dateText)continue;
+
+    const people=[];
+    for(let r=4;r<noteIndex;r++){
+      const name=cell(rows,r,c+1).trim();
+      if(name)people.push({no:cell(rows,r,0).trim(),name});
+    }
+
+    const notes=[];
+    for(let r=noteIndex;r<rows.length;r++){
+      const n=cell(rows,r,c+1).trim();
+      if(n)notes.push(n);
+    }
+
+    days.push({
+      dateText,
+      isoDate:toIso(dateText),
+      group:groups[c]||'',
+      time:String(timeRow[c]||'').trim(),
+      people,
+      notes
+    });
+  }
+
+  const settings={};
+  settingsRows.forEach((r,i)=>{
+    if(i===0)return;
+    const k=String(r[0]||'').trim();
+    if(k)settings[k]=String(r[1]||'').trim();
+  });
+
+  return {
+    title,
+    subtitle:settings['頁面副標題']||'9/27（日）～10/4（日）',
+    announcement:settings['跑馬燈公告']||settings['上翻式公告']||CONFIG.NOTICE,
+    rowLabels:labels,
+    days,
+    today:todayIso()
+  };
+}
+
+function render(data){
+  $('title').textContent=data.title;
+  $('subtitle').textContent=data.subtitle;
+  setupNotice(data.announcement);
+  $('content').className='';
+  $('content').innerHTML=buildTable(data);
+  setSync('已同步');
+  $('updated').textContent='最後更新：'+nowText()+'｜每 30 秒檢查';
+}
+
+function setupNotice(text){
+  clearInterval(noticeTimer);
+  noticeMessages=String(text||'')
+    .split(/｜|\n|，|。/)
+    .map(s=>s.trim())
+    .filter(Boolean);
+  noticeIndex=0;
+
+  if(!noticeMessages.length){
+    $('notice').hidden=true;
+    return;
+  }
+
+  $('notice').hidden=false;
+  const a=$('noticeA'),b=$('noticeB');
+  a.textContent=noticeMessages[0];
+  a.className='notice-item show';
+  b.className='notice-item';
+  b.textContent=noticeMessages[1]||noticeMessages[0];
+
+  noticeTimer=setInterval(()=>{
+    const next=(noticeIndex+1)%noticeMessages.length;
+    b.textContent=noticeMessages[next]||noticeMessages[0];
+    b.className='notice-item';
+    void b.offsetWidth;
+    a.classList.add('out');
+    a.classList.remove('show');
+    b.classList.add('show');
+
+    setTimeout(()=>{
+      noticeIndex=next;
+      a.textContent=b.textContent;
+      a.className='notice-item show';
+      b.className='notice-item';
+    },580);
+  },5200);
+}
+
+function buildTable(data){
+  if(!data.days.length)return '<div class="status">目前沒有勤務資料。</div>';
+
+  const labels=data.rowLabels.length?data.rowLabels:Array.from({length:17},(_,i)=>String(i+1));
+  const gs=groupSpans(data.days);
+
+  const groupHtml=gs.map(g=>
+    `<th class="day-col ${g.start?'group-start':''}" colspan="${g.span}">${esc(g.name)}</th>`
+  ).join('');
+
+  const dateHtml=data.days.map((d,i)=>
+    `<th class="day-col ${todayClass(d,data)} ${groupStart(data.days,i)}">
+      ${esc(d.dateText)}
+      ${d.isoDate===data.today?'<span class="today-mark">今天</span>':''}
+    </th>`
+  ).join('');
+
+  const timeHtml=data.days.map((d,i)=>
+    `<th class="day-col ${todayClass(d,data)} ${groupStart(data.days,i)}">
+      ${d.time?esc(d.time).replace(/\n/g,'<br>'):'—'}
+    </th>`
+  ).join('');
+
+  const body=labels.map(label=>{
+    const tds=data.days.map((d,i)=>{
+      const p=(d.people||[]).find(x=>String(x.no)===String(label));
+      return `<td class="day-col ${todayClass(d,data)} ${groupStart(data.days,i)}">
+        ${p?`<span class="person">${esc(p.name)}</span>`:'<span class="empty">—</span>'}
+      </td>`;
+    }).join('');
+    return `<tr><th class="row-label">${esc(label)}</th>${tds}</tr>`;
+  }).join('');
+
+  const hasNotes=data.days.some(d=>d.notes&&d.notes.length);
+  const notes=hasNotes?`
+    <tr class="notes-row">
+      <th class="row-label">備註</th>
+      ${data.days.map((d,i)=>`
+        <td class="day-col ${todayClass(d,data)} ${groupStart(data.days,i)}">
+          ${(d.notes||[]).map(esc).join('<br>')}
+        </td>`).join('')}
+    </tr>`:'';
+
+  return `<table>
+    <thead>
+      <tr class="group-row"><th class="corner">小組</th>${groupHtml}</tr>
+      <tr class="date-row"><th class="corner">日期</th>${dateHtml}</tr>
+      <tr class="time-row"><th class="corner">時間</th>${timeHtml}</tr>
+    </thead>
+    <tbody>${body}${notes}</tbody>
+  </table>`;
+}
+
+function groupSpans(days){
+  const out=[];let start=0;
+  while(start<days.length){
+    const name=days[start].group||'';
+    let end=start+1;
+    while(end<days.length&&(days[end].group||'')===name)end++;
+    out.push({name,span:end-start,start:start>0});
+    start=end;
+  }
+  return out;
+}
+
+function groupStart(days,i){
+  if(i<=0)return '';
+  return (days[i].group||'')!==(days[i-1].group||'')?'group-start':'';
+}
+function todayClass(d,data){return d.isoDate===data.today?'today-col':''}
+
+function jumpToday(){
+  if(!currentData)return;
+  const i=currentData.days.findIndex(d=>d.isoDate===currentData.today);
+  if(i<0){alert('今天不在這次勤務日期範圍內。');return}
+  const target=document.querySelectorAll('.date-row .day-col')[i];
+  if(target)$('tableScroll').scrollTo({left:Math.max(0,target.offsetLeft-42),top:0,behavior:'smooth'});
+}
+
+function cell(rows,r,c){return String((rows[r]&&rows[r][c])??'')}
+function padSlice(arr,a,b){const o=[];for(let i=a;i<b;i++)o.push(String(arr[i]??''));return o}
+function toIso(text){
+  const m=String(text).match(/(\d{1,2})\/(\d{1,2})/);
+  return m?`2026-${String(+m[1]).padStart(2,'0')}-${String(+m[2]).padStart(2,'0')}`:'';
+}
+function todayIso(){
+  const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const o={};p.forEach(x=>o[x.type]=x.value);
+  return `${o.year}-${o.month}-${o.day}`;
+}
+function nowText(){
+  return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date());
+}
+function setSync(t){$('syncText').textContent=t}
+function showError(err){
+  setSync('同步失敗');
+  $('updated').textContent='稍後自動重試';
+  $('content').className='status';
+  $('content').innerHTML=
+    '<div class="error-title">目前無法讀取 Google 試算表</div>'+
+    '<div>請確認這份試算表仍保持「發布到網路」。</div>'+
+    '<div style="margin-top:6px;font-size:15px">'+esc(err?.message||String(err))+'</div>';
+}
+function esc(v){
+  return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
 </script>
 </body>
 </html>
