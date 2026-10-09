@@ -2,7 +2,8 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>無人機足球模擬器 — Drone Soccer Simulator</title>
 <style>
   html,body{margin:0;padding:0;overflow:hidden;background:#06080f;font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif;user-select:none}
@@ -107,7 +108,7 @@
   #btnCampaign{border-color:rgba(255,215,90,.6);color:#ffd75a}
   #btnCampaign:hover{border-color:#ffd75a;color:#fff;box-shadow:0 0 18px rgba(255,215,90,.35)}
   #campPanel{margin-top:24px;width:720px;max-width:92vw}
-  #campHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  #campHead,#raceHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   #campStarTotal{font-size:15px;color:#ffd75a;font-weight:900;letter-spacing:1px}
   .campChapter{background:rgba(255,255,255,.04);border:1px solid rgba(120,160,255,.2);
     border-radius:12px;padding:12px 16px;margin-bottom:12px}
@@ -126,33 +127,101 @@
   .campCell.locked:hover{transform:none;border-color:rgba(120,160,255,.15);box-shadow:none}
   .campCell.done{border-color:rgba(255,215,90,.45)}
   /* 闖關進行中 HUD */
-  #campHUD{top:12px;left:50%;transform:translateX(-50%);min-width:430px;max-width:92vw;
+  #campHUD,#raceHUD{top:12px;left:50%;transform:translateX(-50%);min-width:430px;max-width:92vw;
     background:rgba(7,7,26,.86);border:1px solid #1e1e40;border-radius:14px;padding:9px 18px;
     backdrop-filter:blur(6px);text-align:center}
-  #campHUD .ttl{font-size:15px;font-weight:900;color:#ffd75a;letter-spacing:1px}
-  #campHUD .brf{font-size:12.5px;color:#cdd8ee;margin-top:3px;line-height:1.5}
-  #campHUD .env{font-size:11.5px;color:#7dc4ff;margin-top:3px;letter-spacing:.5px}
-  #campHUD .row{display:flex;gap:16px;justify-content:center;align-items:center;margin-top:7px;
+  #campHUD .ttl,#raceHUD .ttl{font-size:15px;font-weight:900;color:#ffd75a;letter-spacing:1px}
+  #campHUD .brf,#raceHUD .brf{font-size:12.5px;color:#cdd8ee;margin-top:3px;line-height:1.5}
+  #campHUD .env,#raceHUD .env{font-size:11.5px;color:#7dc4ff;margin-top:3px;letter-spacing:.5px}
+  #campHUD .row,#raceHUD .row{display:flex;gap:16px;justify-content:center;align-items:center;margin-top:7px;
     font-size:13px;font-variant-numeric:tabular-nums;color:#e8ecf5}
-  #campHUD .row i{font-style:normal;color:#7c88a8;font-size:11px;margin-right:3px}
+  #campHUD .row i,#raceHUD .row i{font-style:normal;color:#7c88a8;font-size:11px;margin-right:3px}
   #campDots{letter-spacing:3px;font-size:15px;color:#3a4160}
   #campDots b{color:#7dffa9;font-weight:400}
   #campLimit{color:#fbbf24}
   #campLimit.danger{color:#f87171;animation:pulse .8s infinite}
   /* 過關 / 失敗結算 */
-  #campResult{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  #campResult,#raceResult{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:radial-gradient(ellipse at 50% 45%,rgba(20,30,60,.9),rgba(4,6,12,.96))}
-  #campResultBox{background:rgba(12,16,32,.95);border:1px solid rgba(120,160,255,.32);border-radius:18px;
+  #campResultBox,#raceResultBox{background:rgba(12,16,32,.95);border:1px solid rgba(120,160,255,.32);border-radius:18px;
     padding:30px 44px;text-align:center;min-width:340px}
-  #campResultBox h3{margin:0 0 4px;font-size:30px;letter-spacing:3px;color:#7dffa9}
-  #campResultBox h3.fail{color:#f87171}
-  #campResultSub{font-size:13.5px;color:#aab8d8;margin-bottom:16px}
-  #campStars{font-size:46px;letter-spacing:10px;color:#2e3450;margin-bottom:12px}
-  #campStars b{color:#ffd75a;font-weight:400;text-shadow:0 0 22px rgba(255,215,90,.6)}
-  #campStats{font-size:13px;color:#cdd8ee;line-height:1.9;margin-bottom:20px;font-variant-numeric:tabular-nums}
-  #campStats em{font-style:normal;color:#7c88a8;margin-right:4px}
-  #campResultBtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-  #campResultBtns .modeBtn{padding:10px 20px;font-size:14px}
+  #campResultBox h3,#raceResultBox h3{margin:0 0 4px;font-size:30px;letter-spacing:3px;color:#7dffa9}
+  #campResultBox h3.fail,#raceResultBox h3.fail{color:#f87171}
+  #campResultSub,#raceResultSub{font-size:13.5px;color:#aab8d8;margin-bottom:16px}
+  #campStars,#raceStars{font-size:46px;letter-spacing:10px;color:#2e3450;margin-bottom:12px}
+  #campStars b,#raceStars b{color:#ffd75a;font-weight:400;text-shadow:0 0 22px rgba(255,215,90,.6)}
+  #campStats,#raceStats{font-size:13px;color:#cdd8ee;line-height:1.9;margin-bottom:20px;font-variant-numeric:tabular-nums}
+  #campStats em,#raceStats em{font-style:normal;color:#7c88a8;margin-right:4px}
+  #campResultBtns,#raceResultBtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  #campResultBtns .modeBtn,#raceResultBtns .modeBtn{padding:10px 20px;font-size:14px}
+  /* ---------- 手機／平板觸控操作（2026-10-09 新增）：Mode 2 雙虛擬搖桿，跟實機遙控器一致 ---------- */
+  #touchUI{display:none;position:fixed;inset:0;z-index:40;pointer-events:none}
+  body.touch #touchUI{display:block}
+  .joy{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 4vh);width:var(--joy);height:var(--joy);
+    pointer-events:auto;touch-action:none;--joy:150px}
+  #joyL{left:calc(env(safe-area-inset-left,0px) + 3.5vw)} #joyR{right:calc(env(safe-area-inset-right,0px) + 3.5vw)}
+  .joyBase{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(20,30,60,.35),rgba(20,30,60,.55));
+    border:2px solid rgba(160,190,255,.45);box-shadow:inset 0 0 18px rgba(0,0,0,.4)}
+  .joyBase::before,.joyBase::after{content:'';position:absolute;background:rgba(160,190,255,.22)}
+  .joyBase::before{left:50%;top:12%;bottom:12%;width:2px;margin-left:-1px}
+  .joyBase::after{top:50%;left:12%;right:12%;height:2px;margin-top:-1px}
+  .joyKnob{position:absolute;left:50%;top:50%;width:42%;height:42%;margin:-21% 0 0 -21%;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#e8f0ff,#7d93c8);border:2px solid rgba(255,255,255,.75);
+    box-shadow:0 3px 10px rgba(0,0,0,.45);will-change:transform}
+  .joy.on .joyBase{border-color:#7dffa9}
+  .joyLbl{position:absolute;left:0;right:0;top:-20px;text-align:center;font-size:11px;color:#cdd8ee;
+    text-shadow:0 0 6px #000;letter-spacing:1px}
+  #touchBtns{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:calc(env(safe-area-inset-right,0px) + 10px);
+    display:flex;gap:8px;pointer-events:auto}
+  #touchBtns button{width:42px;height:42px;border-radius:12px;border:1px solid rgba(160,190,255,.45);
+    background:rgba(12,18,36,.7);color:#e8ecf5;font-size:19px;touch-action:manipulation;font-family:inherit}
+  #touchBtns button:active{background:rgba(125,255,169,.25)}
+  #touchToggle{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:70;padding:6px 10px;
+    border-radius:9px;border:1px solid rgba(160,190,255,.4);background:rgba(12,18,36,.75);color:#aab8d8;font-size:12px;
+    cursor:pointer;font-family:inherit;touch-action:manipulation}
+  #rotateHint{display:none;position:fixed;inset:0;z-index:200;background:#060912;color:#e8ecf5;
+    flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:18px;text-align:center}
+  #rotateHint .ic{font-size:56px;animation:rot 1.8s ease-in-out infinite}
+  @keyframes rot{0%,20%{transform:rotate(0)}50%,70%{transform:rotate(90deg)}100%{transform:rotate(0)}}
+  @media (orientation:portrait){ body.touch.phone #rotateHint{display:flex} }
+  body.touch{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  body.touch canvas{touch-action:none}
+  body.touch #help{display:none}
+  /* 平板：搖桿大一點，資訊保留但縮小、移到右上 */
+  body.touch.tablet .joy{--joy:170px}
+  body.touch.tablet #telemetry{top:64px;bottom:auto;right:10px;font-size:12px;min-width:150px;padding:7px 11px}
+  body.touch.tablet #scoreboard{transform:translateX(-50%) scale(.82);transform-origin:top center}
+  body.touch.tablet #netBadge{top:auto!important;bottom:calc(4vh + 190px);right:10px!important}
+  /* 手機（橫拿）：精簡 HUD，只留比分與必要資訊 */
+  body.touch.phone .joy{--joy:min(132px,30vh)}
+  body.touch.phone #telemetry{display:none}
+  body.touch.phone #scoreboard{transform:translateX(-50%) scale(.6);transform-origin:top center;top:4px}
+  body.touch.phone #scoreboard .calc{display:none}
+  body.touch.phone #campHUD,body.touch.phone #raceHUD{transform:translateX(-50%) scale(.72);transform-origin:top center;top:4px;min-width:0}
+  body.touch.phone #campHUD .brf{display:none}
+  body.touch.phone #practiceHUD{transform:translateX(-50%) scale(.75)!important;transform-origin:top center;top:4px!important}
+  body.touch.phone #msg{font-size:32px}
+  body.touch.phone #netBadge{top:auto!important;bottom:6px;right:50%!important;transform:translateX(50%) scale(.8);white-space:nowrap}
+  body.touch.phone #credit{display:none}
+  body.touch.phone #touchBtns button{width:38px;height:38px;font-size:17px}
+  body.touch.phone #overlay h1{font-size:28px}
+  body.touch.phone #overlay h2{font-size:13px;margin-bottom:12px}
+  body.touch.phone #overlay .rules{font-size:12px;line-height:1.7;padding:10px 16px}
+  body.touch.phone #overlay .modes{margin-top:14px;gap:9px}
+  body.touch.phone .modeBtn{padding:9px 16px;font-size:14px}
+  body.touch.phone #overlay{justify-content:flex-start}
+  body.touch.phone #rulesBox{display:none!important}   /* 手機畫面小，規則說明收起來，模式按鈕才放得下 */
+  /* ---------- 飛行賽道（2026-10-09 新增） ---------- */
+  #btnRace{border-color:rgba(125,255,169,.6);color:#7dffa9}
+  #btnRace:hover{border-color:#7dffa9;color:#fff;box-shadow:0 0 18px rgba(125,255,169,.35)}
+  #raceHeadTtl{font-size:16px;font-weight:900;color:#7dffa9;letter-spacing:2px}
+  #raceTotal{font-size:15px;color:#ffd75a;font-weight:900;letter-spacing:1px}
+  #raceModes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px}
+  #raceModeDesc{text-align:center;font-size:12.5px;color:#aab8d8;margin-bottom:12px;min-height:16px}
+  .raceCard .pg{letter-spacing:3px;color:#3a4160}
+  .raceCard .pg b{color:#ffd75a;font-weight:400}
+  .raceCard .best{font-size:11px;color:#7dffa9;margin-top:4px;font-variant-numeric:tabular-nums}
+  #raceHint{text-align:center;margin-top:12px;font-size:12px;color:#7c88a8}
   /* ---------- 場景切換列 ---------- */
   #sceneBar{margin-top:24px;display:flex;flex-direction:column;align-items:center;gap:9px}
   #sceneBar .lbl{font-size:11px;letter-spacing:5px;color:#7c88a8}
@@ -164,8 +233,8 @@
   .sceneBtn:hover{border-color:rgba(125,255,169,.6);color:#e8ecf5}
   .sceneBtn.on{border-color:#7dffa9;background:rgba(125,255,169,.13);color:#7dffa9;font-weight:700}
   /* ---------- 闖關：場景（地圖）選擇 ---------- */
-  #campMapPanel{margin-top:24px;width:760px;max-width:92vw}
-  #campMaps{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}
+  #campMapPanel,#racePanel{margin-top:24px;width:760px;max-width:92vw}
+  #campMaps,#raceMaps{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}
   .campMapCard{border-radius:12px;padding:14px 9px;cursor:pointer;text-align:center;min-width:0;
     border:1px solid rgba(120,160,255,.3);background:rgba(20,30,60,.6);transition:all .14s}
   .campMapCard:hover{transform:translateY(-3px);border-color:#7dffa9;box-shadow:0 0 18px rgba(125,255,169,.22)}
@@ -224,6 +293,30 @@
     <span id="campLimitWrap" style="display:none"><i>限時</i><span id="campLimit">0.0</span>s</span>
   </div>
 </div>
+<div class="hud" id="raceHUD" style="display:none">
+  <div class="ttl" id="raceTitle">—</div>
+  <div class="env" id="raceEnv">—</div>
+  <div class="row">
+    <span><i>拱門</i><span id="raceGate">0 / 0</span></span>
+    <span><i>時間</i><span id="raceTime">0.0</span>s</span>
+    <span id="raceCoinWrap"><i>星幣</i><span id="raceCoins">0</span></span>
+    <span id="raceHitWrap"><i>碰撞</i><span id="raceHits">0</span></span>
+    <span><i>最佳</i><span id="raceBest">—</span></span>
+  </div>
+</div>
+<div id="touchUI">
+  <div class="joy" id="joyL"><span class="joyLbl">油門／旋轉</span><div class="joyBase"></div><div class="joyKnob"></div></div>
+  <div class="joy" id="joyR"><span class="joyLbl">前後／側飛</span><div class="joyBase"></div><div class="joyKnob"></div></div>
+  <div id="touchBtns">
+    <button data-k="KeyC" title="切換視角">🎥</button>
+    <button data-k="KeyP" title="暫停">⏸</button>
+    <button data-k="KeyR" title="重來">↻</button>
+    <button data-k="KeyM" title="回選單">☰</button>
+  </div>
+</div>
+<button id="touchToggle">🎮 觸控</button>
+<div id="rotateHint"><div class="ic">📱</div><div>請把手機轉成<b>橫向</b>操作</div>
+  <div style="font-size:13px;color:#7c88a8">左搖桿＝油門／旋轉　右搖桿＝前後／側飛（Mode 2，跟實機遙控器一樣）</div></div>
 <div class="hud" id="credit">新竹市無人機創新科技協會©</div>
 <div class="hud" id="netBadge" style="display:none;top:12px;right:16px;background:rgba(8,12,24,.7);
   border:1px solid rgba(120,160,255,.25);border-radius:10px;padding:6px 12px;font-size:12px;color:#9fc1ff"></div>
@@ -265,6 +358,7 @@
     <button class="modeBtn" id="btnPlayer">🎮 玩家 vs AI</button>
     <button class="modeBtn" id="btnPractice">🎯 穿越圓環練習</button>
     <button class="modeBtn" id="btnCampaign">🏆 闖關模式</button>
+    <button class="modeBtn" id="btnRace">🏁 飛行賽道</button>
     <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
     <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
   </div>
@@ -298,6 +392,17 @@
       每個場景都有 24 關共用課程 ＋ 3 關場景專屬挑戰，航線與飛行條件各不相同，星星分開記錄
     </div>
   </div>
+  <div id="racePanel" style="display:none">
+    <div id="raceHead">
+      <button class="netBtnSmall" id="btnRaceBack">‹ 返回選單</button>
+      <div id="raceHeadTtl">🏁 飛行賽道</div>
+      <div id="raceTotal">⭐ 0 / 45</div>
+    </div>
+    <div id="raceModes"></div>
+    <div id="raceModeDesc"></div>
+    <div id="raceMaps"></div>
+    <div id="raceHint">每個場景一條專屬賽道：從場地中央起飛，跟著綠色箭頭與光點依序穿過拱門到終點。R 重來、M 回選單</div>
+  </div>
   <div id="campPanel" style="display:none">
     <div id="campHead">
       <button class="netBtnSmall" id="btnCampBack">‹ 場景選擇</button>
@@ -312,6 +417,18 @@
   <div class="credit">新竹市無人機創新科技協會©</div>
 </div>
 
+<div id="raceResult">
+  <div id="raceResultBox">
+    <h3 id="raceResultTitle">完賽！</h3>
+    <div id="raceResultSub">—</div>
+    <div id="raceStars">☆☆☆</div>
+    <div id="raceStats">—</div>
+    <div id="raceResultBtns">
+      <button class="modeBtn" id="btnRaceRetry">↻ 重玩</button>
+      <button class="modeBtn" id="btnRaceList">換賽道／玩法</button>
+    </div>
+  </div>
+</div>
 <div id="campResult">
   <div id="campResultBox">
     <h3 id="campResultTitle">關卡完成</h3>
@@ -358,7 +475,17 @@ const NET_APP_ID = 'hsinchu-drone-soccer-net-v1';   // 純字串即可，不需�
 //   'https://你的app名稱.metered.live/api/v1/turn/credentials?apiKey=你的APIKEY'
 //   留空＝不用 TURN（同一網路、家用網路通常仍可直連）。
 const TURN_CRED_URL = '';
-let NET_TURN = [];
+// 或者直接填固定的 TURN 帳密（Metered 新版後台建立 credential 後會給 urls／username／credential）：
+//   [{urls:'turn:global.relay.metered.ca:80', username:'…', credential:'…'}, …]
+// 2026-10-09 業主的 Metered 工作區 skystriker（Free Trial 500MB）。這組帳密本來就是給網頁前端用的，公開沒關係；
+// 額度用完或想換帳號，到 dashboard.metered.ca → Credentials 重新產生後替換這裡。
+const TURN_STATIC = [
+  {urls:'turn:global.relay.metered.ca:80',                username:'5f8ba3e732217330b85cf804', credential:'pT6pm6bQrd9XIO4K'},
+  {urls:'turn:global.relay.metered.ca:80?transport=tcp',  username:'5f8ba3e732217330b85cf804', credential:'pT6pm6bQrd9XIO4K'},
+  {urls:'turn:global.relay.metered.ca:443',               username:'5f8ba3e732217330b85cf804', credential:'pT6pm6bQrd9XIO4K'},
+  {urls:'turns:global.relay.metered.ca:443?transport=tcp',username:'5f8ba3e732217330b85cf804', credential:'pT6pm6bQrd9XIO4K'},
+];
+let NET_TURN = TURN_STATIC.slice();
 const NET_TURN_READY = (async()=>{
   if(!TURN_CRED_URL) return;
   try{
@@ -386,6 +513,8 @@ const DRAG_K1 = 0.14, DRAG_K2 = 0.10;  // 線性 + 平方空氣阻力（小機�
 const REST_DRONE = 0.55;        // 機體互撞恢復係數
 const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
+// 飛行邊界（Drone.step 用）：平常＝場地；飛行賽道模式會暫時放大成開放空間（raceSetArena）
+const ARENA = { hx: FIELD.hx, hz: FIELD.hz, h: FIELD.h };
 const RING = { R: 0.26, tube: 0.04, y: 1.6, x: 2.2 }; // 球門框內徑開口
 // 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
 // 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
@@ -1047,6 +1176,76 @@ function makeGoalRing(x, color){
 const ringEast = makeGoalRing( RING.x, 0x1166ff);  // 紅場上的藍框：藍隊進攻目標
 const ringWest = makeGoalRing(-RING.x, 0xff1133);  // 藍場上的紅框：紅隊進攻目標
 
+// ---------- 球門電子計分板（2026-10-09 新增，業主要求「球門也要有電子顯示計分，像無人機足球的電子球門」） ----------
+// 依業主提供的實際電子球門照片：小型黑底白框顯示器直接坐在圓框頂端，紅色七段兩位數，
+// 顯示「穿過這個框」的次數（VS／示範賽／連線＝該框的進球數，練習＝該框的穿越次數），進球時數字閃爍。
+// 兩面都有螢幕（朝 +x 與 −x），不擋開口；闖關與飛行賽道模式隱藏。
+// 內容沒變就不重畫 canvas（key 比對），每幀成本很低。碰撞：collideRing 內含計分板方塊的推出。
+const BOARD = { y: RING.R + RING.tube*2 + 0.095, hw: 0.17, hh: 0.085, ht: 0.03 };   // 相對球門中心的高度、半寬(z)、半高、半厚(x)
+function addGoalBoard(ring){
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
+  const tex = new THREE.CanvasTexture(cv);
+  tex.encoding = THREE.sRGBEncoding;
+  tex.anisotropy = 4;
+  const board = new THREE.Group();
+  const housing = new THREE.Mesh(
+    new THREE.BoxGeometry(BOARD.ht*2, BOARD.hh*2+0.01, BOARD.hw*2+0.01),
+    new THREE.MeshStandardMaterial({color:0x111318, roughness:.5, metalness:.3}));
+  board.add(housing);
+  const scrMat = new THREE.MeshBasicMaterial({map:tex, toneMapped:false});
+  [1,-1].forEach(sx=>{
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(BOARD.hw*2, BOARD.hh*2), scrMat);
+    scr.position.x = sx*(BOARD.ht+0.002);
+    scr.rotation.y = sx>0 ? Math.PI/2 : -Math.PI/2;   // 兩面各自朝外，文字都不會左右顛倒
+    board.add(scr);
+  });
+  board.position.set(0, BOARD.y, 0);
+  ring.grp.add(board);
+  ring.board = {grp: board, cv, ctx: cv.getContext('2d'), tex, key: ''};
+}
+addGoalBoard(ringEast); addGoalBoard(ringWest);
+// 七段顯示器數字（參考業主提供的實際電子球門照片：黑底白框、紅色七段數字、兩位數）
+const SEG7 = ['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
+function drawSeg7(g, digit, x, y, w, h, on, off){
+  const t = w*0.2, segs = SEG7[digit] || '';
+  const H = (x0,y0)=>{ g.beginPath(); g.moveTo(x0+t*0.6,y0); g.lineTo(x0+w-t*0.6,y0); g.lineTo(x0+w-t*1.1,y0+t*0.5);
+    g.lineTo(x0+w-t*1.1,y0+t*0.5); g.lineTo(x0+w-t*0.6,y0+t); g.lineTo(x0+t*0.6,y0+t); g.lineTo(x0+t*0.1,y0+t*0.5); g.closePath(); };
+  const Vt = (x0,y0,len)=>{ g.beginPath(); g.moveTo(x0+t*0.5,y0+t*0.1); g.lineTo(x0+t,y0+t*0.6); g.lineTo(x0+t,y0+len-t*0.6);
+    g.lineTo(x0+t*0.5,y0+len-t*0.1); g.lineTo(x0,y0+len-t*0.6); g.lineTo(x0,y0+t*0.6); g.closePath(); };
+  const hh = h/2;
+  const path = {a:()=>H(x,y), g:()=>H(x,y+hh-t/2), d:()=>H(x,y+h-t),
+    f:()=>Vt(x,y+t*0.35,hh), b:()=>Vt(x+w-t,y+t*0.35,hh), e:()=>Vt(x,y+hh-t*0.15,hh), c:()=>Vt(x+w-t,y+hh-t*0.15,hh)};
+  'abcdefg'.split('').forEach(k=>{
+    path[k](); const lit = segs.includes(k);
+    g.fillStyle = lit ? on : off; g.shadowColor = on; g.shadowBlur = lit ? 16 : 0; g.fill();
+  });
+  g.shadowBlur = 0;
+}
+function drawGoalBoard(ring, num, color){
+  const b = ring.board, g = b.ctx, W = b.cv.width, Hh = b.cv.height;
+  g.fillStyle = '#f2f2f2'; g.fillRect(0,0,W,Hh);                // 白色外框
+  g.fillStyle = '#050505'; g.fillRect(9,9,W-18,Hh-18);          // 黑色面板
+  const n = Math.max(0, Math.min(99, num|0));
+  const dw = 50, dh = 84, gap = 22, x0 = (W - dw*2 - gap)/2, y0 = (Hh-dh)/2;
+  const off = 'rgba(80,10,10,0.55)';
+  drawSeg7(g, Math.floor(n/10), x0, y0, dw, dh, color, off);
+  drawSeg7(g, n%10, x0+dw+gap, y0, dw, dh, color, off);
+  b.tex.needsUpdate = true;
+}
+function updateGoalBoards(){
+  const show = mode!=='campaign' && mode!=='race';
+  [ringEast, ringWest].forEach(ring=>{
+    const b = ring.board;
+    b.grp.visible = show;
+    if(!show) return;
+    // 每個球門顯示「穿過這個框」的次數：西框(紅)＝紅隊進球、東框(藍)＝藍隊進球；練習模式＝這個框的穿越次數
+    const num = mode==='practice' ? (ring.passes||0) : (ring===ringWest ? score.red.g : score.blue.g);
+    const blinkOff = ringPulse && ringPulse.ring===ring && ringPulse.t<1.4 && Math.sin(ringPulse.t*14) < 0;
+    const key = num + '|' + blinkOff;
+    if(key !== b.key){ b.key = key; drawGoalBoard(ring, num, blinkOff ? '#3a0a0a' : '#ff2a1a'); }
+  });
+}
+
 // ---------- 無人機模型 ----------
 // LED 光暈貼圖（徑向漸層，加法混合 → 過曝爆亮感）
 const glowTex = (()=>{
@@ -1232,12 +1431,12 @@ class Drone{
       this.vel.x *= 1-Math.min(1,3.2*h); this.vel.z *= 1-Math.min(1,3.2*h); // 地面摩擦
     }
     // 天花網
-    if(this.pos.y > FIELD.h-DRONE_R){
-      this.pos.y = FIELD.h-DRONE_R;
+    if(this.pos.y > ARENA.h-DRONE_R){
+      this.pos.y = ARENA.h-DRONE_R;
       if(this.vel.y>0) this.vel.y = -this.vel.y*REST_WALL;
     }
     // 四面網牆
-    const bx = FIELD.hx-DRONE_R, bz = FIELD.hz-DRONE_R;
+    const bx = ARENA.hx-DRONE_R, bz = ARENA.hz-DRONE_R;
     if(Math.abs(this.pos.x)>bx){
       const hit = Math.abs(this.vel.x);
       this.pos.x = Math.sign(this.pos.x)*bx;
@@ -1356,6 +1555,25 @@ function collideRing(d, ring){
       d.vel.addScaledVector(n, -vn*(1+0.5));
       d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
       if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
+    }
+  }
+  // 電子計分板（球門上方的方塊）：球體對方塊推出，闖關模式計分板隱藏時不碰撞
+  if(ring.board && ring.board.grp.visible){
+    const cx = ring.x, cy = ring.y + BOARD.y, cz = ring.z;
+    const qx = clamp(d.pos.x, cx-BOARD.ht, cx+BOARD.ht);
+    const qy = clamp(d.pos.y, cy-BOARD.hh, cy+BOARD.hh);
+    const qz = clamp(d.pos.z, cz-BOARD.hw, cz+BOARD.hw);
+    const dx = d.pos.x-qx, dy = d.pos.y-qy, dz = d.pos.z-qz;
+    const dd = Math.hypot(dx,dy,dz);
+    if(dd < DRONE_R && dd > 1e-5){
+      const n = V3(dx/dd, dy/dd, dz/dd);
+      d.pos.set(qx,qy,qz).addScaledVector(n, DRONE_R);
+      const vn = d.vel.dot(n);
+      if(vn<0){
+        d.vel.addScaledVector(n, -vn*1.5);
+        d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
+        if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
+      }
     }
   }
 }
@@ -1504,6 +1722,7 @@ function checkPracticePass(dt){
     if(!through) return;
     practiceCooldown[key] = 0.6;   // 短冷卻，避免貼著框平面晃動時重複計數
     practiceCount++;
+    ring.passes = (ring.passes||0) + 1;   // 球門電子計分板：各框自己的穿越次數
     flashMsg('✓ 穿越成功！第 ' + practiceCount + ' 次', '#7dffa9', 1.1);
     sfx.goal();
     ringPulse = {ring, t:0};
@@ -1513,6 +1732,7 @@ function checkPracticePass(dt){
 function restartPractice(){
   drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });   // 只留玩家機，其餘 5 台隱藏、不參與模擬
   practiceCount = 0; practiceCooldown = {E:0, W:0};
+  ringEast.passes = 0; ringWest.passes = 0;
   updatePracticeHUD();
   setState('play');
 }
@@ -1669,6 +1889,75 @@ function aiThink(d, dt){
   flyToward(d, target, maxV, dt);
 }
 
+// ---------- 手機／平板觸控（2026-10-09 新增，業主要求「像手遊一樣有左右搖桿」） ----------
+// 自動偵測：主要指標是觸控（pointer: coarse）→ 觸控模式；螢幕短邊 < 600px 算手機，否則平板。
+// 有觸控螢幕的筆電通常主要指標仍是滑鼠（pointer: fine），不會誤判；左上角「🎮 觸控」可手動切換並記住。
+// 搖桿採 Mode 2（左：油門＋旋轉；右：前後＋側飛），放開自動回中（油門回中＝定高懸停），
+// 數值直接疊進 readInputInto()，所以單機、練習、闖關、賽道、連線對戰全部通用。
+const TOUCH = {on:false, kind:'desktop', lx:0, ly:0, rx:0, ry:0};
+const TOUCH_KEY = 'hsinchuDroneTouchV1';
+function touchDetect(){
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const fine = matchMedia('(pointer: fine)').matches;
+  const auto = coarse || (navigator.maxTouchPoints > 0 && !fine);
+  let pref = null; try{ pref = localStorage.getItem(TOUCH_KEY); }catch(e){}
+  const on = pref === 'on' ? true : pref === 'off' ? false : auto;
+  const short = Math.min(screen.width, screen.height);
+  TOUCH.kind = !on ? 'desktop' : short < 600 ? 'phone' : 'tablet';
+  touchApply(on);
+}
+function touchApply(on){
+  TOUCH.on = on;
+  if(on && TOUCH.kind === 'desktop') TOUCH.kind = Math.min(screen.width, screen.height) < 600 ? 'phone' : 'tablet';
+  document.body.classList.toggle('touch', on);
+  document.body.classList.toggle('phone', on && TOUCH.kind === 'phone');
+  document.body.classList.toggle('tablet', on && TOUCH.kind === 'tablet');
+  document.getElementById('touchToggle').textContent = on ? '⌨️ 鍵盤' : '🎮 觸控';
+  if(!on){ TOUCH.lx = TOUCH.ly = TOUCH.rx = TOUCH.ry = 0; }
+}
+function setupJoy(id, onMove){
+  const el = document.getElementById(id), knob = el.querySelector('.joyKnob');
+  let pid = null;
+  const move = e=>{
+    const r = el.getBoundingClientRect(), R = r.width/2;
+    let dx = (e.clientX - (r.left+R))/R, dy = (e.clientY - (r.top+R))/R;
+    const m = Math.hypot(dx,dy); if(m > 1){ dx /= m; dy /= m; }
+    knob.style.transform = 'translate(' + (dx*R*0.62) + 'px,' + (dy*R*0.62) + 'px)';
+    const dz = v => Math.abs(v) < 0.08 ? 0 : Math.sign(v)*((Math.abs(v)-0.08)/0.92);
+    onMove(dz(dx), -dz(dy));        // 往上推＝正
+  };
+  const end = e=>{
+    if(e.pointerId !== pid) return;
+    pid = null; el.classList.remove('on'); knob.style.transform = ''; onMove(0,0);
+  };
+  el.addEventListener('pointerdown', e=>{
+    if(pid !== null) return;
+    pid = e.pointerId; el.setPointerCapture(pid); el.classList.add('on'); move(e); e.preventDefault();
+    sfx.init();                       // iOS 需要使用者手勢才能開聲音
+  });
+  el.addEventListener('pointermove', e=>{ if(e.pointerId === pid){ move(e); e.preventDefault(); } });
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('lostpointercapture', end);
+}
+setupJoy('joyL', (x,y)=>{ TOUCH.lx = x; TOUCH.ly = y; });
+setupJoy('joyR', (x,y)=>{ TOUCH.rx = x; TOUCH.ry = y; });
+document.querySelectorAll('#touchBtns button').forEach(b=>{
+  b.addEventListener('click', e=>{
+    e.preventDefault();
+    const code = b.dataset.k;
+    dispatchEvent(new KeyboardEvent('keydown', {code}));     // 走既有的鍵盤流程（含連線對戰的房主限制）
+    dispatchEvent(new KeyboardEvent('keyup', {code}));
+  });
+});
+document.getElementById('touchToggle').addEventListener('click', e=>{
+  e.stopPropagation();
+  const on = !TOUCH.on;
+  try{ localStorage.setItem(TOUCH_KEY, on ? 'on' : 'off'); }catch(err){}
+  touchApply(on);
+});
+document.addEventListener('gesturestart', e=>e.preventDefault());   // iOS Safari 雙指縮放
+touchDetect();
+
 // ---------- 玩家輸入 ----------
 const keys = {};
 addEventListener('keydown', e=>{
@@ -1693,6 +1982,7 @@ addEventListener('keydown', e=>{
   if(e.code==='KeyR' && state!=='menu'){
     if(mode==='practice') restartPractice();
     else if(mode==='campaign') campRestart();
+    else if(mode==='race') raceRestart();
     else restart();
   }
   if(e.code==='KeyM' && state!=='menu'){   // 返回模式選單
@@ -1703,6 +1993,7 @@ addEventListener('keydown', e=>{
     document.getElementById('practiceHUD').style.display='none';
     document.getElementById('campPanel').style.display='none';
     document.getElementById('campMapPanel').style.display='none';
+    document.getElementById('racePanel').style.display='none';
     document.getElementById('overlay').style.display='flex';
     document.getElementById('netPanel').style.display='none';
     document.getElementById('rulesBox').style.display='block';
@@ -1752,6 +2043,7 @@ function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
   if(btn(8) && state!=='menu'){                        // SHARE=重賽
     if(mode==='practice') restartPractice();
     else if(mode==='campaign') campRestart();
+    else if(mode==='race') raceRestart();
     else restart();
   }
 }
@@ -1760,6 +2052,12 @@ function readInputInto(i){    // i：任一 drone 的 .input（本地玩家操�
   i.roll     = (keys['KeyD']?1:0) + (keys['KeyA']?-1:0);
   i.yawRate  = ((keys['ArrowLeft']?1:0) + (keys['ArrowRight']?-1:0)) * YAW_RATE;
   i.throttle = (keys['ArrowUp']?1:0) + (keys['ArrowDown']?-1:0);
+  if(TOUCH.on){   // 手機／平板虛擬搖桿（Mode 2）：與鍵盤／實體搖桿疊加後夾限
+    i.yawRate  = clamp(i.yawRate - TOUCH.lx*YAW_RATE, -YAW_RATE, YAW_RATE);
+    i.throttle = clamp(i.throttle + TOUCH.ly, -1, 1);
+    i.roll     = clamp(i.roll + TOUCH.rx, -1, 1);
+    i.pitch    = clamp(i.pitch + TOUCH.ry, -1, 1);
+  }
   const gp = getPad();
   if(gp){   // 搖桿與鍵盤可並用，疊加後夾限
     i.yawRate  = clamp(i.yawRate  - padDZ(gp.axes[0])*YAW_RATE, -YAW_RATE, YAW_RATE);
@@ -1918,6 +2216,18 @@ const sfx = (()=>{
         o.start(t0); o.stop(t0+0.55);
       });
     },
+    coin(mul){   // 飛行賽道：吃星幣／過拱門的短促提示音
+      if(!ctx) return;
+      const m = mul || 1;
+      [[1320*m,0],[1760*m,0.06]].forEach(([f,t])=>{
+        const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=f;
+        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+        const t0=ctx.currentTime+t;
+        g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(0.12,t0+0.01);
+        g.gain.exponentialRampToValueAtTime(0.001,t0+0.16);
+        o.start(t0); o.stop(t0+0.2);
+      });
+    },
     whistle(){
       if(!ctx) return;
       const o=ctx.createOscillator(); o.type='square'; o.frequency.value=2200;
@@ -2034,7 +2344,7 @@ function endMatch(){
   setState('over');
   fireFx({type:'end'});
 }
-let mode = 'player';   // 'player' | 'demo' | 'net' | 'practice'
+let mode = 'player';   // 'player' | 'demo' | 'net' | 'practice' | 'campaign' | 'race'
 function startGame(m){
   if(NET.connected) netTeardown();          // 若切回單機模式，順便離開連線房間
   document.getElementById('netPanel').style.display = 'none';
@@ -2789,6 +3099,7 @@ function campRestart(){ if(campLevel){ document.getElementById('campResult').sty
                                        campBuildLevel(); setState('play'); } }
 // 離開闖關模式時的還原（其餘 5 台機恢復顯示、場上道具清掉、HUD 切回去）
 function campExitCleanup(){
+  raceExitCleanup();                        // 飛行賽道也一起清（還原場地、邊界、HUD）；不在賽道時什麼都不做
   campClearScene();
   campLevel = null; campTasks = []; campMarkers = []; campPoles = [];
   document.getElementById('campHUD').style.display = 'none';
@@ -3060,6 +3371,634 @@ document.getElementById('btnCampNext').addEventListener('click', e=>campStart(+e
   });
 })();
 
+// ============================================================
+// 🏁 飛行賽道（2026-10-09 新增，業主要求「闖關不要都在競賽場裡，要有開放空間＋障礙物，
+//    引導從哪裡起飛、穿越障礙到終點，像飛行版的賽車遊戲」）
+//   - 每個場景一條專屬賽道（RACE_TRACKS，業主選「每個場景各自一條，比較耐玩」）
+//   - 三種玩法三選一：⏱ 計時賽／⭐ 收集賽／🛡 零碰撞挑戰，各自記最佳成績與 ⭐（5 場景 × 3 玩法 × 3 星 = 45）
+//   - 進入賽道時把比賽場地的網牆、充氣管、球門、看台、廣告板全部藏起來（只留 EVA 地墊當起飛坪），
+//     並把飛行邊界 ARENA 放大；離開時全部還原（raceExitCleanup 掛在 campExitCleanup 裡，任何回選單的路徑都會跑到）
+//   - 物理完全沿用 Drone.step()，只疊加該場景的飛行條件（SCENES[].fly，與闖關相同）
+//   - 引導：下一道拱門綠色閃爍＋編號、航線光點（目前這段較亮）、機身上方的綠色箭頭指向下一道門
+//   - 與闖關模式（⭐405）分開計分，不影響闖關的關卡數與星星數
+// ============================================================
+const RACE_SAVE_KEY = 'hsinchuDroneRaceV1';
+const RACE_MODES = [
+  {id:'time',  emoji:'⏱', name:'計時賽',     desc:'依序穿過所有拱門飛到終點，越快越好。'},
+  {id:'coins', emoji:'⭐', name:'收集賽',     desc:'沿著航線收集星幣，收越多越好；要飛到終點才算數。'},
+  {id:'nohit', emoji:'🛡', name:'零碰撞挑戰', desc:'撞到拱門、障礙物或重摔一次就 +3 秒，撞 3 次挑戰失敗。'},
+];
+const RACE_GT = 0.07;        // 拱門管徑
+const RACE_LIMIT = 150;      // 限時（秒）
+const RACE_PENALTY = 3;      // 零碰撞：每撞一次加秒
+const RACE_START = {x:0, z:0};
+// 航線點：['g',x,y,z,r] 拱門（中心＋開口半徑，朝向自動取前後航線方向）／['v',x,y,z] 只是引導點
+// 障礙物：['box',x,y,z,hx,hy,hz] 方塊（中心＋半尺寸）、['pole',x,z,h,r] 直立柱
+//        ['wallX',x,cy,cz,hole,halfW,height] 位在 x 的牆（垂直於 x 軸），開口中心 (cy,cz)
+//        ['wallZ',z,cy,cx,hole,halfW,height] 位在 z 的牆（垂直於 z 軸），開口中心 (cy,cx)
+//        ['side',i,f,off,half,y] 放在第 i→i+1 段航線旁 off 公尺處的方塊（f=段落比例）
+// slalom: [[i, 根數, 擺幅, 柱高]] 在第 i→i+1 段放一排柱子，並自動插入左右交錯的引導點
+const RACE_TRACKS = {
+  sky: {name:'雲端環線', theme:'sky', posts:false, grid:true,
+    brief:'繞著浮空島飛一圈，拱門大、彎道緩，熟悉開放空間的飛行感。',
+    p:[['g',7,2,0,1.3],['g',13,3,5,1.3],['g',14,4,12,1.3],['g',7,5,16,1.3],['g',-1,4.5,14,1.3],
+       ['g',-9,3.5,15,1.3],['g',-15,3,9,1.3],['g',-16,2.5,0,1.3],['g',-13,3,-8,1.3],['g',-6,4,-13,1.3],
+       ['g',3,3.5,-15,1.3],['g',11,2.5,-10,1.3],['g',6,1.6,-3,1.4]],
+    obs:[['side',1,0.5,1.0,0.45,0],['side',5,0.5,-1.0,0.45,0],['side',9,0.5,1.0,0.45,0],['side',11,0.45,-1.05,0.45,0]]},
+  arena: {name:'場館障礙賽', theme:'arena', posts:true, grid:false,
+    brief:'穿柱繞樁、鑽牆洞，彎道又急又密，練精準控制。',
+    p:[['g',6,1.5,0,1.1],['g',11,1.2,6,1.1],['g',6,2.5,11,1.1],['g',-2,1.0,11,1.1],['g',-9,2,8,1.1],
+       ['g',-12,3,0,1.1],['g',-9,1.5,-7,1.1],['g',-2,2.5,-11,1.1],['g',5,1.2,-10,1.1],['g',11,2,-4,1.1],
+       ['g',4,1.4,-3.5,1.2]],
+    slalom:[[0,3,0.75,3],[7,3,0.75,3]],
+    obs:[['wallX',-2,1.0,11,1.32,3,4.5],['wallZ',0,3,-12,1.32,3,5],
+         ['side',4,0.5,1.1,0.5,0],['side',9,0.5,-1.1,0.5,0]]},
+  meadow: {name:'湖畔低空穿林', theme:'meadow', posts:true, grid:false,
+    brief:'貼著草地低空飛行，穿過樹林與柵欄；有穩定側風，要一直修正。',
+    p:[['g',6,1.2,1,1.0],['g',12,1.0,-3,1.0],['v',14.5,1.6,-8],['g',13,2.2,-13,1.0],['g',6,0.9,-15,1.0],
+       ['g',-3,1.4,-14,1.0],['g',-9,2.5,-11,1.0],['g',-14,1.0,-5,1.0],['g',-14,1.6,3,1.0],['g',-10,1.2,9,1.0],
+       ['g',-3,2.8,12,1.0],['g',4,1.0,11,1.0],['g',10,1.6,7,1.0],['g',4,1.2,4.5,1.1]],
+    slalom:[[4,3,0.8,4]],
+    obs:[['box',-14,0.45,-1,1.8,0.07,0.07],['box',-14,2.6,-1,1.8,0.07,0.07],
+         ['side',9,0.5,1.2,0.3,0],['side',11,0.5,-1.2,0.3,0]]},
+  neon: {name:'霓虹峽谷', theme:'neon', posts:true, grid:false,
+    brief:'在大樓之間鑽來鑽去、穿過牆洞；陣風忽強忽弱，拱門也比較小。',
+    p:[['g',6,2,0,0.95],['g',11,3,-4,0.95],['g',12,5,-11,0.95],['g',6,6,-15,0.95],['g',-1,4,-13,0.95],
+       ['g',-7,2,-15,0.95],['g',-13,3,-10,0.95],['g',-13,6,-3,0.95],['g',-12,3,5,0.95],['g',-7,1.5,11,0.95],
+       ['g',0,3,13,0.95],['g',7,5,11,0.95],['g',11,2.5,5,0.95],['g',4,2,3.5,1.05]],
+    obs:[['wallX',-1,4,-13,1.15,3.2,7],['wallX',0,3,13,1.15,3.2,6],
+         ['box',-10.2,4,-6.5,1.2,4,2.0],['box',-15.8,4,-6.5,1.2,4,2.0],
+         ['box',8.8,5,-7.5,1.2,5,1.2],['box',11,4.5,9.3,1,4.5,1]]},
+  orbit: {name:'軌道迴旋', theme:'orbit', posts:false, grid:true,
+    brief:'高低落差最大的立體賽道；真空慣性煞不住，要提早收桿轉彎。',
+    p:[['g',7,2.5,0,1.15],['g',13,5,6,1.15],['g',10,8,13,1.15],['g',2,6,16,1.15],['g',-6,3,14,1.15],
+       ['g',-12,1.5,8,1.15],['g',-15,4,0,1.15],['g',-12,7,-7,1.15],['g',-4,8.5,-12,1.15],['g',5,6,-14,1.15],
+       ['g',12,3,-9,1.15],['g',9,1.5,-2,1.15],['g',6,1.5,-4.5,1.25]],
+    obs:[['side',1,0.5,1.1,0.6,0],['side',4,0.5,-1.1,0.55,0],['side',6,0.5,1.2,0.7,0],['side',8,0.5,-1.1,0.6,0]]},
+};
+const RACE_THEME = {
+  sky:   {box:0xf4f8ff, boxRough:1,   edge:0xa8d4ff, pole:0xdfe8f5, gateFuture:0x6fb8ff},
+  arena: {box:0x2a2f3c, boxRough:.6,  edge:0xff8a3d, pole:0xff8a3d, gateFuture:0x2fb8ff},
+  meadow:{box:0x8a5a35, boxRough:.9,  edge:0xd9b27c, pole:0x6b4a30, gateFuture:0x2fb8ff},
+  neon:  {box:0x141826, boxRough:.5,  edge:0xff2fa0, pole:0x2fe0ff, gateFuture:0x9d5cff},
+  orbit: {box:0xa6b0c0, boxRough:.35, edge:0x7dc4ff, pole:0xa6b0c0, gateFuture:0x7dc4ff},
+};
+// 飛行邊界：比賽時就是場地（6×3×3m），進賽道才放大
+function raceSetArena(open){
+  if(open){ ARENA.hx = 40; ARENA.hz = 40; ARENA.h = 30; }
+  else    { ARENA.hx = FIELD.hx; ARENA.hz = FIELD.hz; ARENA.h = FIELD.h; }
+}
+
+// ---------- 賽道資料展開（純函式，測試也用它檢查佈局） ----------
+const raceInfoCache = {};
+function raceExpand(sid){
+  const T = RACE_TRACKS[sid] || RACE_TRACKS.sky;
+  let P = T.p.map(q=> q[0]==='g' ? {x:q[1], y:q[2], z:q[3], r:q[4], gate:true} : {x:q[1], y:q[2], z:q[3], gate:false});
+  const obs = [], walls = [];
+  // slalom：從後面往前處理，插入引導點時前面的索引不會跑掉；柱子離前後拱門至少約 3 成段長
+  (T.slalom||[]).slice().sort((a,b)=>b[0]-a[0]).forEach(([i,n,amp,h])=>{
+    const A = P[i], B = P[i+1];
+    const dx = B.x-A.x, dz = B.z-A.z, L = Math.hypot(dx,dz), px = -dz/L, pz = dx/L;
+    const vias = [];
+    for(let k=1;k<=n;k++){
+      const f = n===1 ? 0.5 : 0.3 + 0.4*(k-1)/(n-1);
+      const x = A.x+dx*f, z = A.z+dz*f, y = A.y+(B.y-A.y)*f;
+      obs.push({t:'pole', x, z, h, r:0.2});
+      const s = (k%2 ? 1 : -1)*amp;
+      vias.push({x:x+px*s, y, z:z+pz*s, gate:false});
+    }
+    P.splice(i+1, 0, ...vias);
+  });
+  // 航線：起飛坪 → 各點 → 終點門後 2.5m 的緩衝點（確保衝過終點線一定判定得到）
+  const C = [{x:RACE_START.x, y:0.45, z:RACE_START.z, gate:false}].concat(P);
+  const last = C[C.length-1], prev = C[C.length-2];
+  const ex = last.x-prev.x, ez = last.z-prev.z, eL = Math.hypot(ex,ez) || 1;
+  C.push({x:last.x+ex/eL*2.5, y:last.y, z:last.z+ez/eL*2.5, gate:false, runout:true});
+  const curve = new THREE.CatmullRomCurve3(C.map(c=>V3(c.x,c.y,c.z)), false, 'centripetal');
+  const N = C.length - 1;
+  // 拱門朝向＝航線在該點的切線（水平分量），航線一定垂直穿過拱門中心
+  C.forEach((c,i)=>{
+    if(!c.gate) return;
+    const tg = curve.getTangent(i/N);
+    const L = Math.hypot(tg.x, tg.z) || 1; c.nx = tg.x/L; c.nz = tg.z/L; c.ci = i;
+  });
+  const samples = curve.getSpacedPoints(Math.max(50, Math.floor(curve.getLength()/0.25)));
+  (T.obs||[]).forEach(o=>{
+    const k = o[0];
+    if(k==='box') obs.push({t:'box', x:o[1], y:o[2], z:o[3], hx:o[4], hy:o[5], hz:o[6]});
+    else if(k==='pole') obs.push({t:'pole', x:o[1], z:o[2], h:o[3], r:o[4]});
+    else if(k==='side'){
+      const [_, i, f, off, half, dy] = o, A = T.p[i], B = T.p[i+1];
+      const dx = B[1]-A[1], dz = B[3]-A[3], L = Math.hypot(dx,dz);
+      let x = A[1]+dx*f - dz/L*off, z = A[3]+dz*f + dx/L*off;
+      const y = A[2]+(B[2]-A[2])*f + dy;
+      // 航線是曲線，可能彎到方塊上：往遠離最近航線點的方向推，保持至少 0.55m 淨空
+      for(let it=0; it<6; it++){
+        let best = null, bd = 1e9;
+        samples.forEach(q=>{ const d = Math.hypot(q.x-x, q.z-z) + Math.abs(q.y-y)*0.3; if(d<bd){ bd=d; best=q; } });
+        const need = half*1.42 + 0.55, hd = Math.hypot(best.x-x, best.z-z);
+        if(hd >= need || Math.abs(best.y-y) > half + 0.6) break;
+        const ux = hd > 1e-3 ? (x-best.x)/hd : -dz/L*Math.sign(off||1), uz = hd > 1e-3 ? (z-best.z)/hd : dx/L*Math.sign(off||1);
+        x = best.x + ux*need; z = best.z + uz*need;
+      }
+      if(T.theme==='meadow') obs.push({t:'pole', x, z, h:3.6, r:half, tree:true});
+      else obs.push({t:'box', x, y, z, hx:half, hy:half, hz:half});
+    }else if(k==='wallX' || k==='wallZ'){
+      const [_, a, cy, cc, hole, halfW, H] = o, th = 0.08;
+      walls.push({k, a, cy, cc});
+      const mk = (y0,y1,c0,c1)=>{
+        if(y1-y0 < 0.02 || c1-c0 < 0.02) return;
+        const yc=(y0+y1)/2, hy=(y1-y0)/2, cc2=(c0+c1)/2, hc=(c1-c0)/2;
+        obs.push(k==='wallX' ? {t:'box', x:a, y:yc, z:cc2, hx:th, hy, hz:hc, wall:true}
+                             : {t:'box', x:cc2, y:yc, z:a, hx:hc, hy, hz:th, wall:true});
+      };
+      mk(0, cy-hole, cc-halfW, cc+halfW);                 // 開口下方
+      mk(cy+hole, H, cc-halfW, cc+halfW);                 // 開口上方
+      mk(Math.max(0,cy-hole), cy+hole, cc-halfW, cc-hole); // 左
+      mk(Math.max(0,cy-hole), cy+hole, cc+hole, cc+halfW); // 右
+    }
+  });
+  // 牆洞裡的拱門：朝向對齊牆的法線，圓環才不會卡到牆
+  C.forEach(c=>{
+    if(!c.gate) return;
+    walls.forEach(w=>{
+      const inX = w.k==='wallX' && Math.abs(c.x-w.a)<0.3 && Math.abs(c.z-w.cc)<0.3;
+      const inZ = w.k==='wallZ' && Math.abs(c.z-w.a)<0.3 && Math.abs(c.x-w.cc)<0.3;
+      if(inX){ c.nx = Math.sign(c.nx)||1; c.nz = 0; }
+      if(inZ){ c.nz = Math.sign(c.nz)||1; c.nx = 0; }
+    });
+  });
+  const len = curve.getLength();
+  const gates = C.filter(c=>c.gate);
+  return {T, C, gates, obs, curve, len, par: Math.round(len/2.4)};
+}
+function raceInfo(sid){ return raceInfoCache[sid] || (raceInfoCache[sid] = raceExpand(sid)); }
+
+// ---------- 紀錄 ----------
+let raceSave = {};
+function raceLoad(){ try{ raceSave = JSON.parse(localStorage.getItem(RACE_SAVE_KEY)||'{}') || {}; }catch(e){ raceSave = {}; } }
+function raceStore(){ try{ localStorage.setItem(RACE_SAVE_KEY, JSON.stringify(raceSave)); }catch(e){} }
+raceLoad();
+const raceRec = (sid, m) => (raceSave[sid] && raceSave[sid][m]) || null;
+const raceStarsOf = (sid, m) => (raceRec(sid,m) ? raceRec(sid,m).stars|0 : 0);
+const raceGrandTotal = () => SCENES.reduce((n,S)=>n + RACE_MODES.reduce((k,M)=>k + raceStarsOf(S.id,M.id), 0), 0);
+const raceGrandMax = () => SCENES.length * RACE_MODES.length * 3;
+
+// ---------- 狀態 ----------
+let raceSceneId = 'sky', raceModeId = 'time';
+let raceData = null, raceGroup = null, raceHidden = [];
+let raceGateObjs = [], raceCoinObjs = [], raceObs = [], raceArrow = null, raceDotsHi = null;
+let raceIdx = 0, raceTime = 0, raceHits = 0, raceHitCd = 0, raceCD = 0, raceCDShown = 0, raceDone = false, raceCoinGot = 0;
+const racePrevPos = V3(0,0,0);
+
+// 把比賽場地（網牆、充氣管、球門＋計分板、看台、廣告板…）藏起來，只留 EVA 地墊、燈光、場景環境、無人機
+function raceHideArena(){
+  raceHidden = [];
+  const keep = new Set([floor, apron, raceGroup, ...Object.values(envGroups)]);
+  drones.forEach(d=>{ keep.add(d.mesh.grp); if(d.mesh.ribbon) keep.add(d.mesh.ribbon); });
+  scene.children.slice().forEach(o=>{
+    if(o.isLight || o.isCamera || keep.has(o) || !o.visible) return;
+    o.visible = false; raceHidden.push(o);
+  });
+}
+function raceShowArena(){ raceHidden.forEach(o=>o.visible = true); raceHidden = []; }
+
+function raceLabel(text, color, w){
+  const cv = document.createElement('canvas'); cv.width = w||128; cv.height = 64;
+  const g = cv.getContext('2d');
+  g.font = '900 44px "Arial Black", sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+  g.lineWidth = 8; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(text, cv.width/2, 34);
+  g.fillStyle = color; g.fillText(text, cv.width/2, 34);
+  const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+  sp.scale.set(0.9*(cv.width/128), 0.45, 1);
+  return sp;
+}
+const raceCoinGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.04, 24);
+const raceCoinMat = new THREE.MeshStandardMaterial({color:new THREE.Color(0xffc93d).convertSRGBToLinear(),
+  emissive:0xffa400, emissiveIntensity:.55, roughness:.3, metalness:.6});
+
+function raceClear(){
+  if(raceGroup){
+    scene.remove(raceGroup);
+    raceGroup.traverse(o=>{ if(o.geometry && o.geometry!==raceCoinGeo) o.geometry.dispose(); });
+  }
+  raceGroup = null; raceGateObjs = []; raceCoinObjs = []; raceObs = []; raceArrow = null; raceDotsHi = null;
+}
+function raceBuild(){
+  raceClear();
+  const D = raceData = raceInfo(raceSceneId);
+  const TH = RACE_THEME[D.T.theme] || RACE_THEME.sky;
+  raceGroup = new THREE.Group(); scene.add(raceGroup);
+  // 航線光點（全程淡淡的）
+  const pts = D.curve.getSpacedPoints(Math.max(20, Math.floor(D.len/0.6)));
+  const dots = new THREE.Points(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.PointsMaterial({color:0xbfe8ff, size:0.07, transparent:true, opacity:.45, depthWrite:false}));
+  raceGroup.add(dots);
+  raceDotsHi = new THREE.Points(new THREE.BufferGeometry(),
+    new THREE.PointsMaterial({color:0x39ff8a, size:0.12, transparent:true, opacity:.95, depthWrite:false}));
+  raceGroup.add(raceDotsHi);
+  // 拱門
+  const postMat = new THREE.MeshStandardMaterial({color:0x8a93a6, roughness:.5, metalness:.6});
+  D.gates.forEach((c, k)=>{
+    const fin = k === D.gates.length-1;
+    const mat = new THREE.MeshStandardMaterial({color:0x222630, emissive:TH.gateFuture, emissiveIntensity:1, roughness:.4});
+    const tor = new THREE.Mesh(new THREE.TorusGeometry(c.r + RACE_GT, RACE_GT, 14, 56), mat);
+    tor.position.set(c.x, c.y, c.z);
+    tor.rotation.y = Math.atan2(c.nx, c.nz);   // 圓環法線(本地 z)對準航線方向
+    raceGroup.add(tor);
+    const lbl = raceLabel(fin ? 'FINISH' : String(k+1), fin ? '#ffd23d' : '#ffffff', fin ? 256 : 128);
+    lbl.position.set(c.x, c.y + c.r + 0.45, c.z);
+    raceGroup.add(lbl);
+    let postTop = 0;
+    if(D.T.posts){
+      postTop = c.y - c.r - RACE_GT*2;
+      if(postTop > 0.05){
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, postTop, 10), postMat);
+        post.position.set(c.x, postTop/2, c.z); raceGroup.add(post);
+      }
+    }
+    raceGateObjs.push({c, tor, mat, lbl, fin, postTop, base: TH.gateFuture});
+  });
+  // 障礙物
+  const boxMat = new THREE.MeshStandardMaterial({color:new THREE.Color(TH.box).convertSRGBToLinear(),
+    roughness:TH.boxRough, metalness: D.T.theme==='orbit' ? .8 : .15,
+    emissive: D.T.theme==='neon' ? 0x0a0c18 : 0x000000});
+  const edgeMat = new THREE.LineBasicMaterial({color:TH.edge});
+  const poleMat = new THREE.MeshStandardMaterial({color:new THREE.Color(TH.pole).convertSRGBToLinear(), roughness:.7,
+    emissive: (D.T.theme==='neon' || D.T.theme==='arena') ? TH.pole : 0x000000, emissiveIntensity:.35});
+  const leafMat = new THREE.MeshStandardMaterial({color:new THREE.Color(0x2f7a34).convertSRGBToLinear(), roughness:.9, flatShading:true});
+  D.obs.forEach(o=>{
+    if(o.t==='box'){
+      const g = new THREE.BoxGeometry(o.hx*2, o.hy*2, o.hz*2);
+      const m = new THREE.Mesh(g, boxMat); m.position.set(o.x,o.y,o.z); m.castShadow = true;
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeMat); m.add(e);
+      raceGroup.add(m);
+    }else{
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(o.r, o.r*1.1, o.h, 14), poleMat);
+      m.position.set(o.x, o.h/2, o.z); m.castShadow = true; raceGroup.add(m);
+      if(o.tree){
+        const lf = new THREE.Mesh(new THREE.ConeGeometry(o.r*4.2, 1.6, 7), leafMat);
+        lf.position.set(o.x, o.h + 0.6, o.z); raceGroup.add(lf);
+      }
+    }
+    raceObs.push(o);
+  });
+  // 拱門底下的支柱也算障礙（只到拱門下緣）
+  raceGateObjs.forEach(G=>{ if(G.postTop > 0.05) raceObs.push({t:'pole', x:G.c.x, z:G.c.z, h:G.postTop, r:0.08, post:true}); });
+  // 地面格線（天空之城／太空站沒有地面，給一個參考平面；y=0 本來就是物理地板）
+  if(D.T.grid){
+    const grid = new THREE.GridHelper(44, 44, 0x7dc4ff, 0x7dc4ff);
+    grid.material.transparent = true; grid.material.opacity = D.T.theme==='orbit' ? .22 : .28; grid.material.depthWrite = false;
+    grid.position.y = 0.005; raceGroup.add(grid);
+  }
+  // 星幣（只有收集賽）
+  if(raceModeId === 'coins'){
+    const n = Math.floor(D.len/2.8);
+    D.curve.getSpacedPoints(n).forEach((p,i)=>{
+      if(Math.hypot(p.x-RACE_START.x, p.y, p.z-RACE_START.z) < 2.2) return;
+      if(raceObs.some(o=>raceObsDist(o, p) < 0.45)) return;
+      const fg = D.gates[D.gates.length-1];                       // 終點線之後的緩衝段不放星幣
+      if(Math.hypot(p.x-fg.x, p.z-fg.z) < 3.2 && (p.x-fg.x)*fg.nx + (p.z-fg.z)*fg.nz > -0.3) return;
+      const m = new THREE.Mesh(raceCoinGeo, raceCoinMat);
+      m.position.copy(p); m.rotation.z = Math.PI/2; m.userData.ph = i*0.7;
+      raceGroup.add(m); raceCoinObjs.push(m);
+    });
+  }
+  // 指向下一道門的箭頭
+  raceArrow = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.26, 12).rotateX(Math.PI/2),
+    new THREE.MeshBasicMaterial({color:0x39ff8a, toneMapped:false}));
+  raceGroup.add(raceArrow);
+  // 玩家機放到起飛坪（EVA 地墊中央），機頭朝第一道門
+  drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });
+  const g0 = D.gates[0];
+  player.pos.set(RACE_START.x, DRONE_R, RACE_START.z); player.vel.set(0,0,0);
+  player.yaw = Math.atan2(g0.x-RACE_START.x, g0.z-RACE_START.z); player.prevX = player.pos.x;
+  racePrevPos.copy(player.pos);
+  raceIdx = 0; raceTime = 0; raceHits = 0; raceHitCd = 0; raceDone = false; raceCoinGot = 0;
+  raceCD = 3.0; raceCDShown = 4;
+  raceRefreshGates();
+  raceUpdateHUD();
+  const M = RACE_MODES.find(m=>m.id===raceModeId);
+  flashMsg(D.T.name + '　' + M.emoji + ' ' + M.name, '#ffd75a', 1.6);
+}
+// 點到障礙物的最短距離（球心算法；給星幣避位與測試用）
+function raceObsDist(o, p){
+  if(o.t==='box'){
+    const dx = Math.max(Math.abs(p.x-o.x)-o.hx, 0), dy = Math.max(Math.abs(p.y-o.y)-o.hy, 0), dz = Math.max(Math.abs(p.z-o.z)-o.hz, 0);
+    return Math.hypot(dx,dy,dz);
+  }
+  const dh = Math.hypot(p.x-o.x, p.z-o.z) - o.r, dv = Math.max(p.y - o.h, 0);
+  return Math.hypot(Math.max(dh,0), dv);
+}
+function raceRefreshGates(){
+  raceGateObjs.forEach((G,k)=>{
+    if(k < raceIdx){ G.mat.emissive.setHex(0x3a4050); G.mat.emissiveIntensity = .25; G.lbl.visible = false; }
+    else if(k === raceIdx){ G.mat.emissive.setHex(G.fin ? 0xffd23d : 0x39ff8a); G.mat.emissiveIntensity = 2.4; G.lbl.visible = true; }
+    else { G.mat.emissive.setHex(G.fin ? 0xffd23d : G.base); G.mat.emissiveIntensity = G.fin ? 1.2 : .9; G.lbl.visible = k < raceIdx + 3 || G.fin; }
+  });
+  // 目前這一段航線（上一道門 → 下一道門）亮綠色
+  if(raceData && raceDotsHi){
+    const n = raceData.C.length - 1, cur = raceData.gates[raceIdx];
+    if(cur){
+      const prevCi = raceIdx > 0 ? raceData.gates[raceIdx-1].ci : 0;
+      const pts = [];
+      const steps = Math.max(8, Math.round((cur.ci - prevCi) * 18));
+      for(let s=0;s<=steps;s++) pts.push(raceData.curve.getPoint((prevCi + (cur.ci-prevCi)*s/steps)/n));
+      raceDotsHi.geometry.dispose();
+      raceDotsHi.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+      raceDotsHi.visible = true;
+    }else raceDotsHi.visible = false;
+  }
+}
+
+// ---------- 碰撞（回傳撞擊速度，0＝沒撞到） ----------
+function raceBounce(n, restitution){
+  const vn = player.vel.dot(n);
+  if(vn >= 0) return 0;
+  player.vel.addScaledVector(n, -vn*(1+restitution));
+  player.disturb = Math.min(1, player.disturb + Math.min(0.6, -vn*0.1));
+  if(-vn > 1.0) sfx.hit(Math.min(1, -vn/8));
+  return -vn;
+}
+function raceCollideGate(c){
+  const rx = player.pos.x-c.x, ry = player.pos.y-c.y, rz = player.pos.z-c.z;
+  const ux = -c.nz, uz = c.nx;                         // 拱門平面內的水平方向
+  const a = rx*c.nx + rz*c.nz, b = rx*ux + rz*uz;      // a：沿航線方向距離，b/ry：平面內座標
+  const radial = Math.hypot(b, ry);
+  if(radial < 1e-4) return 0;
+  const RC = c.r + RACE_GT;
+  const P = V3(c.x + ux*b/radial*RC, c.y + ry/radial*RC, c.z + uz*b/radial*RC);
+  const diff = player.pos.clone().sub(P), dist = diff.length(), minD = DRONE_R + RACE_GT;
+  if(dist >= minD || dist < 1e-5 || Math.abs(a) > minD + 0.01) return 0;
+  const n = diff.multiplyScalar(1/dist);
+  player.pos.copy(P).addScaledVector(n, minD);
+  return raceBounce(n, 0.5);
+}
+function raceCollideObs(o){
+  const p = player.pos;
+  if(o.t==='box'){
+    const qx = clamp(p.x, o.x-o.hx, o.x+o.hx), qy = clamp(p.y, o.y-o.hy, o.y+o.hy), qz = clamp(p.z, o.z-o.hz, o.z+o.hz);
+    const dx = p.x-qx, dy = p.y-qy, dz = p.z-qz, d = Math.hypot(dx,dy,dz);
+    if(d >= DRONE_R) return 0;
+    let n;
+    if(d > 1e-5){ n = V3(dx/d, dy/d, dz/d); p.set(qx,qy,qz).addScaledVector(n, DRONE_R); }
+    else{   // 球心已經跑進方塊裡（高速穿入）：從最近的面推出去
+      const px = o.hx-Math.abs(p.x-o.x), py = o.hy-Math.abs(p.y-o.y), pz = o.hz-Math.abs(p.z-o.z);
+      if(px<=py && px<=pz){ n = V3(Math.sign(p.x-o.x)||1,0,0); p.x = o.x + n.x*(o.hx+DRONE_R); }
+      else if(py<=pz){ n = V3(0,Math.sign(p.y-o.y)||1,0); p.y = o.y + n.y*(o.hy+DRONE_R); }
+      else{ n = V3(0,0,Math.sign(p.z-o.z)||1); p.z = o.z + n.z*(o.hz+DRONE_R); }
+    }
+    return raceBounce(n, 0.45);
+  }
+  // 直立柱（地面到 h）
+  if(p.y > o.h + DRONE_R) return 0;
+  const dx = p.x-o.x, dz = p.z-o.z, d = Math.hypot(dx,dz), minD = o.r + DRONE_R;
+  if(p.y > o.h){   // 柱頂
+    if(d < o.r){ p.y = o.h + DRONE_R; return raceBounce(V3(0,1,0), 0.35); }
+    return 0;
+  }
+  if(d >= minD || d < 1e-5) return 0;
+  const n = V3(dx/d, 0, dz/d);
+  p.x = o.x + n.x*minD; p.z = o.z + n.z*minD;
+  return raceBounce(n, 0.5);
+}
+// 場景飛行條件（同闖關 campApplyEnv，只是不帶關卡風）
+function raceApplyEnv(h, t){
+  const S = sceneById(raceSceneId).fly || {};
+  const bx = S.wind ? S.wind.x : 0, bz = S.wind ? S.wind.z : 0, gu = S.gust || 0;
+  if(bx || bz || gu){
+    const gx = gu ? Math.sin(t*0.70)*Math.sin(t*1.90+1.3)*gu : 0;
+    const gz = gu ? Math.sin(t*0.55+2.1)*Math.sin(t*1.40)*gu : 0;
+    player.vel.x += (bx + gx)*h; player.vel.z += (bz + gz)*h;
+  }
+  if(S.updraft) player.vel.y += S.updraft*(0.75 + 0.25*Math.sin(t*0.9))*h;
+  const dm = S.dragMul === undefined ? 1 : S.dragMul;
+  if(dm !== 1){
+    const sp = player.vel.length();
+    if(sp > 1e-4){
+      const back = (1 - dm) * (DRAG_K1*sp + DRAG_K2*sp*sp) / MASS * h;
+      player.vel.addScaledVector(player.vel.clone().multiplyScalar(1/sp), back);
+    }
+  }
+}
+
+// ---------- 每個物理子步 ----------
+function raceStep(h, t){
+  if(raceDone || state !== 'play' || !raceData) return;
+  if(raceCD > 0){                                    // 倒數：機體停在起飛坪
+    raceCD -= h;
+    player.pos.set(RACE_START.x, DRONE_R, RACE_START.z); player.vel.set(0,0,0);
+    player.input = {pitch:0, roll:0, yawRate:0, throttle:0};
+    const sec = Math.ceil(raceCD);
+    if(sec !== raceCDShown && sec > 0){ raceCDShown = sec; flashMsg(String(sec), '#ffd75a', 0.8); sfx.warn(); }
+    if(raceCD <= 0){ flashMsg('GO!', '#7dffa9', 0.9); sfx.whistle(); }
+    racePrevPos.copy(player.pos);
+    return;
+  }
+  raceTime += h;
+  racePrevPos.copy(player.pos);
+  const vy0 = player.vel.y;
+  player.step(h);
+  raceApplyEnv(h, t);
+  let impact = 0;
+  raceGateObjs.forEach(G=>{ impact = Math.max(impact, raceCollideGate(G.c)); });
+  raceObs.forEach(o=>{ impact = Math.max(impact, raceCollideObs(o)); });
+  if(player.pos.y <= DRONE_R + 0.002 && vy0 < -1.5) impact = Math.max(impact, -vy0);   // 重摔落地
+  raceHitCd = Math.max(0, raceHitCd - h);
+  if(impact > 0.6 && raceHitCd <= 0){
+    raceHits++; raceHitCd = 0.5;
+    if(raceModeId === 'nohit'){
+      flashMsg('💥 碰撞 ' + raceHits + ' / 3　+' + RACE_PENALTY + ' 秒', '#f87171', 0.8);
+      if(raceHits >= 3){ raceFinish(false, '撞擊 3 次，挑戰失敗'); return; }
+    }else flashMsg('💥 碰撞', '#f87171', 0.45);
+  }
+  // 下一道門：由後往前穿過圓環平面、且在開口內
+  const c = raceData.gates[raceIdx];
+  if(c){
+    const s0 = (racePrevPos.x-c.x)*c.nx + (racePrevPos.z-c.z)*c.nz;
+    const s1 = (player.pos.x-c.x)*c.nx + (player.pos.z-c.z)*c.nz;
+    if(s0 < 0 && s1 >= 0){
+      const b = -(player.pos.x-c.x)*c.nz + (player.pos.z-c.z)*c.nx, ry = player.pos.y-c.y;
+      if(Math.hypot(b, ry) < c.r - DRONE_R*0.5) racePassGate();
+    }
+  }
+  // 星幣
+  for(const m of raceCoinObjs){
+    if(m.visible && m.position.distanceTo(player.pos) < 0.42){
+      m.visible = false; raceCoinGot++; sfx.coin();
+    }
+  }
+  if(!raceDone && raceTime >= RACE_LIMIT) raceFinish(false, '時間到');
+}
+function racePassGate(){
+  raceIdx++;
+  if(raceIdx >= raceData.gates.length){ raceFinish(true); return; }
+  sfx.coin(1.5);
+  flashMsg('✓ ' + raceIdx + ' / ' + raceData.gates.length, '#7dffa9', 0.6);
+  raceRefreshGates();
+}
+const raceTotalTime = () => raceTime + (raceModeId === 'nohit' ? raceHits*RACE_PENALTY : 0);
+function raceFinish(ok, reason){
+  raceDone = true;
+  setState('over');
+  const D = raceData, par = D.par, total = raceTotalTime(), nCoin = raceCoinObjs.length;
+  let stars = 0;
+  if(ok){
+    stars = 1;
+    if(raceModeId === 'time'){ if(total <= par*1.35) stars = 2; if(total <= par) stars = 3; }
+    else if(raceModeId === 'coins'){ const r = nCoin ? raceCoinGot/nCoin : 1; if(r >= 0.6) stars = 2; if(r >= 1) stars = 3; }
+    else { if(raceHits <= 1 && total <= par*1.35) stars = 2; if(raceHits === 0 && total <= par*1.35) stars = 3; }
+    sfx.goal();
+  }
+  // 紀錄：星數高的優先；同星數比成績（收集賽：星幣多→時間短；其他：總時間短）
+  let isNew = false;
+  if(ok){
+    const old = raceRec(raceSceneId, raceModeId);
+    const better = !old || stars > old.stars || (stars === old.stars && (
+      raceModeId === 'coins' ? (raceCoinGot > old.coins || (raceCoinGot === old.coins && total < old.best)) : total < old.best));
+    if(better){
+      raceSave[raceSceneId] = raceSave[raceSceneId] || {};
+      raceSave[raceSceneId][raceModeId] = {stars, best: +total.toFixed(2), coins: raceCoinGot, of: nCoin};
+      raceStore(); isNew = !!old || true;
+    }
+  }
+  const M = RACE_MODES.find(m=>m.id===raceModeId);
+  const ttl = document.getElementById('raceResultTitle');
+  ttl.textContent = ok ? '完賽！' : (reason || '挑戰失敗');
+  ttl.className = ok ? '' : 'fail';
+  document.getElementById('raceResultSub').textContent = sceneById(raceSceneId).emoji + ' ' + D.T.name + '　' + M.emoji + ' ' + M.name;
+  document.getElementById('raceStars').innerHTML = [0,1,2].map(i=> i < stars ? '<b>★</b>' : '★').join('');
+  const g = '<span style="color:#7c88a8">', e = '</span>';
+  let st = '<em>用時</em>' + raceTime.toFixed(1) + ' s';
+  if(raceModeId === 'nohit') st += '　<em>碰撞</em>' + raceHits + ' 次（+' + raceHits*RACE_PENALTY + ' s）<br><em>總成績</em>' + total.toFixed(1) + ' s';
+  if(raceModeId === 'coins') st += '<br><em>星幣</em>' + raceCoinGot + ' / ' + nCoin;
+  st += '<br>';
+  if(raceModeId === 'time')  st += g + '3★ ≤ ' + par + ' s　2★ ≤ ' + Math.round(par*1.35) + ' s' + e;
+  if(raceModeId === 'coins') st += g + '3★ 全部收集　2★ 收集 6 成以上' + e;
+  if(raceModeId === 'nohit') st += g + '3★ 零碰撞且 ≤ ' + Math.round(par*1.35) + ' s　2★ 碰撞 ≤ 1 次' + e;
+  if(ok && isNew) st += '<br><span style="color:#7dffa9;font-weight:700">🏅 新紀錄！</span>';
+  if(!ok) st += '<br>' + g + '通過 ' + raceIdx + ' / ' + D.gates.length + ' 道拱門' + e;
+  document.getElementById('raceStats').innerHTML = st;
+  document.getElementById('raceResult').style.display = 'flex';
+  raceArrow && (raceArrow.visible = false);
+}
+
+// ---------- 每幀畫面 ----------
+function raceAnimate(t){
+  if(mode !== 'race' || !raceData) return;
+  const G = raceGateObjs[raceIdx];
+  if(G) G.mat.emissiveIntensity = 2.0 + Math.sin(t*6)*0.9;
+  raceCoinObjs.forEach(m=>{ if(m.visible){ m.rotation.y = t*2.6 + m.userData.ph; } });
+  // 箭頭：機身上方，指向下一道門
+  const c = raceData.gates[raceIdx];
+  if(raceArrow){
+    raceArrow.visible = !!c && !raceDone;
+    if(c){
+      raceArrow.position.set(player.pos.x, player.pos.y + 0.36, player.pos.z);
+      raceArrow.lookAt(c.x, c.y, c.z);
+      raceArrow.material.color.setHex(raceCD > 0 ? 0xffd75a : 0x39ff8a);
+    }
+  }
+}
+function raceUpdateHUD(){
+  if(!raceData) return;
+  const D = raceData, M = RACE_MODES.find(m=>m.id===raceModeId), SC = sceneById(raceSceneId);
+  const $ = id => document.getElementById(id);
+  $('raceTitle').textContent = '🏁 ' + D.T.name + '　' + M.emoji + ' ' + M.name;
+  $('raceEnv').textContent = SC.emoji + ' ' + SC.name + '　飛行條件：' + ((SC.fly && SC.fly.note) || '無風') +
+    '　全長 ' + Math.round(D.len) + ' m';
+  $('raceGate').textContent = Math.min(raceIdx, D.gates.length) + ' / ' + D.gates.length;
+  $('raceTime').textContent = raceTotalTime().toFixed(1);
+  $('raceCoinWrap').style.display = raceModeId === 'coins' ? '' : 'none';
+  $('raceCoins').textContent = raceCoinGot + ' / ' + raceCoinObjs.length;
+  $('raceHitWrap').style.display = raceModeId === 'coins' ? 'none' : '';
+  $('raceHits').textContent = raceModeId === 'nohit' ? raceHits + ' / 3' : raceHits;
+  const R = raceRec(raceSceneId, raceModeId);
+  $('raceBest').textContent = !R ? '—' : raceModeId === 'coins' ? (R.coins + '/' + R.of + ' 枚') : (R.best.toFixed(1) + ' s');
+}
+
+// ---------- 開始／重來／離開 ----------
+function raceStart(sid){
+  if(NET.connected) netTeardown();
+  campExitCleanup();                              // 清掉闖關殘留（內含 raceExitCleanup）
+  raceSceneId = sid;
+  setScene(sid);
+  ['netPanel','campPanel','campMapPanel','racePanel','overlay','campResult','raceResult','scoreboard','practiceHUD']
+    .forEach(k=>document.getElementById(k).style.display='none');
+  document.getElementById('raceHUD').style.display = 'block';
+  mode = 'race';
+  sfx.init();
+  camMode = 0;
+  document.querySelector('#telemetry b').textContent = '你的無人機（賽道）';
+  raceSetArena(true);
+  raceBuild();                                    // 先建 raceGroup，raceHideArena 才不會把它藏起來
+  raceHideArena();
+  setState('play');
+}
+function raceRestart(){
+  if(!raceData) return;
+  document.getElementById('raceResult').style.display = 'none';
+  raceBuild();
+  setState('play');
+}
+function raceExitCleanup(){
+  if(!raceGroup && !raceHidden.length) return;
+  raceClear(); raceShowArena(); raceSetArena(false);
+  raceData = null;
+  if(mode === 'race') mode = 'player';
+  document.getElementById('raceHUD').style.display = 'none';
+  document.getElementById('raceResult').style.display = 'none';
+  drones.forEach(d=>{ d.reset(); setDroneVisible(d, true); });
+}
+function raceBackToPanel(){
+  raceExitCleanup();
+  setState('menu');
+  document.getElementById('scoreboard').style.display = 'flex';
+  document.getElementById('overlay').style.display = 'flex';
+  raceOpenPanel();
+}
+
+// ---------- 選單：玩法 × 場景 ----------
+function raceBuildPanel(){
+  const M = RACE_MODES.find(m=>m.id===raceModeId);
+  document.getElementById('raceModes').innerHTML = RACE_MODES.map(m=>
+    '<button class="sceneBtn' + (m.id===raceModeId ? ' on' : '') + '" data-id="' + m.id + '"><i>' + m.emoji + '</i>' + m.name + '</button>').join('');
+  document.querySelectorAll('#raceModes .sceneBtn').forEach(b=>b.addEventListener('click', ()=>{
+    raceModeId = b.dataset.id;
+    try{ localStorage.setItem(RACE_SAVE_KEY + '-mode', raceModeId); }catch(e){}
+    raceBuildPanel();
+  }));
+  document.getElementById('raceModeDesc').textContent = M.desc;
+  document.getElementById('raceMaps').innerHTML = SCENES.map(S=>{
+    const I = raceInfo(S.id), R = raceRec(S.id, raceModeId), st = raceStarsOf(S.id, raceModeId);
+    const best = !R ? '尚未完賽' : raceModeId === 'coins' ? ('最佳 ' + R.coins + '/' + R.of + ' 枚') : ('最佳 ' + R.best.toFixed(1) + ' s');
+    return '<div class="campMapCard raceCard" data-id="' + S.id + '">' +
+      '<div class="ico">' + S.emoji + '</div><div class="nm">' + I.T.name + '</div>' +
+      '<div class="sb">' + S.name + '・' + I.gates.length + ' 道門・' + Math.round(I.len) + ' m</div>' +
+      '<div class="fly">' + ((S.fly && S.fly.note) || '無風') + '</div>' +
+      '<div class="pg">' + [0,1,2].map(i=> i < st ? '<b>★</b>' : '★').join('') + '</div>' +
+      '<div class="best">' + best + '</div></div>';
+  }).join('');
+  document.querySelectorAll('#raceMaps .raceCard').forEach(el=>el.addEventListener('click', ()=>raceStart(el.dataset.id)));
+  document.getElementById('raceTotal').textContent = '⭐ ' + raceGrandTotal() + ' / ' + raceGrandMax();
+}
+function raceOpenPanel(){
+  try{ const m = localStorage.getItem(RACE_SAVE_KEY + '-mode'); if(RACE_MODES.some(x=>x.id===m)) raceModeId = m; }catch(e){}
+  campMenuChrome(false);
+  ['netPanel','campPanel','campMapPanel'].forEach(k=>document.getElementById(k).style.display='none');
+  document.getElementById('racePanel').style.display = 'block';
+  raceBuildPanel();
+}
+function raceClosePanel(){
+  document.getElementById('racePanel').style.display = 'none';
+  campMenuChrome(true);
+}
+document.getElementById('btnRace').addEventListener('click', raceOpenPanel);
+document.getElementById('btnRaceBack').addEventListener('click', raceClosePanel);
+document.getElementById('btnRaceRetry').addEventListener('click', raceRestart);
+document.getElementById('btnRaceList').addEventListener('click', raceBackToPanel);
+
 function loop(){
   requestAnimationFrame(loop);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -3100,6 +4039,11 @@ function loop(){
       campStep(H, t);
       acc -= H;
     }
+  }else if(mode==='race' && state==='play'){
+    // ---- 飛行賽道：只有玩家機，開放空間（邊界已放大），障礙物／拱門碰撞與過門判定在 raceStep ----
+    readPlayerInput();
+    acc += dt;
+    while(acc >= H){ raceStep(H, t); acc -= H; }
   }else if(state==='play'){
     // ---- 單機／示範賽／連線對戰房主：完整權威物理 ----
     timeLeft -= dt;
@@ -3145,6 +4089,7 @@ function loop(){
   drones.forEach(d=>d.syncMesh(t));
   envAnimate(dt);
   if(mode==='campaign'){ campAnimate(t); campUpdateHUD(); }
+  if(mode==='race'){ raceAnimate(t); raceUpdateHUD(); }
   if(ringPulse){
     // 電子球門進球燈效：綠白交替爆閃後恢復隊色
     ringPulse.t += dt;
@@ -3161,6 +4106,7 @@ function loop(){
       ringPulse = null;
     }
   }
+  updateGoalBoards();
   // 觀眾影格輪播（同一群人換姿勢）＋律動明暗＋手機閃光
   crowdMats.forEach((c,i)=>{
     c.ft -= dt;
