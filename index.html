@@ -154,6 +154,13 @@
   #campStats em,#raceStats em{font-style:normal;color:#7c88a8;margin-right:4px}
   #campResultBtns,#raceResultBtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   #campResultBtns .modeBtn,#raceResultBtns .modeBtn{padding:10px 20px;font-size:14px}
+  /* 操作說明／飛行數據：平常收成一條標題，滑鼠移過去才展開；點標題可固定展開（2026-10-09，業主反映會擋畫面） */
+  #help,#telemetry{pointer-events:auto;overflow:hidden;max-height:420px;transition:max-height .25s ease,opacity .25s ease}
+  .pTitle{font-size:12px;font-weight:700;color:#9fc1ff;cursor:pointer;white-space:nowrap;margin-bottom:2px}
+  .pTitle .pHint{font-weight:400;color:#7c88a8;font-size:10.5px}
+  #help.mini:not(:hover),#telemetry.mini:not(:hover){max-height:20px;opacity:.55}
+  #help:not(.mini) .pHint,#telemetry:not(.mini) .pHint{display:none}
+  body.touch #help.mini,body.touch #telemetry.mini{max-height:20px;opacity:.6}
   /* ---------- 手機／平板觸控操作（2026-10-09 新增）：Mode 2 雙虛擬搖桿，跟實機遙控器一致 ---------- */
   #touchUI{display:none;position:fixed;inset:0;z-index:40;pointer-events:none}
   body.touch #touchUI{display:block}
@@ -320,7 +327,8 @@
 <div class="hud" id="credit">新竹市無人機創新科技協會©</div>
 <div class="hud" id="netBadge" style="display:none;top:12px;right:16px;background:rgba(8,12,24,.7);
   border:1px solid rgba(120,160,255,.25);border-radius:10px;padding:6px 12px;font-size:12px;color:#9fc1ff"></div>
-<div class="hud" id="telemetry">
+<div class="hud mini" id="telemetry">
+  <div class="pTitle" data-k="tele">📊 飛行數據 <span class="pHint">（滑鼠移過來展開・點標題固定）</span></div>
   <b>你的 Striker（紅）</b><br>
   速度 <span id="tSpd">0.0</span> m/s<br>
   高度 <span id="tAlt">0.0</span> m<br>
@@ -328,11 +336,12 @@
   得分權 <span id="armBadge" class="armed">已解鎖</span><br>
   搖桿 <span id="tPad" style="color:#fbbf24">未偵測</span>
 </div>
-<div class="hud" id="help">
-  <b>W / S</b> 前傾 / 後傾<br>
-  <b>A / D</b> 左 / 右側飛<br>
-  <b>← / →</b> 機頭旋轉<br>
-  <b>↑ / ↓</b> 上升 / 下降<br>
+<div class="hud mini" id="help">
+  <div class="pTitle" data-k="help">⌨️ 操作說明・美國手 <span class="pHint">（滑鼠移過來展開・點標題固定）</span></div>
+  <b>W / S</b> 上升 / 下降（油門）<br>
+  <b>A / D</b> 機頭左轉 / 右轉<br>
+  <b>↑ / ↓</b> 前進 / 後退<br>
+  <b>← / →</b> 左 / 右側飛<br>
   <b>C</b> 視角（追視/機載/全場）<br>
   <b>P</b> 暫停&nbsp;<b>R</b> 重來&nbsp;<b>M</b> 模式選單<br>
   <b>🎮 搖桿</b> 左桿=油門/旋轉、右桿=前後/側飛<br>
@@ -823,66 +832,321 @@ function cloudBank(cx,cy,cz,s,n,op){         // 幾顆 puff 疊成一朵較大�
   return g;
 }
 
+// --- 真實素材（2026-10-09 起，業主要求「背景盡可能逼真，不要像幾何圖形」）---
+// 素材放在 repo 的 assets/ 資料夾（Poly Haven / pmndrs 的 CC0 素材），跟 index.html 一起上傳。
+// 每個場景第一次進入才載入；載入失敗或用 file:// 直接開檔時，自動保留程序化外觀（不會白屏）。
+//   ※ file:// 下 Chrome 會把本機圖片當跨來源，WebGL 上傳貼圖會丟 SecurityError 讓整個畫面停掉，所以直接跳過。
+const ENV_ASSET_BASE = 'assets/';
+const ENV_ASSETS_OK = location.protocol !== 'file:';
+const ENV_LOW = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; // 手機：素材減量
+const envTexLoader = new THREE.TextureLoader();
+const envAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+function envLoadTex(path, opt, ok){
+  if(!ENV_ASSETS_OK) return;
+  envTexLoader.load(ENV_ASSET_BASE + path, t=>{
+    if(opt.srgb) t.encoding = THREE.sRGBEncoding;
+    if(opt.repeat){ t.wrapS = t.wrapT = THREE.RepeatWrapping; }
+    t.anisotropy = envAniso;
+    ok(t);
+  }, undefined, ()=>console.info('[場景素材] 載入失敗，保留程序化外觀：' + path));
+}
+// 給 PBR 材質掛上照片貼圖（顏色貼圖＋法線貼圖），載入後才切換，之前維持純色
+function envPbr(mat, name, normalScale, tint){
+  envLoadTex(name + '_diff.jpg', {srgb:true, repeat:true}, t=>{
+    mat.map = t; mat.color.setRGB(...(tint || [1,1,1])); mat.needsUpdate = true;
+  });
+  envLoadTex(name + '_nor.jpg', {repeat:true}, t=>{
+    mat.normalMap = t; mat.normalScale.set(normalScale, normalScale); mat.needsUpdate = true;
+  });
+}
+
+// 平滑的 3D value noise（浮空島岩體變形用；用固定種子，每次開網頁形狀一樣）
+function envNoise3(seed){
+  const P = new Uint8Array(512);
+  let s = seed >>> 0 || 1;
+  const rnd = ()=>{ s = (s*1664525 + 1013904223) >>> 0; return s/4294967296; };
+  const p = [...Array(256).keys()];
+  for(let i=255;i>0;i--){ const j = Math.floor(rnd()*(i+1)); [p[i],p[j]] = [p[j],p[i]]; }
+  for(let i=0;i<512;i++) P[i] = p[i&255];
+  const fade = t=>t*t*(3-2*t);
+  const h = (x,y,z)=>P[P[P[x&255]+(y&255)]+(z&255)]/255;
+  const n = (x,y,z)=>{
+    const X=Math.floor(x), Y=Math.floor(y), Z=Math.floor(z);
+    const u=fade(x-X), v=fade(y-Y), w=fade(z-Z);
+    const L=(a,b,t)=>a+(b-a)*t;
+    return L(L(L(h(X,Y,Z),h(X+1,Y,Z),u), L(h(X,Y+1,Z),h(X+1,Y+1,Z),u), v),
+             L(L(h(X,Y,Z+1),h(X+1,Y,Z+1),u), L(h(X,Y+1,Z+1),h(X+1,Y+1,Z+1),u), v), w)*2-1;
+  };
+  return (x,y,z,oct)=>{ let a=0, f=1, amp=0.5; for(let i=0;i<(oct||4);i++){ a+=n(x*f,y*f,z*f)*amp; f*=2.03; amp*=0.5; } return a; };
+}
+
+// 浮空島：不規則岩體（倒錐＋雜訊變形＋岩層）＋ 微隆起的草皮頂
+//   rx/rz：頂面半徑（可橢圓）；depth：岩體深度；flatTop：草皮頂保持水平（場地基座用）
+function makeFloatIsland(o, rockMat, grassMat){
+  const nz = envNoise3(o.seed);
+  const SEG = o.seg || 56, RINGS = o.rings || 26;
+  const rim = th => 1 + 0.16*nz(Math.cos(th)*1.3, Math.sin(th)*1.3, 3.7, 3) * (o.rimNoise===undefined?1:o.rimNoise);
+  const TILE = o.tile || 4;                      // 岩壁貼圖一格代表幾公尺
+  const avgR = (o.rx + o.rz)/2;
+  const uRep = Math.max(1, Math.round(2*Math.PI*avgR / TILE));
+  // --- 岩體 ---
+  const pos = [], uv = [], idx = [];
+  for(let k=0;k<=RINGS;k++){
+    const t = k/RINGS;
+    const y = -o.depth * Math.pow(t, 0.92);
+    // 輪廓：頂部略外凸，往下收成尖（像被拔起來的一塊地）
+    const prof = Math.pow(1-t, 0.8) * (1 + 0.10*Math.sin(t*Math.PI)) * (k===RINGS ? 0 : 1);
+    for(let j=0;j<=SEG;j++){
+      const th = j/SEG*Math.PI*2;
+      const r0 = rim(th) * prof;
+      let x = Math.cos(th)*o.rx*r0, z = Math.sin(th)*o.rz*r0;
+      // 越往下越崎嶇；岩層：沿 y 的條紋
+      const d = nz(x*0.32, y*0.32, z*0.32, 4) * avgR * 0.22 * (0.35 + t)
+              + nz(x*0.05, y*1.6, z*0.05, 2) * avgR * 0.05;
+      const len = Math.hypot(x,z) || 1;
+      if(k>0){ x += x/len*d; z += z/len*d; }
+      pos.push(x, y + (k>0 ? nz(x*0.4,7.1,z*0.4,2)*0.25 : 0), z);
+      uv.push(j/SEG*uRep, -y/TILE);
+    }
+  }
+  for(let k=0;k<RINGS;k++) for(let j=0;j<SEG;j++){
+    const a = k*(SEG+1)+j, b = a+SEG+1;
+    idx.push(a, a+1, b, a+1, b+1, b);
+  }
+  const rg = new THREE.BufferGeometry();
+  rg.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  rg.setAttribute('uv', new THREE.Float32BufferAttribute(uv,2));
+  rg.setIndex(idx); rg.computeVertexNormals();
+  // 接縫（j=0 與 j=SEG 同位置）法線取平均，避免一條亮線
+  const nrm = rg.attributes.normal;
+  for(let k=0;k<=RINGS;k++){
+    const a = k*(SEG+1), b = a+SEG;
+    const v = new THREE.Vector3(nrm.getX(a)+nrm.getX(b), nrm.getY(a)+nrm.getY(b), nrm.getZ(a)+nrm.getZ(b)).normalize();
+    nrm.setXYZ(a, v.x,v.y,v.z); nrm.setXYZ(b, v.x,v.y,v.z);
+  }
+  const rock = new THREE.Mesh(rg, rockMat);
+  rock.castShadow = !!o.shadow; rock.receiveShadow = !!o.shadow;
+  // --- 草皮頂（極座標網格，邊緣微微下垂蓋住岩體上緣）---
+  const GR = 9, gp = [], gu = [], gi = [];
+  const GT = o.grassTile || 6;
+  gp.push(0, o.flatTop ? 0 : avgR*0.07, 0); gu.push(0,0);
+  for(let k=1;k<=GR;k++){
+    const q = k/GR;
+    for(let j=0;j<=SEG;j++){
+      const th = j/SEG*Math.PI*2, r = rim(th)*q*1.015;
+      const x = Math.cos(th)*o.rx*r, z = Math.sin(th)*o.rz*r;
+      let y;
+      if(o.flatTop) y = (k===GR ? -0.06 : 0);
+      else y = avgR*0.07*(1-q*q) + nz(x*0.25, 1.3, z*0.25, 3)*avgR*0.05*(1-q) - (k===GR ? avgR*0.025 : 0);
+      gp.push(x, y, z); gu.push(x/GT, z/GT);
+    }
+  }
+  for(let j=0;j<SEG;j++) gi.push(0, 1+j, 1+j+1);
+  for(let k=1;k<GR;k++) for(let j=0;j<SEG;j++){
+    const a = 1+(k-1)*(SEG+1)+j, b = a+SEG+1;
+    gi.push(a, a+1, b, a+1, b+1, b);
+  }
+  const gg = new THREE.BufferGeometry();
+  gg.setAttribute('position', new THREE.Float32BufferAttribute(gp,3));
+  gg.setAttribute('uv', new THREE.Float32BufferAttribute(gu,2));
+  gg.setIndex(gi); gg.computeVertexNormals();
+  const top = new THREE.Mesh(gg, grassMat);
+  top.receiveShadow = true; top.castShadow = !!o.shadow && !o.flatTop;
+  const g = new THREE.Group(); g.add(rock, top);
+  return g;
+}
+
+// 雲層：所有雲朵合成「一個」draw call（instanced billboard），手機也跑得動。
+//   顏色在 shader 裡直接用 sRGB 原值計算、不做編碼轉換（與 bg/fog 用原始 hex 的規則一致）。
+//   遠處漸漸融進地平線顏色（空氣透視），太靠近鏡頭的雲淡出（不會整個畫面一片白）。
+function makeCloudLayer(list, tex){
+  const base = new THREE.PlaneGeometry(1,1);
+  const geo = new THREE.InstancedBufferGeometry();
+  geo.index = base.index;
+  geo.setAttribute('position', base.attributes.position);
+  geo.setAttribute('uv', base.attributes.uv);
+  const N = list.length;
+  const off = new Float32Array(N*3), prm = new Float32Array(N*4);
+  const offA = new THREE.InstancedBufferAttribute(off, 3), prmA = new THREE.InstancedBufferAttribute(prm, 4);
+  geo.setAttribute('offset', offA); geo.setAttribute('prm', prmA);
+  geo.instanceCount = N;
+  const mat = new THREE.ShaderMaterial({
+    uniforms:{ map:{value:tex}, horizon:{value:new THREE.Color(0xdcefff)}, shade:{value:new THREE.Color(0x9fb4cc)},
+               fogNear:{value:40}, fogFar:{value:125} },
+    vertexShader:`
+      attribute vec3 offset; attribute vec4 prm;   // prm: 寬, 旋轉, 亮度, 不透明度
+      varying vec2 vUv; varying float vDist; varying float vBright; varying float vAlpha; varying float vH;
+      void main(){
+        vec4 mv = modelViewMatrix * vec4(offset, 1.0);
+        float c = cos(prm.y), s = sin(prm.y);
+        vec2 p = position.xy * vec2(prm.x, prm.x*0.68);
+        mv.xy += vec2(c*p.x - s*p.y, s*p.x + c*p.y);
+        gl_Position = projectionMatrix * mv;
+        vUv = uv; vDist = length(mv.xyz); vBright = prm.z; vAlpha = prm.w;
+        vH = position.y + 0.5;
+      }`,
+    fragmentShader:`
+      uniform sampler2D map; uniform vec3 horizon; uniform vec3 shade; uniform float fogNear; uniform float fogFar;
+      varying vec2 vUv; varying float vDist; varying float vBright; varying float vAlpha; varying float vH;
+      void main(){
+        vec4 t = texture2D(map, vUv);
+        float a = t.a * vAlpha;
+        vec2 e = min(vUv, 1.0 - vUv);                           // 貼圖邊緣強制淡到 0（避免看到方形邊）
+        a *= smoothstep(0.0, 0.18, e.x) * smoothstep(0.0, 0.18, e.y);
+        a *= smoothstep(2.0, 9.0, vDist);                       // 鏡頭附近淡出
+        if(a < 0.004) discard;
+        vec3 col = mix(shade, vec3(1.0), clamp(t.r * vBright * (0.80 + 0.30*vH), 0.0, 1.0));
+        col = mix(col, horizon, smoothstep(fogNear, fogFar, vDist) * 0.88);
+        gl_FragColor = vec4(col, a);
+      }`,
+    transparent:true, depthWrite:false, fog:false
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 1;
+  // 由遠到近排序（半透明疊加才自然）；鏡頭移動超過 1.5m 才重排
+  const order = list.map((_,i)=>i), wp = new THREE.Vector3(), last = new THREE.Vector3(1e9,0,0), cp = new THREE.Vector3();
+  const tmp = list.map(c=>new THREE.Vector3(c[0],c[1],c[2]));
+  function sort(cam){
+    cam.getWorldPosition(cp);
+    if(cp.distanceToSquared(last) < 2.25) return;
+    last.copy(cp);
+    const d = tmp.map(v=>{ wp.copy(v).applyMatrix4(mesh.matrixWorld); return wp.distanceToSquared(cp); });
+    order.sort((a,b)=>d[b]-d[a]);
+    order.forEach((src,i)=>{
+      const c = list[src];
+      off[i*3]=c[0]; off[i*3+1]=c[1]; off[i*3+2]=c[2];
+      prm[i*4]=c[3]; prm[i*4+1]=c[4]; prm[i*4+2]=c[5]; prm[i*4+3]=c[6];
+    });
+    offA.needsUpdate = prmA.needsUpdate = true;
+  }
+  sort(camera);
+  mesh.onBeforeRender = (r, s, cam)=>sort(cam);
+  mesh.userData.forceSort = ()=>last.set(1e9,0,0);
+  return mesh;
+}
+
 // --- 場景一：天空之城（雲海浮空） ---
+// 2026-10-09 逼真化：真實天空全景照片＋環境反光、雲海改成立體雲朵、浮空島改不規則岩體貼真實岩壁/草地照片。
+// 天空照片的太陽方位已在素材處理時轉到跟主光源 key（4,10,5）同一方向，影子方向與照片一致。
 function buildSkyCity(){
   const G = new THREE.Group(); G.userData.anim = [];
-  G.add(skyDome(gradTex([[0,'#1f6fc4'],[0.40,'#7dbfe8'],[0.63,'#d6ecff'],[1,'#ffffff']])));
-  // 雲海：兩層大平面反向緩慢漂移，做出「場地浮在雲上」的感覺
-  const seaBase = noiseTex('#eef6ff', [['#ffffff',200,16,46],['#cbdff3',110,10,32]], 512, 0.75);
-  [[-2.3, 0.96, 0.013], [-3.6, 0.55, -0.008]].forEach(([y,op,sp])=>{
-    const tex = seaBase.clone(); tex.needsUpdate = true;
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(7,7);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(260,260),
-      new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:op, fog:false, depthWrite:false}));
-    m.rotation.x = -Math.PI/2; m.position.y = y;
-    G.add(m);
-    G.userData.anim.push(dt=>{ tex.offset.x += sp*dt; tex.offset.y += sp*0.4*dt; });
+  const R = Math.random;
+  // 天空：先放漸層罩，照片載入後換上（2K 先到，桌機再換 4K）
+  const dome = skyDome(gradTex([[0,'#1f6fc4'],[0.40,'#7dbfe8'],[0.63,'#d6ecff'],[1,'#ffffff']]));
+  dome.geometry.dispose();
+  dome.geometry = new THREE.SphereGeometry(120, 64, 32);
+  G.add(dome);
+  const HORIZON = 0xc4cedc;                           // 照片地平線附近的顏色（素材處理時量的）
+  const usePhoto = t=>{
+    dome.material.map = t; dome.material.needsUpdate = true;
+    dome.scale.x = -1; dome.rotation.y = Math.PI;      // 從球內看要左右翻；轉 180° 讓背景與 PMREM 反光方位一致
+  };
+  envLoadTex('sky/sky_2k.jpg', {srgb:true}, t=>{
+    usePhoto(t);
+    // 環境反光（PBR 材質會反映天空的顏色與亮度）
+    const pm = new THREE.PMREMGenerator(renderer);
+    const e = t.clone(); e.mapping = THREE.EquirectangularReflectionMapping; e.needsUpdate = true;
+    G.userData.envMap = pm.fromEquirectangular(e).texture; pm.dispose();
+    G.userData.fogColor = HORIZON;
+    G.userData.hemiMul = 0.55;                        // 有環境光後半球光調暗，避免整體過曝
+    if(curScene === 'sky') setScene('sky');           // 已經在這個場景就立即套用
+    if(!ENV_LOW) envLoadTex('sky/sky_4k.jpg', {srgb:true}, usePhoto);
   });
-  // 浮空島：倒圓錐岩體 + 草皮頂
-  const rock  = new THREE.MeshStandardMaterial({color:envSRGB(0x7a6552), roughness:.96});
-  const grass = new THREE.MeshStandardMaterial({color:envSRGB(0x5eae45), roughness:.9});
-  for(let i=0;i<10;i++){
-    const a = i/10*Math.PI*2 + Math.random()*0.5;
-    const r = 26 + Math.random()*34, s = 2.0 + Math.random()*4.2, y = 1.5 + Math.random()*11;
-    const g = new THREE.Group();
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(s*0.96, s*2.0, 7), rock);
-    cone.rotation.z = Math.PI; cone.position.y = -s*1.05;
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(s, s*0.99, s*0.5, 7), grass);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(s*0.62, s*0.9, s*0.34, 7), grass);
-    cap.position.y = s*0.4;
-    g.add(cone, top, cap);
+
+  // 材質：素材到之前用純色（不會比原本差），到了換成照片貼圖
+  const rockMat  = new THREE.MeshStandardMaterial({color:envSRGB(0x8a7865), roughness:0.95});
+  const grassMat = new THREE.MeshStandardMaterial({color:envSRGB(0x6a9a48), roughness:0.92});
+  const baseRock = rockMat.clone(), baseGrass = grassMat.clone();
+  envPbr(rockMat, 'sky/cliff', 1.2);  envPbr(grassMat, 'sky/grass', 0.8, [0.86,1.0,0.78]);
+  envPbr(baseRock, 'sky/cliff', 1.2); envPbr(baseGrass, 'sky/grass', 0.8, [0.86,1.0,0.78]);   // 草地照片偏乾黃，略調綠
+
+  // 場地基座：一座大浮空島（場地坐在草地上；apron 在此場景關掉，沒有它場地會懸空）
+  const home = makeFloatIsland({seed:7, rx:6.4, rz:4.7, depth:11, flatTop:true, rimNoise:0.6,
+                                tile:4, grassTile:5, shadow:true}, baseRock, baseGrass);
+  home.position.y = -0.03;
+  G.add(home);
+
+  // 周圍浮空島：近小遠大，遠的被空氣透視淡化
+  const isl = [];
+  const foot = [[0, 0, 6.6, 0.5, -11.5]];               // [x, z, 半徑, 頂 y, 底 y]：雲不要插進島裡（會看到一條硬切線）
+  const clear = (x,y,z,sz)=>foot.every(([fx,fz,fr,top,bot])=>
+    Math.hypot(x-fx, z-fz) > fr + sz*0.55 || y - sz*0.35 > top || y + sz*0.35 < bot);
+  const ISL = [
+    [  0.3, 30,  3.2, 2.5], [ 1.05, 36,  6.5, 4.5], [ 1.75, 27,  1.5, 1.8], [ 2.40, 44, 10.0, 6.0],
+    [  3.10, 33,  4.0, 3.0], [ 3.75, 52,  2.0, 8.5], [ 4.35, 29,  8.5, 2.2], [ 5.00, 40,  1.0, 5.0],
+    [  5.65, 62, 14.0, 9.5], [ 2.95, 75,  5.0,12.0], [ 0.75, 85, 18.0,10.0], [ 4.70, 90,  9.0,13.0],
+  ];
+  ISL.forEach(([a,r,y,s],i)=>{
+    const g = makeFloatIsland({seed:100+i*17, rx:s*(0.9+R()*0.3), rz:s*(0.8+R()*0.3), depth:s*(1.7+R()*0.8),
+                               seg: s>6 ? 56 : 40, rings: s>6 ? 26 : 18, tile:Math.max(4, s*0.9), grassTile:Math.max(5, s)},
+                              rockMat, grassMat);
     g.position.set(Math.cos(a)*r, y, Math.sin(a)*r);
-    G.add(g);
-    const y0 = y, ph = Math.random()*6;
-    G.userData.anim.push(()=>{ g.position.y = y0 + Math.sin(envTime*0.35 + ph)*0.25; });
+    g.rotation.y = R()*Math.PI*2;
+    foot.push([g.position.x, g.position.z, s*1.25, y + 0.5, y - s*2.6]);
+    G.add(g); isl.push(g);
+    const y0 = y, ph = R()*6, amp = 0.15 + 0.2*R();
+    G.userData.anim.push(()=>{ g.position.y = y0 + Math.sin(envTime*0.3 + ph)*amp; });
+  });
+
+  // 雲：雲海（場地下方）＋ 地平線雲牆 ＋ 半空中的積雲團
+  const C = [], push = c=>{ if(clear(c[0],c[1],c[2],c[3])) C.push(c); };  // [x,y,z, 寬, 旋轉, 亮度, 不透明度]
+  const k = ENV_LOW ? 0.55 : 1;
+  for(let i=0;i<Math.round(560*k);i++){
+    const r = Math.sqrt(R()*(126*126 - 5*5) + 5*5), a = R()*Math.PI*2;
+    const sz = (11 + R()*15) * (1 + r/110) / (ENV_LOW ? 0.85 : 1);
+    push([Math.cos(a)*r, -5.5 - R()*5.5 - r*0.02, Math.sin(a)*r, sz, (R()-0.5)*0.5, 0.92+R()*0.16, 0.75+R()*0.25]);
   }
-  // 遠處飛艇（緩慢繞場）
+  for(let i=0;i<Math.round(260*k);i++){            // 下層雲（從上層縫隙往下看到的）
+    const r = Math.sqrt(R()*(120*120)), a = R()*Math.PI*2;
+    push([Math.cos(a)*r, -15 - R()*6, Math.sin(a)*r, 16 + R()*16, (R()-0.5)*0.5, 0.86+R()*0.12, 0.9]);
+  }
+  for(let i=0;i<Math.round(110*k);i++){
+    const r = 104 + R()*14, a = R()*Math.PI*2;
+    push([Math.cos(a)*r, -4 + R()*5, Math.sin(a)*r, 30+R()*22, (R()-0.5)*0.3, 0.96+R()*0.08, 0.9]);
+  }
+  [[0.6,55,14,9],[1.9,70,20,12],[2.7,48,9,7],[3.6,80,24,14],[4.5,60,16,10],[5.4,72,11,11],[0.1,95,28,16]]
+    .forEach(([a,r,y,s])=>{
+      const cx = Math.cos(a)*r, cz = Math.sin(a)*r;
+      for(let j=0;j<Math.round(9*k)+2;j++)
+        push([cx+(R()-0.5)*s*1.6, y+(R()-0.3)*s*0.45, cz+(R()-0.5)*s*1.0, s*(0.55+R()*0.6), (R()-0.5)*0.6, 1.0+R()*0.08, 0.85]);
+    });
+  const clouds = makeCloudLayer(C, cloudTex);
+  G.add(clouds);
+  const cu = clouds.material.uniforms;
+  envLoadTex('sky/cloud.png', {}, t=>{ cu.map.value = t; });
+  G.userData.anim.push(dt=>{ clouds.rotation.y += dt*0.004; });   // 整片雲緩慢流動
+  // 雲海底下的霧層：從雲縫往下看不會看到天空球的下半部
+  const haze = new THREE.Mesh(new THREE.PlaneGeometry(320,320),
+    new THREE.MeshBasicMaterial({color:envSRGB(0xd5e0ec), fog:true, depthWrite:false}));
+  haze.rotation.x = -Math.PI/2; haze.position.y = -24;   // 不寫深度：雲朵下半部不會被它切出一條水平線
+  G.add(haze);
+  G.userData.onActive = ()=>{ cu.horizon.value.setHex(G.userData.fogColor || 0xdcefff); clouds.userData.forceSort(); };
+
+  // 遠處飛艇（緩慢繞場）：圓滑機身＋四片尾翼＋吊艙
   const air = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.SphereGeometry(1.5,16,12),
-    new THREE.MeshStandardMaterial({color:envSRGB(0xe8e2d2), roughness:.7}));
-  body.scale.set(3.1,1,1);
-  const fin = new THREE.Mesh(new THREE.ConeGeometry(0.75,1.7,4),
-    new THREE.MeshStandardMaterial({color:envSRGB(0xcf3434), roughness:.7}));
-  fin.rotation.z = Math.PI/2; fin.position.x = -4.6;
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.5,0.7),
-    new THREE.MeshStandardMaterial({color:envSRGB(0x3a4152), roughness:.6}));
-  cabin.position.y = -1.4;
-  air.add(body, fin, cabin);
+  const hullMat = new THREE.MeshStandardMaterial({color:envSRGB(0xe9e4d8), roughness:.55, metalness:.05});
+  const finMat  = new THREE.MeshStandardMaterial({color:envSRGB(0xc23a32), roughness:.6});
+  const darkMat = new THREE.MeshStandardMaterial({color:envSRGB(0x2f3440), roughness:.45, metalness:.3});
+  const hull = new THREE.Mesh(new THREE.SphereGeometry(1.5, 40, 24), hullMat);
+  hull.scale.set(3.2, 1, 1);
+  air.add(hull);
+  for(let i=0;i<4;i++){
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.3, 0.08), finMat);
+    const q = i*Math.PI/2;
+    fin.position.set(-4.0, Math.cos(q)*1.05, Math.sin(q)*1.05);
+    fin.rotation.x = q;
+    air.add(fin);
+  }
+  const gond = new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,1.8,16), darkMat);
+  gond.rotation.z = Math.PI/2; gond.position.y = -1.55;
+  air.add(gond);
   G.add(air);
   G.userData.anim.push(()=>{
     const a = envTime*0.035;
-    air.position.set(Math.cos(a)*44, 11 + Math.sin(a*2)*1.2, Math.sin(a)*44);
+    air.position.set(Math.cos(a)*48, 13 + Math.sin(a*2)*1.2, Math.sin(a)*48);
     air.rotation.y = -a + Math.PI/2;
   });
-  [[-26,15,-30,9],[30,19,-24,11],[-34,9,26,8],[26,13,32,10],[0,22,-42,12]]
-    .forEach(([x,y,z,s])=>G.add(cloudBank(x,y,z,s,5,0.8)));
-  // 場地基座：apron 在此場景是關掉的，沒有這塊會變成場地懸空沒有底
-  const base = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.42, 4.4),
-    new THREE.MeshStandardMaterial({color:envSRGB(0xb9b0a0), roughness:.92}));
-  base.position.y = -0.23; base.receiveShadow = true; G.add(base);
-  const baseRock = new THREE.Mesh(new THREE.ConeGeometry(3.6, 5.2, 8),
-    new THREE.MeshStandardMaterial({color:envSRGB(0x7a6552), roughness:.96, flatShading:true}));
-  baseRock.rotation.z = Math.PI; baseRock.position.y = -3.0; G.add(baseRock);
   return G;
 }
 
@@ -1111,9 +1375,12 @@ function setScene(id){
     scene.add(envGroups[S.id]);
   }
   Object.keys(envGroups).forEach(k=>{ envGroups[k].visible = (k===S.id); });
+  const EG = envGroups[S.id], U = EG ? EG.userData : {};
   scene.background = new THREE.Color(S.bg);
-  scene.fog.color.setHex(S.fog[0]); scene.fog.near = S.fog[1]; scene.fog.far = S.fog[2];
-  hemi.color.setHex(S.hemi[0]); hemi.groundColor.setHex(S.hemi[1]); hemi.intensity = S.hemi[2];
+  scene.environment = U.envMap || null;              // 有真實天空照片的場景才有環境反光（其他場景維持原樣）
+  scene.fog.color.setHex(U.fogColor !== undefined ? U.fogColor : S.fog[0]); scene.fog.near = S.fog[1]; scene.fog.far = S.fog[2];
+  hemi.color.setHex(S.hemi[0]); hemi.groundColor.setHex(S.hemi[1]); hemi.intensity = S.hemi[2] * (U.hemiMul || 1);
+  if(U.onActive) U.onActive();
   key.color.setHex(S.key[0]);   key.intensity  = S.key[1];
   fill.color.setHex(S.fill[0]); fill.intensity = S.fill[1];
   standGroups.forEach(g=>g.visible = S.stands);      // 戶外/太空場景沒有看台
@@ -2048,10 +2315,12 @@ function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
   }
 }
 function readInputInto(i){    // i：任一 drone 的 .input（本地玩家操控用，連線對戰時也用同一套讀法）
-  i.pitch    = (keys['KeyW']?1:0) + (keys['KeyS']?-1:0);
-  i.roll     = (keys['KeyD']?1:0) + (keys['KeyA']?-1:0);
-  i.yawRate  = ((keys['ArrowLeft']?1:0) + (keys['ArrowRight']?-1:0)) * YAW_RATE;
-  i.throttle = (keys['ArrowUp']?1:0) + (keys['ArrowDown']?-1:0);
+  // 2026-10-09 改成「美國手」Mode 2（業主要求）：左手 WASD＝左搖桿（W/S 油門、A/D 旋轉），
+  // 右手方向鍵＝右搖桿（↑/↓ 前後、←/→ 側飛），與實體搖桿、觸控搖桿、實機遙控器一致
+  i.pitch    = (keys['ArrowUp']?1:0) + (keys['ArrowDown']?-1:0);
+  i.roll     = (keys['ArrowRight']?1:0) + (keys['ArrowLeft']?-1:0);
+  i.yawRate  = ((keys['KeyA']?1:0) + (keys['KeyD']?-1:0)) * YAW_RATE;
+  i.throttle = (keys['KeyW']?1:0) + (keys['KeyS']?-1:0);
   if(TOUCH.on){   // 手機／平板虛擬搖桿（Mode 2）：與鍵盤／實體搖桿疊加後夾限
     i.yawRate  = clamp(i.yawRate - TOUCH.lx*YAW_RATE, -YAW_RATE, YAW_RATE);
     i.throttle = clamp(i.throttle + TOUCH.ly, -1, 1);
@@ -2332,7 +2601,32 @@ function updateOccluders(dt){
 let state = 'menu';   // menu | play | pause | over
 let timeLeft = MATCH_TIME;
 let warned30 = false;
-function setState(s){ state = s; }
+function setState(s){
+  if(s === 'play' && state !== 'play') panelsPeek();
+  state = s;
+}
+// 操作說明／飛行數據：預設收起；每次開始飛的前 4 秒自動展開一下提醒，之後收回（使用者點標題固定的就一直開著）
+const PANEL_KEY = 'hsinchuDronePanelsV1';
+let panelPins = {}; try{ panelPins = JSON.parse(localStorage.getItem(PANEL_KEY)||'{}') || {}; }catch(e){}
+let panelPeekTmr = null, panelPeeked = false;
+function panelsApply(){
+  [['help','help'],['telemetry','tele']].forEach(([id,k])=>
+    document.getElementById(id).classList.toggle('mini', !panelPins[k] && !panelPeekTmr));
+}
+function panelsPeek(){
+  if(panelPeeked) return;                 // 每次開網頁只提醒一次，避免一直跳出來擋畫面
+  panelPeeked = true;
+  clearTimeout(panelPeekTmr);
+  panelPeekTmr = setTimeout(()=>{ panelPeekTmr = null; panelsApply(); }, 4000);
+  panelsApply();
+}
+document.querySelectorAll('.pTitle').forEach(t=>t.addEventListener('click', e=>{
+  e.stopPropagation();
+  const k = t.dataset.k; panelPins[k] = !panelPins[k];
+  try{ localStorage.setItem(PANEL_KEY, JSON.stringify(panelPins)); }catch(err){}
+  clearTimeout(panelPeekTmr); panelPeekTmr = null; panelsApply();
+}));
+panelsApply();
 function restart(){
   score.red = {g:0,o:0,d:0}; score.blue = {g:0,o:0,d:0}; updateScore();
   timeLeft = MATCH_TIME; warned30 = false;
@@ -3445,7 +3739,7 @@ const RACE_THEME = {
 };
 // 飛行邊界：比賽時就是場地（6×3×3m），進賽道才放大
 function raceSetArena(open){
-  if(open){ ARENA.hx = 40; ARENA.hz = 40; ARENA.h = 30; }
+  if(open){ ARENA.hx = 40; ARENA.hz = 40; ARENA.h = 12; }   // 天花板 12m：賽道最高 8.5m，避免飛太高迷路
   else    { ARENA.hx = FIELD.hx; ARENA.hz = FIELD.hz; ARENA.h = FIELD.h; }
 }
 
