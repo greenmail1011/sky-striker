@@ -348,8 +348,25 @@
 //   3. 換成 Nostr 策略（Trystero 預設、官方 README 列為最推薦的策略，比原本考慮的
 //      BitTorrent 更穩定）用同樣方式實測：兩分頁 10 秒內互相發現、makeAction 訊息
 //      雙向送達都正常。因此改用 Nostr，且不再需要任何 Firebase 專案/帳號設定。
-import {joinRoom, selfId} from 'https://esm.sh/trystero/nostr';
+// 2026-10-09：鎖定版本。原本寫 trystero/nostr（不帶版本），esm.sh 會自動換成最新版，
+//   上游一改版就可能整個壞掉；0.26.0 已實測（兩分頁 2 秒內互連）。要升級請先實測再改版本號。
+import {joinRoom, selfId} from 'https://esm.sh/trystero@0.26.0/nostr';
 const NET_APP_ID = 'hsinchu-drone-soccer-net-v1';   // 純字串即可，不需要任何外部帳號/網址
+// 2026-10-09：TURN 中繼（解決「兩台不同裝置，大廳一直只有自己」）。
+//   只有 STUN 時，手機 4G（電信級 NAT）、學校 Wi-Fi（用戶端隔離）常常「找得到對方、卻連不起來」。
+//   TURN 會在直連失敗時改走中繼。填入 Metered Open Relay 的取得憑證網址即可啟用，例如：
+//   'https://你的app名稱.metered.live/api/v1/turn/credentials?apiKey=你的APIKEY'
+//   留空＝不用 TURN（同一網路、家用網路通常仍可直連）。
+const TURN_CRED_URL = '';
+let NET_TURN = [];
+const NET_TURN_READY = (async()=>{
+  if(!TURN_CRED_URL) return;
+  try{
+    const r = await fetch(TURN_CRED_URL);
+    const list = await r.json();
+    if(Array.isArray(list)) NET_TURN = list.filter(x=>x && x.urls);
+  }catch(e){ console.warn('TURN 憑證取得失敗，改用純 STUN', e); }
+})();
 
 // ---------- 物理常數（真實單位：公尺、秒、公斤） ----------
 const G = 9.81;                 // 重力加速度
@@ -2064,12 +2081,28 @@ function randomRoomCode(){
   return s;
 }
 
-function netJoin(code, asHost){
+async function netJoin(code, asHost){
+  if(NET.joining) return;          // 避免等待 TURN 憑證時連點兩次開出兩個房間
+  NET.joining = true;
+  try{ await NET_TURN_READY; } finally { NET.joining = false; }
   netTeardown();
   NET.roomId = code;
   NET.isHost = asHost;
   if(asHost) NET.hostId = selfId;
-  NET.room = joinRoom({appId: NET_APP_ID}, 'drone-soccer-hsinchu-' + code);
+  NET.joinErr = 0;
+  const cfg = {appId: NET_APP_ID};
+  if(NET_TURN.length) cfg.turnConfig = NET_TURN;
+  NET.room = joinRoom(cfg, 'drone-soccer-hsinchu-' + code, {
+    // 找到對方、交換過連線資訊卻無法打通時會呼叫這裡；以前沒接，學生只會看到大廳一直只有自己
+    onJoinError: err=>{
+      console.warn('連線對戰：無法與對方建立連線', err);
+      NET.joinErr++;
+      refreshLobbyUI();
+    },
+  });
+  NET.joinedAt = performance.now();
+  clearTimeout(NET.findTimer);
+  NET.findTimer = setTimeout(()=>{ if(NET.connected) refreshLobbyUI(); }, 20000);
 
   const inputAct = NET.room.makeAction('input');
   const snapAct  = NET.room.makeAction('snap');
@@ -2082,6 +2115,7 @@ function netJoin(code, asHost){
 
   NET.room.onPeerJoin = peerId=>{
     NET.peers.add(peerId);
+    NET.joinErr = 0;
     if(NET.isHost){
       helloAct.send({isHost:true}, {target:peerId});
       slotAct.send(NET.slotOwners, {target:peerId});
@@ -2129,6 +2163,7 @@ function netJoin(code, asHost){
 
 function netTeardown(){
   if(NET.room){ try{ NET.room.leave(); }catch(e){} }
+  clearTimeout(NET.findTimer);
   NET.room = null; NET.actions = {}; NET.peers = new Set(); NET.remoteInputs = {};
   NET.slotOwners = [null,null,null,null,null,null];
   NET.mySlot = -1; NET.isHost = false; NET.hostId = null; NET.connected = false;
@@ -2202,8 +2237,19 @@ function updateNetWaitStatus(){
 function refreshLobbyUI(){
   if(!NET.connected) return;
   const statusEl = document.getElementById('netStatus');
-  statusEl.textContent = NET.isHost ? '你是房主'
+  statusEl.textContent = NET.isHost ? ('你是房主' + (NET.peers.size ? '（已連線 ' + NET.peers.size + ' 人）' : '（等待玩家加入…）'))
     : (NET.hostId ? '已連線，房主 ' + shortId(NET.hostId) : '尋找房主中…');
+  // 連不上時給看得懂的提示（以前完全沒有回饋）
+  const msgEl = document.getElementById('netMsg');
+  const waited = performance.now() - (NET.joinedAt||0);
+  if(NET.joinErr && !NET.peers.size){
+    msgEl.textContent = '⚠ 找到對方了，但網路不允許直接連線（常見於手機 4G、學校 Wi-Fi）。'
+      + (NET_TURN.length ? '中繼也連不上，請換個網路再試。' : '請改用同一個家用 Wi-Fi，或請老師開啟中繼伺服器（TURN）。');
+  }else if(!NET.isHost && !NET.hostId && waited > 19000){
+    msgEl.textContent = '還沒找到房主：請確認房號正確、房主還在大廳裡。';
+  }else{
+    msgEl.textContent = '';
+  }
   const live = netLiveState()==='play' || netLiveState()==='pause';
   const wrap = document.getElementById('netSlots');
   wrap.innerHTML = '';
