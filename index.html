@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="icon" type="image/png" href="assets/icon-192.png">
-<title>無人機足球模擬器 — Drone Soccer Simulator</title>
+<title>無人機足球模擬培訓系統 — Drone Soccer Training Simulator</title>
 <style>
   html,body{margin:0;padding:0;overflow:hidden;background:#06080f;font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif;user-select:none}
   #c{display:block}
@@ -99,6 +99,95 @@
   .t-red .netSlotName{color:#f87171} .t-blue .netSlotName{color:#60a5fa}
   .netSlotOcc{flex:1;font-size:13px;color:#cdd8ee}
   .netSlotOcc.ai{color:#6b7290;font-style:italic}
+  /* ===== 主選單：分步驟引導（2026-10-09 業主要求：不要一堆按鈕，分階段、不用教就會用，要夠炫） ===== */
+  #rulesBox,#modesRow,#sceneBar{display:none!important}     /* 舊的規則說明／模式按鈕列／場景列不再顯示（按鈕仍留在 DOM 給程式觸發） */
+  #overlay{background:radial-gradient(ellipse at 50% 30%,rgba(14,24,52,.55),rgba(3,5,12,.88) 75%)}
+  #overlay h1{font-size:46px;letter-spacing:4px;margin:4px 0 2px;background:linear-gradient(90deg,#ff6a6a,#ffd75a,#7dffa9,#5ab8ff,#ff6a6a);
+    background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    animation:mfShine 8s linear infinite;filter:drop-shadow(0 0 18px rgba(90,170,255,.35))}
+  @keyframes mfShine{to{background-position:300% 0}}
+  #overlay h2{font-size:13px;letter-spacing:6px;color:#8fb4ff;margin:0 0 18px;text-transform:uppercase;opacity:.85}
+  #mfLogo{width:112px;height:112px;border-radius:50%;background:radial-gradient(circle,#fff 62%,#e6f0ff);display:flex;
+    align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(125,190,255,.55),0 0 40px rgba(90,170,255,.55);
+    animation:mfFloat 5s ease-in-out infinite;margin-bottom:6px}
+  #mfLogo img{width:92%;height:auto;display:block}
+  @keyframes mfFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  #menuFlow{display:flex;flex-direction:column;align-items:center;width:min(980px,94vw)}
+  .mfSteps{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:#5d6a8a;letter-spacing:1px}
+  .mfSteps span{padding:5px 14px;border-radius:999px;border:1px solid rgba(120,150,220,.25);transition:all .3s}
+  .mfSteps span.on{color:#0b1020;background:linear-gradient(90deg,#7dffa9,#5ad1ff);border-color:transparent;font-weight:800;
+    box-shadow:0 0 16px rgba(125,255,200,.5)}
+  .mfSteps span.done{color:#7dffa9;border-color:rgba(125,255,169,.45)}
+  .mfSteps i{width:26px;height:2px;background:rgba(120,150,220,.3);border-radius:2px}
+  .mfSteps.noS2 [data-s="2"],.mfSteps.noS2 i.s2{display:none}
+  .mfStage{display:none;flex-direction:column;align-items:center;width:100%}
+  .mfStage.on{display:flex;animation:mfIn .45s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes mfIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.mfStage.on,.mfCard .ic,#mfLogo,.mfGo,#overlay h1{animation:none}}
+  .mfQ{font-size:24px;font-weight:800;color:#fff;margin:2px 0 16px;letter-spacing:2px;text-shadow:0 0 18px rgba(90,170,255,.6)}
+  .mfCards{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;width:100%}
+  .mfCard{--c:125,255,169;position:relative;width:250px;min-height:200px;padding:22px 18px 18px;border-radius:22px;cursor:pointer;
+    font-family:inherit;color:#fff;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;
+    background:linear-gradient(160deg,rgba(var(--c),.16),rgba(12,18,40,.72) 55%);border:1px solid rgba(var(--c),.45);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);
+    transition:transform .2s,box-shadow .2s,border-color .2s;overflow:hidden}
+  .mfCard::after{content:'';position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent 0 70%,rgba(var(--c),.35) 80%,transparent 90%);
+    animation:mfSpin 5s linear infinite;opacity:0;transition:opacity .25s;pointer-events:none}
+  .mfCard:hover::after,.mfCard:focus-visible::after{opacity:1}
+  @keyframes mfSpin{to{transform:rotate(360deg)}}
+  .mfCard:hover,.mfCard:focus-visible{transform:translateY(-7px) scale(1.03);border-color:rgb(var(--c));
+    box-shadow:0 16px 40px rgba(0,0,0,.45),0 0 30px rgba(var(--c),.45);outline:none}
+  .mfCard:active{transform:scale(.97)}
+  .mfCard .ic{font-size:56px;line-height:1.1;filter:drop-shadow(0 6px 14px rgba(var(--c),.55));animation:mfFloat 4s ease-in-out infinite}
+  .mfCard b{font-size:23px;letter-spacing:2px;margin-top:4px;position:relative;z-index:1}
+  .mfCard span{font-size:13.5px;color:#b9c6e4;line-height:1.5;position:relative;z-index:1}
+  .mfCard .tag{position:absolute;top:12px;left:12px;font-size:11px;font-weight:800;letter-spacing:1px;padding:3px 9px;border-radius:999px;
+    background:rgba(var(--c),.22);color:rgb(var(--c));z-index:1}
+  .mfCard.rec::before{content:'新手推薦';position:absolute;top:12px;right:-30px;transform:rotate(35deg);background:#ffd75a;color:#2a1a00;
+    font-size:11px;font-weight:900;padding:3px 34px;z-index:2}
+  .c-train{--c:125,255,169}.c-match{--c:255,120,120}.c-watch{--c:120,180,255}.c-camp{--c:255,215,90}.c-race{--c:90,210,255}.c-net{--c:190,140,255}
+  .mfScenes{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;width:100%}
+  .mfScene{width:168px;height:116px;border-radius:18px;cursor:pointer;position:relative;overflow:hidden;font-family:inherit;color:#fff;
+    border:2px solid rgba(255,255,255,.18);background:var(--bg);display:flex;flex-direction:column;justify-content:flex-end;
+    align-items:flex-start;padding:10px 12px;text-align:left;transition:transform .2s,box-shadow .2s,border-color .2s;
+    box-shadow:0 8px 22px rgba(0,0,0,.4)}
+  .mfScene .em{position:absolute;top:8px;right:10px;font-size:34px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4))}
+  .mfScene b{font-size:17px;text-shadow:0 1px 6px rgba(0,0,0,.8)} .mfScene small{font-size:11px;color:#e6eeff;opacity:.85;text-shadow:0 1px 4px #000}
+  .mfScene:hover{transform:translateY(-5px)}
+  .mfScene.sel{border-color:#7dffa9;box-shadow:0 0 0 3px rgba(125,255,169,.35),0 0 28px rgba(125,255,169,.55);transform:translateY(-5px) scale(1.04)}
+  .mfScene.sel::after{content:'✓';position:absolute;top:8px;left:10px;width:24px;height:24px;border-radius:50%;background:#7dffa9;color:#08210f;
+    font-weight:900;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .mfGo{margin-top:22px;padding:16px 64px;font-size:22px;font-weight:900;letter-spacing:4px;border-radius:999px;cursor:pointer;
+    border:none;color:#06210f;font-family:inherit;background:linear-gradient(90deg,#7dffa9,#5ad1ff);
+    box-shadow:0 0 0 0 rgba(125,255,200,.6),0 10px 30px rgba(90,209,255,.35);animation:mfPulse 1.8s ease-out infinite}
+  .mfGo:hover{transform:scale(1.05)}
+  @keyframes mfPulse{0%{box-shadow:0 0 0 0 rgba(125,255,200,.55),0 10px 30px rgba(90,209,255,.35)}
+    100%{box-shadow:0 0 0 22px rgba(125,255,200,0),0 10px 30px rgba(90,209,255,.35)}}
+  .mfBack{margin-top:18px;background:none;border:1px solid rgba(160,190,255,.35);color:#aab8d8;padding:8px 22px;border-radius:999px;
+    font-size:14px;cursor:pointer;font-family:inherit;visibility:hidden}
+  .mfBack.show{visibility:visible} .mfBack:hover{color:#fff;border-color:#fff}
+  #overlay .credit{margin-top:14px}
+  /* 選單開著時把比賽 HUD（計分板、操作說明、飛行數據、搖桿…）藏起來，畫面才乾淨 */
+  body.inMenu .hud,body.inMenu #touchUI,body.inMenu #scoreboard,body.inMenu #campHUD,body.inMenu #raceHUD,body.inMenu #practiceHUD{visibility:hidden!important}
+  /* 手機橫拿：卡片縮小、一排放得下 */
+  @media (max-height:520px){
+    #mfLogo{width:62px;height:62px;margin-bottom:2px} #overlay h1{font-size:26px!important;letter-spacing:2px}
+    #overlay h2{font-size:10px;margin-bottom:8px;letter-spacing:4px}
+    .mfSteps{margin-bottom:8px;font-size:11px} .mfSteps span{padding:3px 10px}
+    .mfQ{font-size:17px;margin-bottom:10px}
+    .mfCards{gap:10px;flex-wrap:nowrap} .mfCard{width:31%;max-width:220px;min-height:0;padding:12px 8px 10px;border-radius:16px}
+    .mfCard .ic{font-size:34px} .mfCard b{font-size:16px} .mfCard span{font-size:11px}
+    .mfCard .tag{font-size:9px;top:7px;left:7px}
+    .mfCard.rec::before{font-size:9px;top:8px;right:-34px}
+    .mfScene{width:118px;height:78px;padding:6px 8px;border-radius:13px} .mfScene .em{font-size:24px} .mfScene b{font-size:13px} .mfScene small{display:none}
+    .mfScenes{gap:8px} .mfGo{margin-top:12px;padding:10px 44px;font-size:17px} .mfBack{margin-top:8px;padding:5px 16px;font-size:12px}
+    #overlay .credit{margin-top:6px;font-size:11px}
+  }
+  .netSlotOcc.empty{color:#4d5570}
+  #netCfgRow{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin:-4px 0 10px;font-size:13px;color:#aab8d8}
+  #netCfgRow .netBtnSmall.sel{border-color:#7dffa9;color:#7dffa9;background:rgba(125,255,169,.12)}
+  #netFormat{text-align:center;font-size:13px;color:#cdd8ee;margin-top:8px;min-height:16px}
+  #netFormat .warn{color:#fbbf24}
   .netSlotOcc.me{color:#ffd75a;font-weight:700}
   .netBtnSmall{padding:5px 14px;font-size:12px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:700;
     border:1px solid rgba(125,255,169,.5);background:rgba(125,255,169,.1);color:#7dffa9;transition:all .12s}
@@ -377,8 +466,41 @@
 </div>
 
 <div id="overlay">
-  <h1>無人機足球競賽</h1>
-  <h2>真實物理模擬 · 6×3×3 m 室內競技場 · 3 v 3</h2>
+  <div id="mfLogo"><img src="assets/logo.webp" alt="新竹市無人機創新科技協會"></div>
+  <h1>無人機足球模擬培訓系統</h1>
+  <h2>Drone Soccer Training Simulator</h2>
+  <div id="menuFlow">
+    <div class="mfSteps" id="mfSteps"><span data-s="1">① 選目標</span><i class="s2"></i><span data-s="2">② 選項目</span><i></i><span data-s="3">③ 選場地</span></div>
+    <div class="mfStage" id="mfS1">
+      <div class="mfQ">今天想做什麼？</div>
+      <div class="mfCards">
+        <button class="mfCard c-train rec" data-go="train"><div class="ic">🛫</div><b>飛行訓練</b><span>從零開始學操控<br>練習・闖關・賽道</span></button>
+        <button class="mfCard c-match" data-go="match"><div class="ic">⚽</div><b>足球比賽</b><span>跟 AI 或同學<br>來一場 3 分鐘對戰</span></button>
+        <button class="mfCard c-watch" data-go="watch"><div class="ic">👀</div><b>觀看示範</b><span>看 AI 怎麼踢<br>學走位與戰術</span></button>
+      </div>
+    </div>
+    <div class="mfStage" id="mfS2train">
+      <div class="mfQ">飛行訓練：照順序一步一步來</div>
+      <div class="mfCards">
+        <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic">🎯</div><b>圓環練習</b><span>自由飛行穿越圓環<br>先熟悉搖桿</span></button>
+        <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 2</span><div class="ic">🏆</div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
+        <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 3</span><div class="ic">🏁</div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄</span></button>
+      </div>
+    </div>
+    <div class="mfStage" id="mfS2match">
+      <div class="mfQ">要跟誰比？</div>
+      <div class="mfCards">
+        <button class="mfCard c-match" data-mode="player"><div class="ic">🤖</div><b>對戰 AI</b><span>你是紅隊 Striker<br>隊友和對手都是 AI</span></button>
+        <button class="mfCard c-net" data-mode="net"><div class="ic">🌐</div><b>連線對戰</b><span>開房間給同學房號<br>1v1・2v2・3v3</span></button>
+      </div>
+    </div>
+    <div class="mfStage" id="mfS3">
+      <div class="mfQ">選一個場地</div>
+      <div class="mfScenes" id="mfScenes"></div>
+      <button class="mfGo" id="mfGo">開始 ▶</button>
+    </div>
+    <button class="mfBack" id="mfBack">‹ 上一步</button>
+  </div>
   <div class="rules" id="rulesBox">
     <b>規則：</b>只有 <b>Striker</b>（機身下方<b>垂掛紅色識別緞帶</b>）穿過<b>己方顏色的懸吊式電子球門</b>才得分（紅隊攻紅框、藍隊攻藍框），進球時球門亮燈顯示。<br>
     得分後 Striker 必須<b>飛回己方半場</b>重新解鎖得分權。<br>
@@ -412,7 +534,12 @@
     <div id="netMsg" style="text-align:center;color:#fbbf24;font-size:13px;margin-top:8px;min-height:16px"></div>
     <div id="netLobby" style="display:none">
       <div id="netLobbyHead">房號 <b id="netRoomCodeShow"></b>　<span id="netStatus"></span></div>
+      <div id="netCfgRow">空位：
+        <button class="netBtnSmall" id="btnFillAI" data-v="1">🤖 AI 代打</button>
+        <button class="netBtnSmall" id="btnFillNone" data-v="0">⬜ 不上場（只有真人）</button>
+      </div>
       <div id="netSlots"></div>
+      <div id="netFormat"></div>
       <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center">
         <button class="modeBtn netBtn" id="btnNetStart" style="display:none">開始比賽</button>
         <button class="netBtnSmall leave" id="btnNetLeave">離開房間</button>
@@ -1812,6 +1939,7 @@ const blueStriker = drones[3];
 function collideDrones(){
   for(let i=0;i<drones.length;i++)for(let j=i+1;j<drones.length;j++){
     const a=drones[i], b=drones[j];
+    if(a.benched || b.benched) continue;          // 不上場的機（連線對戰空位）
     const d = b.pos.clone().sub(a.pos);
     const dist = d.length();
     if(dist<1e-5 || dist >= DRONE_R*2) continue;
@@ -1920,6 +2048,7 @@ function fireFx(data, targetPeer){ playFx(data); netBroadcastFx(data, targetPeer
 
 function checkGoals(){
   drones.forEach((d,i)=>{
+    if(d.benched) return;
     const atkRing = d.attackDir>0 ? ringEast : ringWest;   // 進攻己方顏色的框
     // Striker 回防解鎖
     if(d.role==='striker' && !d.canScore
@@ -1953,6 +2082,7 @@ function checkGoals(){
 // 防守違規：於己方球門禁區逗留逾時（守門）
 function updateFouls(dt){
   drones.forEach((d,i)=>{
+    if(d.benched) return;
     const ownRing = d.attackDir>0 ? ringWest : ringEast;  // 己方防守的框（自家半場）
     const dist = Math.sqrt(
       (d.pos.x-ownRing.x)**2 + (d.pos.y-ownRing.y)**2 + (d.pos.z-ownRing.z)**2);
@@ -2101,7 +2231,7 @@ function aiThink(d, dt){
         const crossedPlane = (d.pos.x-atkRing.x)*d.attackDir > 0;
         if(d.dashT<=0 || crossedPlane || d.disturb>0.65) d.dash = false;
         else for(const o of drones){   // 正前方被堵死 → 放棄改道
-          if(o.team===d.team) continue;
+          if(o.team===d.team || o.benched) continue;
           const ahead = (o.pos.x-d.pos.x)*d.attackDir;
           if(ahead>0.05 && ahead<0.45
              && Math.hypot(o.pos.y-d.pos.y, o.pos.z-d.pos.z)<0.22){
@@ -2121,7 +2251,7 @@ function aiThink(d, dt){
         maxV = 3.9*d.skill;
         // 前方有敵機擋路 → 側向與垂直閃避
         for(const o of drones){
-          if(o.team===d.team) continue;
+          if(o.team===d.team || o.benched) continue;
           const ahead = (o.pos.x-d.pos.x)*d.attackDir;
           if(ahead>0.1 && ahead<1.2
              && Math.abs(o.pos.z-d.pos.z)<0.5 && Math.abs(o.pos.y-d.pos.y)<0.5){
@@ -2174,7 +2304,7 @@ function aiThink(d, dt){
   }
   // 與隊友保持間距
   for(const o of drones){
-    if(o===d || o.team!==d.team) continue;
+    if(o===d || o.team!==d.team || o.benched) continue;
     const sep = d.pos.clone().sub(o.pos);
     const L = sep.length();
     if(L<0.45 && L>1e-4) target.addScaledVector(sep.normalize(), (0.45-L)*1.5);
@@ -2422,7 +2552,7 @@ function readPlayerInput(){ readInputInto(player.input); }
 
 // ---------- 音效（WebAudio 合成） ----------
 const sfx = (()=>{
-  let ctx=null, noiseBuf=null, crowdGain=null, engines=null;
+  let ctx=null, noiseBuf=null, crowdGain=null, crowdMaster=null, engines=null;
   function init(){
     if(ctx) return;
     ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -2437,7 +2567,10 @@ const sfx = (()=>{
     const crowdSrc = ctx.createBufferSource(); crowdSrc.buffer=cbuf; crowdSrc.loop=true;
     const cf = ctx.createBiquadFilter(); cf.type='lowpass'; cf.frequency.value=600;
     crowdGain = ctx.createGain(); crowdGain.gain.value=0.02;
-    crowdSrc.connect(cf); cf.connect(crowdGain); crowdGain.connect(ctx.destination);
+    // 2026-10-09：觀眾聲多一道總開關——只有「比賽進行中＋有看台的場景」才出聲；
+    // 以前在主選單也一直播，低沉的嘈雜聲聽起來像無人機在嗡嗡叫
+    crowdMaster = ctx.createGain(); crowdMaster.gain.value = 0;
+    crowdSrc.connect(cf); cf.connect(crowdGain); crowdGain.connect(crowdMaster); crowdMaster.connect(ctx.destination);
     crowdSrc.start();
     // 噪音 buffer（碰撞）
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.12, ctx.sampleRate);
@@ -2473,9 +2606,10 @@ const sfx = (()=>{
     });
   }
   // 每幀呼叫：更新聽者（鏡頭）位置朝向，以及各機馬達音高/音量/空間定位
-  function updateEngines(dronesArr, listenerPos, listenerLook, playing){
+  function updateEngines(dronesArr, listenerPos, listenerLook, playing, crowdOn){
     if(!ctx || !engines) return;
     const t0 = ctx.currentTime, TC = 0.06;
+    if(crowdMaster) crowdMaster.gain.setTargetAtTime(crowdOn ? 1 : 0, t0, 0.25);
     const lis = ctx.listener;
     const fx = listenerLook.x-listenerPos.x, fy = listenerLook.y-listenerPos.y, fz = listenerLook.z-listenerPos.z;
     const fl = Math.hypot(fx,fy,fz) || 1;
@@ -2639,6 +2773,15 @@ function camDrone(){
 }
 function updateCamera(dt){
   let dp, dl;
+  if(state==='menu' && mode!=='net' && document.getElementById('overlay').style.display!=='none'){
+    // 主選單：鏡頭繞場慢慢轉，讓選單後面的場景「活起來」（2026-10-09）
+    const a = envTime*0.07;
+    dp = V3(Math.sin(a)*8.2, 3.3 + Math.sin(a*0.7)*0.6, Math.cos(a)*8.2); dl = V3(0, 1.0, 0);
+    const k = Math.min(1, dt*1.5);
+    camPos.lerp(dp, k); camLook.lerp(dl, k);
+    camera.position.copy(camPos); camera.lookAt(camLook);
+    return;
+  }
   const cd = camDrone();
   if(!cd){ camMode = 2; }
   const fwd = cd ? V3(Math.sin(cd.yaw),0,Math.cos(cd.yaw)) : V3(0,0,1);
@@ -2752,7 +2895,8 @@ const SLOT_LABELS = ['紅隊 Striker','紅隊 Defender','紅隊 Harasser','藍�
 const shortId = id => id ? id.slice(0,5) : '';
 const NET = {
   room: null, roomId: null, isHost: false, hostId: null,
-  slotOwners: [null,null,null,null,null,null],   // 與 drones[] 同序：peerId 或 null(=AI代打)
+  slotOwners: [null,null,null,null,null,null],   // 與 drones[] 同序：peerId 或 null(=空位)
+  fillAI: true,               // 空位由 AI 代打（true）或不上場（false）——房主在大廳切換（2026-10-09）
   mySlot: -1,
   peers: new Set(),
   remoteInputs: {},           // peerId -> {pitch,roll,yawRate,throttle}（host 端使用）
@@ -2798,13 +2942,15 @@ async function netJoin(code, asHost){
   const helloAct = NET.room.makeAction('hello');
   const fxAct    = NET.room.makeAction('fx');
   const matchAct = NET.room.makeAction('match');
-  NET.actions = {inputAct, snapAct, slotAct, claimAct, helloAct, fxAct, matchAct};
+  const cfgAct   = NET.room.makeAction('cfg');     // 房間設定（目前只有「空位 AI 代打／不上場」）
+  NET.actions = {inputAct, snapAct, slotAct, claimAct, helloAct, fxAct, matchAct, cfgAct};
 
   NET.room.onPeerJoin = peerId=>{
     NET.peers.add(peerId);
     NET.joinErr = 0;
     if(NET.isHost){
       helloAct.send({isHost:true}, {target:peerId});
+      cfgAct.send({fillAI:NET.fillAI}, {target:peerId});
       slotAct.send(NET.slotOwners, {target:peerId});
     }
     refreshLobbyUI();
@@ -2837,6 +2983,10 @@ async function netJoin(code, asHost){
     if(mode!=='net'){ updateNetWaitStatus(); maybeEnterLiveMatch(); }   // 大廳中即時同步「比賽進行中／剩餘時間」，並視情況自動接手中途加入
   };
   fxAct.onMessage = data=> playFx(data);
+  cfgAct.onMessage = (data,{peerId})=>{
+    if(peerId!==NET.hostId && NET.hostId) return;          // 只聽房主的
+    NET.fillAI = data.fillAI !== false; refreshLobbyUI();
+  };
   matchAct.onMessage = data=>{ if(data.cmd==='start') localNetStart(); };
 
   NET.connected = true;
@@ -2855,6 +3005,28 @@ function netTeardown(){
   NET.slotOwners = [null,null,null,null,null,null];
   NET.mySlot = -1; NET.isHost = false; NET.hostId = null; NET.connected = false;
   NET.snapPrev = null; NET.snapCur = null;
+  NET.fillAI = true;
+  netApplyBench();                // 離開房間：所有機恢復上場
+}
+// 「空位不上場」：沒有真人的位置那台機整台退場（隱藏、不模擬、不碰撞、不判進球/違規）。
+// 只在連線房間內、且房主選了「不上場」時生效；任何人坐上該位置（含中途加入）就回到出生點上場。
+function netApplyBench(){
+  drones.forEach((d,i)=>{
+    const b = NET.connected && !NET.fillAI && NET.slotOwners[i]===null;
+    if(b !== !!d.benched){
+      d.benched = b;
+      d.reset();                  // 退場停在出生點；上場也從出生點開始
+    }
+    if(NET.connected || !b) setDroneVisible(d, !b);   // 每次都重設（其他流程可能把機全部顯示回來）
+  });
+}
+function netSetFillAI(v){
+  if(!NET.isHost) return;
+  const live = netLiveState()==='play' || netLiveState()==='pause';
+  if(live){ flashMsg('比賽進行中不能更改，請等這場結束', '#fbbf24', 1.5); return; }
+  NET.fillAI = v;
+  NET.actions.cfgAct && NET.actions.cfgAct.send({fillAI:v});
+  refreshLobbyUI();
 }
 
 function netLeave(){
@@ -2948,7 +3120,8 @@ function refreshLobbyUI(){
     const occ = document.createElement('div');
     let btn = null;
     if(owner===null){
-      occ.className = 'netSlotOcc ai'; occ.textContent = 'AI 代打';
+      occ.className = NET.fillAI ? 'netSlotOcc ai' : 'netSlotOcc empty';
+      occ.textContent = NET.fillAI ? 'AI 代打' : '空位（不上場）';
       btn = document.createElement('button');
       btn.className = 'netBtnSmall'; btn.textContent = live ? '中途加入' : '坐上此位置';
       btn.onclick = ()=> requestSlot(i, true);
@@ -2966,6 +3139,27 @@ function refreshLobbyUI(){
     wrap.appendChild(row);
   });
   document.getElementById('btnNetStart').style.display = (NET.isHost && !live) ? 'inline-block' : 'none';
+  // 空位設定：房主可切換（比賽中鎖住），其他人只看得到目前設定
+  ['btnFillAI','btnFillNone'].forEach(id=>{
+    const b = document.getElementById(id), on = (b.dataset.v==='1') === NET.fillAI;
+    b.classList.toggle('sel', on);
+    b.style.display = (NET.isHost || on) ? '' : 'none';
+    b.disabled = !NET.isHost || live;
+  });
+  // 對戰人數摘要＋提醒（例如 1v1 要兩隊都坐 Striker，不然該隊無法得分）
+  const fmt = document.getElementById('netFormat');
+  if(NET.fillAI){
+    fmt.textContent = '目前 3 v 3（沒人坐的位置由 AI 代打）';
+  }else{
+    const cnt = t=>[0,1,2].filter(k=>NET.slotOwners[t*3+k]!==null).length;
+    const r = cnt(0), b = cnt(1), w = [];
+    if(!r || !b) w.push((!r ? '紅隊' : '藍隊') + '還沒有人');
+    if(r && NET.slotOwners[0]===null) w.push('紅隊沒人坐 Striker，無法得分');
+    if(b && NET.slotOwners[3]===null) w.push('藍隊沒人坐 Striker，無法得分');
+    fmt.innerHTML = '目前 <b>' + r + ' v ' + b + '</b>（只有真人上場）'
+      + (w.length ? '　<span class="warn">⚠ ' + w.join('；') + '</span>' : '');
+  }
+  netApplyBench();
   updateNetWaitStatus();
   maybeEnterLiveMatch();
 }
@@ -2983,6 +3177,7 @@ function localNetStart(){
   document.querySelector('#telemetry b').textContent =
     NET.mySlot>=0 ? '你的機（' + SLOT_LABELS[NET.mySlot] + '）' : '觀戰模式';
   restart();
+  netApplyBench();
 }
 // 中途加入：比賽已在進行中才會走這條路（見 maybeEnterLiveMatch）。
 // 跟 localNetStart() 幾乎一樣，差別是不呼叫 restart()——比分/時間/所有機的位置
@@ -2995,6 +3190,7 @@ function localNetEnterLive(){
   document.querySelector('#telemetry b').textContent =
     NET.mySlot>=0 ? '你的機（' + SLOT_LABELS[NET.mySlot] + '）' : '觀戰模式';
   flashMsg('已加入比賽中場！', '#7dffa9', 1.6);
+  netApplyBench();
   applyNetSnapshotInterp();
 }
 
@@ -3067,6 +3263,88 @@ document.getElementById('btnNetJoin').addEventListener('click', ()=>{
   netJoin(v, false);
 });
 document.getElementById('btnNetStart').addEventListener('click', netStartMatch);
+document.getElementById('btnFillAI').addEventListener('click', ()=>netSetFillAI(true));
+document.getElementById('btnFillNone').addEventListener('click', ()=>netSetFillAI(false));
+// ---------- 主選單：分步驟引導（2026-10-09 業主：「選單不夠炫、不要一堆功能眼花撩亂，要白癡都會用」） ----------
+// ① 選目標（訓練／比賽／觀看）→ ② 選項目 → ③ 選場地 → 開始。一次只出現一個問題。
+// 實際開始各模式仍是「點舊的隱藏按鈕」（btnPlayer、btnCampaign…），所以各模式原本的流程（闖關選關、
+// 賽道選玩法、連線大廳）都不用改。舊程式回選單時會把 #modesRow 設回顯示 → 這裡用 MutationObserver
+// 偵測到後把引導畫面重置回第 1 步；進入闖關／賽道／連線面板時舊程式會把 #modesRow 藏起來 → 引導畫面跟著藏。
+const MF = {stage:'1', mode:null, from:null};
+const MF_SCENE_BG = {
+  sky:'linear-gradient(180deg,#3a8ee6 0%,#9fd3ff 55%,#ffffff 100%)',
+  arena:'radial-gradient(ellipse at 50% 80%,#2a3a8a,#070a14 70%),linear-gradient(90deg,#3d6bff,#ff4d5a)',
+  meadow:'linear-gradient(180deg,#5aa6e6 0%,#bfe3f0 45%,#5f9a4a 46%,#3d7a34 100%)',
+  neon:'linear-gradient(180deg,#0b0d2a 0%,#3a1060 55%,#ff3db4 100%)',
+  orbit:'radial-gradient(circle at 75% 85%,#3f7fd8 0 22%,#0a1a3a 23%,#000 70%)',
+};
+const MF_MODE_BTN = {player:'btnPlayer', practice:'btnPractice', demo:'btnDemo', campaign:'btnCampaign', race:'btnRace', net:'btnNet'};
+function mfShow(stage){
+  MF.stage = stage;
+  document.querySelectorAll('#menuFlow .mfStage').forEach(s=>s.classList.toggle('on', s.id === 'mfS' + stage));
+  const n = stage[0];                                   // '1' | '2' | '3'
+  const steps = document.getElementById('mfSteps');
+  steps.classList.toggle('noS2', MF.mode === 'demo');   // 觀看示範沒有第 2 步
+  steps.querySelectorAll('span').forEach(sp=>{
+    sp.classList.toggle('on', sp.dataset.s === n);
+    sp.classList.toggle('done', sp.dataset.s < n);
+  });
+  document.getElementById('mfBack').classList.toggle('show', n !== '1');
+  if(n === '3') mfBuildScenes();
+}
+function mfBuildScenes(){
+  const host = document.getElementById('mfScenes');
+  host.innerHTML = SCENES.map(S=>'<button class="mfScene' + (S.id===curScene?' sel':'') + '" data-id="' + S.id + '" style="--bg:'
+    + (MF_SCENE_BG[S.id] || '#223') + '"><span class="em">' + S.emoji + '</span><b>' + S.name + '</b><small>' + S.sub + '</small></button>').join('');
+  host.querySelectorAll('.mfScene').forEach(b=>b.addEventListener('click', e=>{
+    e.stopPropagation();
+    setScene(b.dataset.id);                             // 背景立刻換成該場景（選單後面就看得到）
+    host.querySelectorAll('.mfScene').forEach(x=>x.classList.toggle('sel', x === b));
+  }));
+}
+function mfPickMode(m){
+  MF.mode = m;
+  if(m === 'campaign' || m === 'race' || m === 'net'){   // 這三個有自己的下一步畫面（選關／選玩法／連線大廳）
+    document.getElementById(MF_MODE_BTN[m]).click();
+    return;
+  }
+  mfShow('3');
+}
+document.querySelectorAll('#menuFlow [data-go]').forEach(b=>b.addEventListener('click', e=>{
+  e.stopPropagation();
+  const g = b.dataset.go;
+  MF.from = g;
+  if(g === 'watch'){ MF.mode = 'demo'; mfShow('3'); }
+  else { MF.mode = null; mfShow('2' + g); }
+}));
+document.querySelectorAll('#menuFlow [data-mode]').forEach(b=>b.addEventListener('click', e=>{
+  e.stopPropagation(); mfPickMode(b.dataset.mode);
+}));
+document.getElementById('mfGo').addEventListener('click', e=>{
+  e.stopPropagation();
+  const id = MF_MODE_BTN[MF.mode];
+  if(id) document.getElementById(id).click();
+});
+document.getElementById('mfBack').addEventListener('click', e=>{
+  e.stopPropagation();
+  if(MF.stage === '3' && MF.mode !== 'demo') mfShow('2' + MF.from);
+  else mfShow('1');
+});
+(function(){
+  const mr = document.getElementById('modesRow'), ov = document.getElementById('overlay'), mf = document.getElementById('menuFlow');
+  let wasShown = null;
+  const sync = ()=>{
+    const shown = mr.style.display !== 'none' && ov.style.display !== 'none';
+    document.body.classList.toggle('inMenu', ov.style.display !== 'none');
+    mf.style.display = mr.style.display === 'none' ? 'none' : '';
+    if(shown && wasShown !== true) mfShow('1');          // 每次回到選單都從第 1 步開始
+    wasShown = shown;
+  };
+  new MutationObserver(sync).observe(mr, {attributes:true, attributeFilter:['style']});
+  new MutationObserver(sync).observe(ov, {attributes:true, attributeFilter:['style']});
+  sync();
+})();
+
 document.getElementById('btnNetLeave').addEventListener('click', netLeave);
 
 // ---------- 主迴圈（固定步長物理） ----------
@@ -4437,7 +4715,7 @@ function loop(){
     drones.forEach((d,i)=>{
       if(mode==='net'){
         const owner = NET.slotOwners[i];
-        if(owner===null) aiThink(d, dt);                       // 空位：AI 代打
+        if(owner===null){ if(NET.fillAI) aiThink(d, dt); }   // 空位：AI 代打（或不上場：整台退場、不跑）
         else if(owner!==selfId){                                // 別人的機：套用最後收到的遠端輸入
           const ri = NET.remoteInputs[owner];
           if(ri) Object.assign(d.input, ri);
@@ -4452,9 +4730,9 @@ function loop(){
     // 物理（固定子步長，數值穩定）
     acc += dt;
     while(acc >= H){
-      drones.forEach(d=>d.step(H));
+      drones.forEach(d=>{ if(!d.benched) d.step(H); });
       collideDrones();
-      drones.forEach(d=>{ collideRing(d, ringEast); collideRing(d, ringWest); });
+      drones.forEach(d=>{ if(!d.benched){ collideRing(d, ringEast); collideRing(d, ringWest); } });
       checkGoals();
       acc -= H;
     }
@@ -4503,7 +4781,8 @@ function loop(){
   updateOccluders(dt);
   updateHUD();
   updateCamera(dt);
-  sfx.updateEngines(drones, camera.position, camLook, state==='play');   // 各機依與鏡頭的距離/方位即時調整音量與定位
+  sfx.updateEngines(drones, camera.position, camLook, state==='play',
+                    state==='play' && sceneById(curScene).stands);   // 觀眾聲：只有比賽中＋有看台的場景   // 各機依與鏡頭的距離/方位即時調整音量與定位
   renderer.render(scene, camera);
 }
 loop();
