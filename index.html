@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="無人機足球">
+<meta name="theme-color" content="#06080f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="icon" type="image/png" href="assets/icon-192.png">
 <title>無人機足球模擬器 — Drone Soccer Simulator</title>
 <style>
   html,body{margin:0;padding:0;overflow:hidden;background:#06080f;font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif;user-select:none}
@@ -183,6 +190,15 @@
   #touchBtns button{width:42px;height:42px;border-radius:12px;border:1px solid rgba(160,190,255,.45);
     background:rgba(12,18,36,.7);color:#e8ecf5;font-size:19px;touch-action:manipulation;font-family:inherit}
   #touchBtns button:active{background:rgba(125,255,169,.25)}
+  /* 全螢幕（2026-10-09）：iPhone Safari 不支援網頁自己全螢幕 → 選單顯示提示＋⛶ 按鈕開說明卡 */
+  #fsTip{display:none;margin-top:12px;font-size:12.5px;color:#9fb0d0;text-align:center;line-height:1.6}
+  #fsTip b{color:#ffd75a} #fsTip a{color:#7dc4ff;cursor:pointer;text-decoration:underline}
+  #fsCard{display:none;position:fixed;inset:0;z-index:300;background:rgba(4,6,12,.82);align-items:center;justify-content:center}
+  #fsCard .box{max-width:min(560px,88vw);background:#0d1428;border:1px solid rgba(120,160,255,.35);border-radius:16px;
+    padding:18px 22px;color:#e8ecf5;font-size:14px;line-height:1.75}
+  #fsCard h3{margin:0 0 8px;font-size:17px;color:#ffd75a} #fsCard ol{margin:6px 0 10px;padding-left:22px}
+  #fsCard .note{font-size:12px;color:#8a94ad} #fsCard button{margin-top:6px;padding:7px 22px;border-radius:10px;
+    border:1px solid rgba(125,255,169,.5);background:rgba(125,255,169,.15);color:#e8ecf5;font-size:14px;font-family:inherit}
   #touchToggle{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:70;padding:6px 10px;
     border-radius:9px;border:1px solid rgba(160,190,255,.4);background:rgba(12,18,36,.75);color:#aab8d8;font-size:12px;
     cursor:pointer;font-family:inherit;touch-action:manipulation}
@@ -319,9 +335,21 @@
     <button data-k="KeyP" title="暫停">⏸</button>
     <button data-k="KeyR" title="重來">↻</button>
     <button data-k="KeyM" title="回選單">☰</button>
+    <button id="fsBtn" title="全螢幕">⛶</button>
   </div>
 </div>
 <button id="touchToggle">🎮 觸控</button>
+<div id="fsCard"><div class="box">
+  <h3>📱 iPhone 怎麼全螢幕飛行</h3>
+  iPhone 的 Safari 不讓網頁自己切成全螢幕，有兩個辦法：
+  <ol>
+    <li><b>馬上用：</b>點網址列左邊的 <b>≡</b>（或「大小」圖示）→ 選「<b>隱藏工具列</b>」。要叫回來時點畫面最上方。</li>
+    <li><b>最推薦：</b>點 Safari 的 <b>分享</b> 按鈕 →「<b>加入主畫面</b>」。之後從主畫面的「無人機足球」圖示打開，就沒有網址列和分頁列，像 App 一樣。</li>
+  </ol>
+  <div class="note">另外可到「設定 → App → Safari」把「橫向分頁列」關掉，橫拿時就少一排分頁。<br>
+  加入主畫面的版本，闖關星星和賽道紀錄跟 Safari 裡的是分開記的。</div>
+  <div style="text-align:center"><button id="fsCardOk">知道了</button></div>
+</div></div>
 <div id="rotateHint"><div class="ic">📱</div><div>請把手機轉成<b>橫向</b>操作</div>
   <div style="font-size:13px;color:#7c88a8">左搖桿＝油門／旋轉　右搖桿＝前後／側飛（Mode 2，跟實機遙控器一樣）</div></div>
 <div class="hud" id="credit">新竹市無人機創新科技協會©</div>
@@ -371,6 +399,7 @@
     <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
     <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
   </div>
+  <div id="fsTip">📱 想要全螢幕飛行？iPhone 請點網址列左邊的 <b>≡</b> →「<b>隱藏工具列</b>」，或 <a id="fsTipMore">加入主畫面（看作法）</a></div>
   <div id="netPanel" style="display:none">
     <div style="text-align:center;margin-bottom:12px">
       <button class="netBtnSmall" id="btnNetBack">‹ 返回選單</button>
@@ -2161,6 +2190,7 @@ function aiThink(d, dt){
 // 有觸控螢幕的筆電通常主要指標仍是滑鼠（pointer: fine），不會誤判；左上角「🎮 觸控」可手動切換並記住。
 // 搖桿採 Mode 2（左：油門＋旋轉；右：前後＋側飛），放開自動回中（油門回中＝定高懸停），
 // 數值直接疊進 readInputInto()，所以單機、練習、闖關、賽道、連線對戰全部通用。
+let fsUiHook = null;            // 全螢幕提示的更新函式（定義在下方「全螢幕」區塊）
 const TOUCH = {on:false, kind:'desktop', lx:0, ly:0, rx:0, ry:0};
 const TOUCH_KEY = 'hsinchuDroneTouchV1';
 function touchDetect(){
@@ -2180,6 +2210,7 @@ function touchApply(on){
   document.body.classList.toggle('phone', on && TOUCH.kind === 'phone');
   document.body.classList.toggle('tablet', on && TOUCH.kind === 'tablet');
   document.getElementById('touchToggle').textContent = on ? '⌨️ 鍵盤' : '🎮 觸控';
+  if(fsUiHook) fsUiHook();
   if(!on){ TOUCH.lx = TOUCH.ly = TOUCH.rx = TOUCH.ry = 0; }
 }
 function setupJoy(id, onMove){
@@ -2208,7 +2239,7 @@ function setupJoy(id, onMove){
 }
 setupJoy('joyL', (x,y)=>{ TOUCH.lx = x; TOUCH.ly = y; });
 setupJoy('joyR', (x,y)=>{ TOUCH.rx = x; TOUCH.ry = y; });
-document.querySelectorAll('#touchBtns button').forEach(b=>{
+document.querySelectorAll('#touchBtns button[data-k]').forEach(b=>{
   b.addEventListener('click', e=>{
     e.preventDefault();
     const code = b.dataset.k;
@@ -2224,6 +2255,58 @@ document.getElementById('touchToggle').addEventListener('click', e=>{
 });
 document.addEventListener('gesturestart', e=>e.preventDefault());   // iOS Safari 雙指縮放
 touchDetect();
+
+// ---------- 全螢幕（2026-10-09 新增，業主：「手機上方被網址列擋住，飛行時能自動全螢幕嗎」） ----------
+// 觸控模式下「開始飛」（setState('play')）時自動請求全螢幕；手機順便鎖橫向。
+// 瀏覽器規定全螢幕只能由使用者點擊觸發：從按鈕開始的都可以，若是連線對戰由房主開賽（沒有點擊），
+// 就在玩家第一次按搖桿時補請求一次。玩家自己退出全螢幕後，同一局不會再一直把他切回去。
+// iPhone Safari 沒有網頁全螢幕 API（只有 iPad/Android 有）→ 選單顯示「隱藏工具列／加入主畫面」提示，⛶ 按鈕開說明卡。
+// 從主畫面打開（standalone）本來就沒有網址列，不用處理。manifest.webmanifest＋assets/icon-*.png 是給「加入主畫面」用的。
+const FS = {pending:false};
+const fsDocEl = document.documentElement;
+const fsApi = !!(fsDocEl.requestFullscreen || fsDocEl.webkitRequestFullscreen) &&
+              !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const fsStandalone = navigator.standalone === true ||
+  matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches;
+const fsActive = ()=>!!(document.fullscreenElement || document.webkitFullscreenElement);
+function fsEnter(){
+  if(!fsApi || fsActive()) return Promise.resolve(fsActive());
+  let p;
+  try{ p = fsDocEl.requestFullscreen ? fsDocEl.requestFullscreen({navigationUI:'hide'}) : fsDocEl.webkitRequestFullscreen(); }
+  catch(e){ return Promise.resolve(false); }
+  return Promise.resolve(p).then(()=>{
+    if(TOUCH.kind === 'phone' && screen.orientation && screen.orientation.lock)
+      screen.orientation.lock('landscape').catch(()=>{});
+    return true;
+  }).catch(()=>false);
+}
+function fsExit(){
+  try{ if(document.exitFullscreen) document.exitFullscreen().catch(()=>{}); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){}
+}
+function fsAuto(){                                 // 由 setState('play') 呼叫
+  if(!TOUCH.on || fsStandalone || !fsApi || fsActive()) return;
+  FS.pending = true;
+  fsEnter().then(ok=>{ if(ok) FS.pending = false; });
+}
+function fsShowCard(){ document.getElementById('fsCard').style.display = 'flex'; }
+document.getElementById('fsCardOk').addEventListener('click', e=>{
+  e.stopPropagation(); document.getElementById('fsCard').style.display = 'none'; });
+document.getElementById('fsTipMore').addEventListener('click', e=>{ e.stopPropagation(); fsShowCard(); });
+document.getElementById('fsBtn').addEventListener('click', e=>{
+  e.preventDefault(); e.stopPropagation();
+  if(fsApi){ if(fsActive()) fsExit(); else fsEnter(); }
+  else if(!fsStandalone) fsShowCard();
+});
+['joyL','joyR'].forEach(id=>document.getElementById(id).addEventListener('pointerdown', ()=>{
+  if(FS.pending && state === 'play'){ FS.pending = false; fsEnter(); }   // 補一次就好，玩家退出後不再強迫
+}));
+function fsUpdateUI(){
+  // ⛶ 按鈕：已是主畫面 App 就不需要；提示列：只在觸控模式＋沒有全螢幕 API＋不是主畫面 App 時顯示（iPhone Safari）
+  document.getElementById('fsBtn').style.display = fsStandalone ? 'none' : '';
+  document.getElementById('fsTip').style.display = (TOUCH.on && !fsApi && !fsStandalone) ? 'block' : 'none';
+}
+fsUiHook = fsUpdateUI;
+fsUpdateUI();
 
 // ---------- 玩家輸入 ----------
 const keys = {};
@@ -2602,7 +2685,7 @@ let state = 'menu';   // menu | play | pause | over
 let timeLeft = MATCH_TIME;
 let warned30 = false;
 function setState(s){
-  if(s === 'play' && state !== 'play') panelsPeek();
+  if(s === 'play' && state !== 'play'){ panelsPeek(); fsAuto(); }
   state = s;
 }
 // 操作說明／飛行數據：預設收起；每次開始飛的前 4 秒自動展開一下提醒，之後收回（使用者點標題固定的就一直開著）
