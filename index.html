@@ -733,7 +733,7 @@ const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
 // 飛行邊界（Drone.step 用）：平常＝場地；飛行賽道模式會暫時放大成開放空間（raceSetArena）
 const ARENA = { hx: FIELD.hx, hz: FIELD.hz, h: FIELD.h };
-const RING = { R: 0.40*0.20/0.35, Ro: 0.40, depth: 0.20, y: 1.6, x: 2.2 }; // 2026-10-21 業主：外徑 80cm、內徑等比例放大（≈45.7cm，R＝開口半徑）、厚 20cm 的圓環（原 70/40cm）
+const RING = { R: 0.20, Ro: 0.35, depth: 0.20, y: 1.6, x: 2.2 }; // 2026-10-21 業主比賽規格：內徑 40cm（R＝開口半徑，球的 2 倍）、外徑 70cm、厚 20cm 的圓環
 // 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
 // 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
 // 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
@@ -1618,7 +1618,7 @@ buildSceneBar();
 setScene((()=>{ try{ return localStorage.getItem(SCENE_SAVE_KEY) || SCENES[0].id; }catch(e){ return SCENES[0].id; } })());
 
 // ---------- 圓形球門框 ----------
-// 2026-10-21 依業主實際球框照片重做：圓環（外徑 80cm、內徑≈45.7cm、厚 20cm），正反兩面同一張印刷圖——
+// 2026-10-21 依業主實際球框照片重做：圓環（內徑 40cm、外徑 70cm、厚 20cm），正反兩面同一張印刷圖——
 // 左側紅白棋盤格、右側藍白棋盤格、上下彩虹漸層；上方（原「科技領航」字的位置）是電子計分板，下方印「富志科技」。
 // 兩個框正面圖案一樣，隊色靠「外圈側邊發光帶」（進球時綠白爆閃）＋內圈箭頭紋＋點光源區分。
 const ringFaceTex = (()=>{
@@ -1843,7 +1843,7 @@ function buildDroneMesh(teamColor, isStriker){
   grp.add(cage);
   // 環形燈：WS2812B LED 燈條 12 顆（白，赤道）＋深色燈條基座
   const strip = new THREE.Mesh(
-    new THREE.TorusGeometry(DRONE_R, 0.011, 8, 40),
+    new THREE.TorusGeometry(DRONE_R-0.011, 0.011, 8, 40),   // 2026-10-21：燈條收進 20cm 球籠內（外緣＝DRONE_R），外觀直徑＝碰撞直徑
     new THREE.MeshStandardMaterial({color:0x15171c, roughness:.6}));
   strip.rotation.x = Math.PI/2; grp.add(strip);
   const ledGeo = new THREE.SphereGeometry(0.0085, 8, 6);
@@ -1855,7 +1855,7 @@ function buildDroneMesh(teamColor, isStriker){
   for(let k=0; k<12; k++){
     const a = k/12*Math.PI*2;
     const px = new THREE.Mesh(ledGeo, ledMat);
-    px.position.set(Math.sin(a)*(DRONE_R+0.006), 0, Math.cos(a)*(DRONE_R+0.006));
+    px.position.set(Math.sin(a)*(DRONE_R-0.0085), 0, Math.cos(a)*(DRONE_R-0.0085));
     grp.add(px);
     const sp = new THREE.Sprite(ringGlowMat);   // 每顆燈珠帶光暈
     sp.scale.set(0.05,0.05,1); sp.position.copy(px.position); grp.add(sp);
@@ -1868,7 +1868,7 @@ function buildDroneMesh(teamColor, isStriker){
   for(let k=0; k<4; k++){
     const a = Math.PI + (k-1.5)/3*(Math.PI/3.5);   // 機尾 180°±26° 扇形展開
     const tl = new THREE.Mesh(tailGeo, tailMat);
-    tl.position.set(Math.sin(a)*(DRONE_R+0.008), 0, Math.cos(a)*(DRONE_R+0.008));
+    tl.position.set(Math.sin(a)*(DRONE_R-0.011), 0, Math.cos(a)*(DRONE_R-0.011));
     grp.add(tl);
     const sp = new THREE.Sprite(tailGlowMat);   // 尾燈光暈更大更亮
     sp.scale.set(0.1,0.1,1); sp.position.copy(tl.position); grp.add(sp);
