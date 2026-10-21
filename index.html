@@ -733,7 +733,7 @@ const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
 // 飛行邊界（Drone.step 用）：平常＝場地；飛行賽道模式會暫時放大成開放空間（raceSetArena）
 const ARENA = { hx: FIELD.hx, hz: FIELD.hz, h: FIELD.h };
-const RING = { R: 0.20, Ro: 0.35, depth: 0.10, y: 1.6, x: 2.2 }; // 2026-10-21 業主實際球框：內徑 40cm（R＝開口半徑）、外徑 70cm、厚 10cm 的平板圓環
+const RING = { R: 0.20, Ro: 0.35, depth: 0.20, y: 1.6, x: 2.2 }; // 2026-10-21 業主實際球框：內徑 40cm（R＝開口半徑）、外徑 70cm、厚 20cm 的圓環
 // 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
 // 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
 // 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
@@ -1618,7 +1618,7 @@ buildSceneBar();
 setScene((()=>{ try{ return localStorage.getItem(SCENE_SAVE_KEY) || SCENES[0].id; }catch(e){ return SCENES[0].id; } })());
 
 // ---------- 圓形球門框 ----------
-// 2026-10-21 依業主實際球框照片重做：平板圓環（內徑 40cm、外徑 70cm、厚 10cm），正反兩面同一張印刷圖——
+// 2026-10-21 依業主實際球框照片重做：圓環（內徑 40cm、外徑 70cm、厚 20cm），正反兩面同一張印刷圖——
 // 左側紅白棋盤格、右側藍白棋盤格、上下彩虹漸層；上方（原「科技領航」字的位置）是電子計分板，下方印「富志科技」。
 // 兩個框正面圖案一樣，隊色靠「外圈側邊發光帶」（進球時綠白爆閃）＋內圈箭頭紋＋點光源區分。
 const ringFaceTex = (()=>{
@@ -1659,7 +1659,8 @@ function makeChevronTex(color){                        // 內圈：隊色／白�
   g.fillStyle = '#' + new THREE.Color(color).getHexString();
   for(let k=0;k<4;k++){ const x = k*64; g.beginPath(); g.moveTo(x,0); g.lineTo(x+30,0); g.lineTo(x+60,32); g.lineTo(x+30,64); g.lineTo(x,64); g.lineTo(x+30,32); g.closePath(); g.fill(); }
   const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding;
-  t.wrapS = THREE.RepeatWrapping; t.repeat.set(6, 1);
+  t.wrapS = THREE.RepeatWrapping;
+  t.repeat.set(Math.max(1, Math.round(2*Math.PI*RING.R / (4*RING.depth))), 1);   // 一個箭頭寬≈框厚，厚度改了箭頭也不會被拉長
   return t;
 }
 function makeGoalRing(x, color){
@@ -1730,6 +1731,51 @@ function addGoalBoard(ring){
   ring.board = {grp: board, cv, ctx: cv.getContext('2d'), tex, key: ''};
 }
 addGoalBoard(ringEast); addGoalBoard(ringWest);
+
+// ---------- 球門被撞會搖晃（2026-10-21，業主：「球門被撞到要模擬物理搖晃，這樣才擬真」） ----------
+// 球門用織帶吊在場地頂部 → 當成單擺：支點在頂部（擺長 L＝場高−球門高），被撞時依動量守恆取得水平速度，
+// 之後以 ω²＝g/L 來回擺盪並逐漸衰減；撞到偏離中心的位置還會繞垂直軸扭轉一點。
+// 球門位置/角度改變後，ring.x/y/z 跟著更新（進球判定、AI 瞄準都用它），collideRing 也改在球門自己的座標系計算。
+// 連線對戰：只有房主模擬，擺動狀態放進快照（rg）給其他人。
+const RING_SWING = { m: 1.5, L: FIELD.h - RING.y, damp: 0.55, wT: 3.4, dampT: 1.1,
+  I: 1.5*(RING.R*RING.R + RING.Ro*RING.Ro)/4, twist: 0.25, maxP: 0.4, maxT: 0.5 };
+function ringSwingInit(ring){ ring.x0 = ring.x; ring.y0 = ring.y; ring.z0 = ring.z; ring.sw = {px:0, pz:0, vx:0, vz:0, a:0, w:0}; }
+ringSwingInit(ringEast); ringSwingInit(ringWest);
+const _swUp = new THREE.Vector3(0,1,0), _swQ = new THREE.Quaternion(), _swQy = new THREE.Quaternion(), _swDir = new THREE.Vector3();
+function ringSwingApply(ring){
+  const S = ring.sw, L = RING_SWING.L;
+  const h = Math.sqrt(Math.max(1e-6, L*L - S.px*S.px - S.pz*S.pz));
+  ring.x = ring.x0 + S.px; ring.z = ring.z0 + S.pz; ring.y = ring.y0 + (L - h);   // 擺出去時會稍微抬高（圓弧）
+  ring.grp.position.set(ring.x, ring.y, ring.z);
+  _swQ.setFromUnitVectors(_swUp, _swDir.set(-S.px, h, -S.pz).normalize());      // 吊帶方向＝指回頂部支點
+  _swQy.setFromAxisAngle(_swUp, S.a);
+  ring.grp.quaternion.copy(_swQ).multiply(_swQy);
+}
+function ringSwingReset(){
+  [ringEast, ringWest].forEach(r=>{ Object.assign(r.sw, {px:0, pz:0, vx:0, vz:0, a:0, w:0}); ringSwingApply(r); });
+}
+function ringSwingImpulse(ring, J, P){   // J：作用在球門上的衝量（世界座標），P：接觸點
+  const S = ring.sw, R = RING_SWING;
+  S.vx += J.x/R.m; S.vz += J.z/R.m;                   // 吊帶擋住垂直方向，只吃水平分量
+  const rx = P.x - ring.x, rz = P.z - ring.z;
+  S.w += (rz*J.x - rx*J.z) / R.I * R.twist;            // 偏心撞擊 → 扭轉（兩條吊帶會抵抗，打折）
+}
+function updateRingSwing(dt){
+  const R = RING_SWING, w2 = G / R.L;
+  [ringEast, ringWest].forEach(ring=>{
+    const S = ring.sw;
+    const n = Math.max(1, Math.ceil(dt/0.01)), h = dt/n;
+    for(let i=0;i<n;i++){
+      S.vx += (-w2*S.px - R.damp*S.vx)*h; S.vz += (-w2*S.pz - R.damp*S.vz)*h;
+      S.px += S.vx*h; S.pz += S.vz*h;
+      S.w += (-R.wT*R.wT*S.a - R.dampT*S.w)*h; S.a += S.w*h;
+    }
+    const pm = Math.hypot(S.px, S.pz);
+    if(pm > R.maxP){ S.px *= R.maxP/pm; S.pz *= R.maxP/pm; S.vx *= 0.5; S.vz *= 0.5; }
+    if(Math.abs(S.a) > R.maxT){ S.a = Math.sign(S.a)*R.maxT; S.w *= -0.3; }
+    ringSwingApply(ring);
+  });
+}
 // 七段顯示器數字（參考業主提供的實際電子球門照片：黑底白框、紅色七段數字、兩位數）
 const SEG7 = ['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
 function drawSeg7(g, digit, x, y, w, h, on, off){
@@ -2064,26 +2110,34 @@ function collideDrones(){
 }
 
 // ---------- 球門框（圓環剛體）碰撞 ----------
+const _crQi = new THREE.Quaternion();
 function collideRing(d, ring){
-  // 2026-10-21：平板圓環剛體（x 方向厚 RING.depth、半徑 RING.R～RING.Ro）——找圓環實體上離球心最近的點推出
-  const hx = RING.depth/2;
-  const rx = d.pos.x-ring.x, ry = d.pos.y-ring.y, rz = d.pos.z-ring.z;
-  const radial = Math.hypot(ry, rz);
-  const uy = radial>1e-4 ? ry/radial : 1, uz = radial>1e-4 ? rz/radial : 0;
+  // 平板圓環剛體（厚 RING.depth、半徑 RING.R～RING.Ro），在球門自己的座標系計算（球門會擺動／扭轉）
+  const hx = RING.depth/2, q = ring.grp.quaternion;
+  _crQi.copy(q).invert();
+  const rel = V3(d.pos.x-ring.x, d.pos.y-ring.y, d.pos.z-ring.z).applyQuaternion(_crQi);
+  const radial = Math.hypot(rel.y, rel.z);
+  const uy = radial>1e-4 ? rel.y/radial : 1, uz = radial>1e-4 ? rel.z/radial : 0;
   const qr = clamp(radial, RING.R, RING.Ro);
-  const P = V3(ring.x + clamp(rx,-hx,hx), ring.y + uy*qr, ring.z + uz*qr);
-  const diff = d.pos.clone().sub(P);
+  const Pl = V3(clamp(rel.x,-hx,hx), uy*qr, uz*qr);
+  const diff = rel.clone().sub(Pl);
   const dist = diff.length();
   if(dist >= DRONE_R) return;
-  let n;
-  if(dist > 1e-5) n = diff.multiplyScalar(1/dist);
-  else { n = V3(Math.sign(rx)||1, 0, 0); P.x = ring.x + n.x*hx; }   // 球心卡進板子裡：往最近的板面推出
-  d.pos.copy(P).addScaledVector(n, DRONE_R);
-  const vn = d.vel.dot(n);
+  let nl;
+  if(dist > 1e-5) nl = diff.multiplyScalar(1/dist);
+  else { nl = V3(Math.sign(rel.x)||1, 0, 0); Pl.x = nl.x*hx; }   // 球心卡進板子裡：往最近的板面推出
+  const out = Pl.clone().addScaledVector(nl, DRONE_R).applyQuaternion(q);
+  d.pos.set(ring.x + out.x, ring.y + out.y, ring.z + out.z);
+  const n = nl.applyQuaternion(q);
+  const S = ring.sw;
+  const vn = (d.vel.x - (S ? S.vx : 0))*n.x + d.vel.y*n.y + (d.vel.z - (S ? S.vz : 0))*n.z;   // 相對速度（球門也在動）
   if(vn<0){
-    d.vel.addScaledVector(n, -vn*(1+0.5));
+    const mu = S ? MASS*RING_SWING.m/(MASS + RING_SWING.m) : MASS;   // 兩物體碰撞的約化質量
+    const Jn = -vn*(1+0.5)*mu;                                        // 衝量大小（恢復係數 0.5）
+    d.vel.addScaledVector(n, Jn/MASS);
     d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
     if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
+    if(S) ringSwingImpulse(ring, n.clone().multiplyScalar(-Jn), Pl.clone().applyQuaternion(q).add(ring.grp.position));
   }
 }
 
@@ -2245,6 +2299,7 @@ function checkPracticePass(dt){
   });
 }
 function restartPractice(){
+  ringSwingReset();
   drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });   // 只留玩家機，其餘 5 台隱藏、不參與模擬
   practiceCount = 0; practiceCooldown = {E:0, W:0};
   ringEast.passes = 0; ringWest.passes = 0;
@@ -2953,6 +3008,7 @@ document.querySelectorAll('.pTitle').forEach(t=>t.addEventListener('click', e=>{
 }));
 panelsApply();
 function restart(){
+  ringSwingReset();
   score.red = {g:0,o:0,d:0}; score.blue = {g:0,o:0,d:0}; updateScore();
   timeLeft = MATCH_TIME; warned30 = false;
   drones.forEach(d=>d.reset());
@@ -3120,6 +3176,7 @@ function duoStartPractice(){
   DUO.snap = true; DUO.msgT = [0,0];
 }
 function duoPracReset(){
+  ringSwingReset();
   drones.forEach(d=>{
     const h = duoSideOf(d) >= 0;
     d.reset(); d.benched = !h; setDroneVisible(d, h);
@@ -3545,7 +3602,8 @@ function netMaybeBroadcastSnapshot(){
       vx:d.vel.x, vy:d.vel.y, vz:d.vel.z,
       yaw:d.yaw, tp:d.tiltP, tr:d.tiltR, dist:d.disturb, cs:d.canScore,
       th:d.thrustN/(MASS*G)
-    }))
+    })),
+    rg: [ringEast, ringWest].map(r=>[+r.sw.px.toFixed(4), +r.sw.pz.toFixed(4), +r.sw.a.toFixed(4)])   // 球門擺盪
   });
 }
 // ---- 每幀（非房主）：用最近兩份 snapshot 內插所有機的視覺狀態，並鏡射分數/時間/狀態 ----
@@ -3571,6 +3629,11 @@ function applyNetSnapshotInterp(){
     d.canScore = c.cs;
     d.thrustN = lerp(p.th,c.th,a)*MASS*G;   // 供馬達音效依推力調整音高/音量用
     d.propSpin += 0.9;
+  });
+  if(cur.rg) [ringEast, ringWest].forEach((r,k)=>{   // 球門擺盪（房主模擬）
+    const c = cur.rg[k], pv = (prev && prev.rg) ? prev.rg[k] : c;
+    r.sw.px = lerp(pv[0],c[0],a); r.sw.pz = lerp(pv[1],c[1],a); r.sw.a = lerp(pv[2],c[2],a);
+    ringSwingApply(r);
   });
 }
 
@@ -5250,6 +5313,7 @@ function loop(){
   }
   if(mode==='net' && NET.isHost) netMaybeBroadcastSnapshot();   // 房主：無論何種 state 都持續廣播（暫停/賽後也同步）
 
+  if(!isNetClient && state!=='pause') updateRingSwing(dt);   // 球門擺盪（連線對戰的其他人用房主快照）
   // 視覺
   drones.forEach(d=>d.syncMesh(t));
   envAnimate(dt);
