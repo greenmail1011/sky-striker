@@ -168,6 +168,29 @@
   .mfBack.show{visibility:visible} .mfBack:hover{color:#fff;border-color:#fff}
   #overlay .credit{margin-top:14px}
   /* 選單開著時把比賽 HUD（計分板、操作說明、飛行數據、搖桿…）藏起來，畫面才乾淨 */
+  /* ---- 左右雙人對戰（2026-10-21）---- */
+  .c-duo{--c:255,190,90}
+  #mfDuoOpt{display:none;flex-direction:column;gap:8px;align-items:center;margin:-4px 0 14px;font-size:14px;color:#b9c6e4}
+  #mfDuoOpt .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+  #mfDuoOpt small{color:#7c88a8;font-size:12px}
+  #menuFlow.duo #mfDuoOpt{display:flex}
+  #mfDuoOpt button{padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#dfe7f7;font-size:14px;cursor:pointer;font-family:inherit}
+  #mfDuoOpt button.sel{background:rgba(255,190,90,.22);border-color:#ffbe5a;color:#fff;font-weight:800}
+  #duoHUD{display:none}
+  body.duo #duoHUD{display:block}
+  body.duo #telemetry,body.duo #help,body.duo #touchUI,body.duo #touchToggle,body.duo #netBadge{display:none!important}
+  body.duo #scoreboard{transform:translateX(-50%) scale(.78);transform-origin:top center}
+  body.inMenu #duoHUD{display:none!important}
+  #duoDiv{position:fixed;top:0;bottom:0;left:50%;width:4px;margin-left:-2px;background:linear-gradient(180deg,#60a5fa,#e5e7eb 50%,#f87171);box-shadow:0 0 10px rgba(0,0,0,.85);z-index:9;pointer-events:none}
+  .duoP{position:fixed;bottom:12px;z-index:10;pointer-events:none;width:calc(50% - 34px);box-sizing:border-box;display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;
+    background:rgba(7,7,26,.8);border-radius:12px;padding:8px 14px;font-size:13px;color:#cdd8ee;text-shadow:none;backdrop-filter:blur(4px)}
+  #duoP0{left:16px;border:1px solid rgba(96,165,250,.6)} #duoP1{right:16px;border:1px solid rgba(248,113,113,.6)}
+  .duoP .who{font-weight:900;font-size:15px;letter-spacing:1px} #duoP0 .who{color:#60a5fa} #duoP1 .who{color:#f87171}
+  .duoP .v{font-weight:800;color:#fff;font-variant-numeric:tabular-nums;display:inline-block;min-width:2.4em;text-align:right}
+  .duoP .armed,.duoP .disarmed{padding:1px 7px;border-radius:6px;font-size:12px}
+  .duoP .pad{font-size:12px} .duoP .kb{font-size:11.5px;color:#7c88a8;width:100%}
+  .duoMsg{position:fixed;top:34%;transform:translateX(-50%);font-size:24px;font-weight:900;letter-spacing:1px;text-shadow:0 0 10px rgba(0,0,0,.95);z-index:10;pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap}
+  #duoM0{left:25%} #duoM1{left:75%}
   body.inMenu .hud,body.inMenu #touchUI,body.inMenu #scoreboard,body.inMenu #campHUD,body.inMenu #raceHUD,body.inMenu #practiceHUD{visibility:hidden!important}
   /* 手機橫拿：卡片縮小、一排放得下 */
   @media (max-height:520px){
@@ -416,6 +439,20 @@
     <span><i>最佳</i><span id="raceBest">—</span></span>
   </div>
 </div>
+<div id="duoHUD">
+  <div id="duoDiv"></div>
+  <div class="duoP" id="duoP0"><span class="who">P1 藍隊 Striker</span>
+    <span>速度 <span class="v" id="duoSpd0">0.0</span> m/s</span><span>高度 <span class="v" id="duoAlt0">0.0</span> m</span>
+    <span>推力 <span class="v" id="duoThr0">0</span>%</span><span>得分權 <span id="duoArm0" class="armed">已解鎖</span></span>
+    <span class="pad" id="duoPad0">—</span>
+    <span class="kb" id="duoKb0"></span></div>
+  <div class="duoP" id="duoP1"><span class="who">P2 紅隊 Striker</span>
+    <span>速度 <span class="v" id="duoSpd1">0.0</span> m/s</span><span>高度 <span class="v" id="duoAlt1">0.0</span> m</span>
+    <span>推力 <span class="v" id="duoThr1">0</span>%</span><span>得分權 <span id="duoArm1" class="armed">已解鎖</span></span>
+    <span class="pad" id="duoPad1">—</span>
+    <span class="kb" id="duoKb1"></span></div>
+  <div class="duoMsg" id="duoM0"></div><div class="duoMsg" id="duoM1"></div>
+</div>
 <div id="touchUI">
   <div class="joy" id="joyL"><span class="joyLbl">油門／旋轉</span><div class="joyBase"></div><div class="joyKnob"></div></div>
   <div class="joy" id="joyR"><span class="joyLbl">前後／側飛</span><div class="joyBase"></div><div class="joyKnob"></div></div>
@@ -492,10 +529,15 @@
       <div class="mfCards">
         <button class="mfCard c-match" data-mode="player"><div class="ic">🤖</div><b>對戰 AI</b><span>你是紅隊 Striker<br>隊友和對手都是 AI</span></button>
         <button class="mfCard c-net" data-mode="net"><div class="ic">🌐</div><b>連線對戰</b><span>開房間給同學房號<br>1v1・2v2・3v3</span></button>
+        <button class="mfCard c-duo" data-mode="duo"><div class="ic">👥</div><b>雙人對戰</b><span>同一台電腦左右分割畫面<br>兩支搖桿・藍 vs 紅</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS3">
       <div class="mfQ">選一個場地</div>
+      <div id="mfDuoOpt">
+        <div class="row">隊伍：<button data-v="0">⬜ 只有兩人（1v1）</button><button data-v="1">🤖 加 AI 隊友（3v3）</button></div>
+        <div class="row">只有一支搖桿時，搖桿給：<button data-pad="0">◀ 左邊 P1 藍</button><button data-pad="1">右邊 P2 紅 ▶</button><small>另一人用鍵盤</small></div>
+      </div>
       <div class="mfScenes" id="mfScenes"></div>
       <button class="mfGo" id="mfGo">開始 ▶</button>
     </div>
@@ -520,6 +562,7 @@
     <button class="modeBtn" id="btnRace">🏁 飛行賽道</button>
     <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
     <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
+    <button class="modeBtn" id="btnDuo">👥 左右雙人對戰</button>
   </div>
   <div id="fsTip">📱 想要全螢幕飛行？iPhone 請點網址列左邊的 <b>≡</b> →「<b>隱藏工具列</b>」，或 <a id="fsTipMore">加入主畫面（看作法）</a></div>
   <div id="netPanel" style="display:none">
@@ -2055,6 +2098,7 @@ function checkGoals(){
        && Math.sign(d.pos.x||1)!==Math.sign(atkRing.x) && Math.abs(d.pos.x)>0.4){
       d.canScore = true;
       if(d.isPlayer && mode==='player') flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
+      else if(mode==='duo' && duoSideOf(d)>=0) duoMsg(duoSideOf(d), '得分權已解鎖 ✓', '#7dffa9', 1.2);
       else if(mode==='net' && NET.slotOwners[i]) fireFx({type:'unlock'}, NET.slotOwners[i]);
     }
     // 穿越框平面偵測
@@ -2091,6 +2135,9 @@ function updateFouls(dt){
       if(d.isPlayer && mode==='player' && d.zoneT>1.5 && !d.zoneWarned){
         d.zoneWarned = true;
         flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
+      }else if(mode==='duo' && duoSideOf(d)>=0 && d.zoneT>1.5 && !d.zoneWarned){
+        d.zoneWarned = true;
+        duoMsg(duoSideOf(d), '⚠️ 離開己方球門區！', '#fbbf24', 1.2);
       }else if(mode==='net' && d.zoneT>1.5 && !d.zoneWarned && NET.slotOwners[i]){
         d.zoneWarned = true;
         fireFx({type:'zoneWarn'}, NET.slotOwners[i]);
@@ -2467,6 +2514,7 @@ addEventListener('keydown', e=>{
   }
   if(e.code==='KeyM' && state!=='menu'){   // 返回模式選單
     setState('menu');
+    duoCleanup();                                    // 若剛才在左右雙人對戰，恢復單一畫面與退場的機
     campExitCleanup();                               // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
     drones.forEach(d=>setDroneVisible(d,true));      // 若剛才在練習模式，恢復其餘 5 台機顯示
     document.getElementById('scoreboard').style.display='flex';
@@ -2509,6 +2557,7 @@ function getPad(){
   return null;
 }
 function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
+  if(mode==='duo'){ duoPollButtons(); return; }       // 雙人對戰：兩支搖桿都能暫停／重賽／切視角
   const gp = getPad(); if(!gp) return;
   const btn = n=>{
     const v = !!(gp.buttons[n] && gp.buttons[n].pressed);
@@ -2866,6 +2915,7 @@ function endMatch(){
 }
 let mode = 'player';   // 'player' | 'demo' | 'net' | 'practice' | 'campaign' | 'race'
 function startGame(m){
+  duoCleanup();
   if(NET.connected) netTeardown();          // 若切回單機模式，順便離開連線房間
   document.getElementById('netPanel').style.display = 'none';
   campExitCleanup();                            // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
@@ -2884,6 +2934,183 @@ function startGame(m){
 }
 document.getElementById('btnPlayer').addEventListener('click', ()=>startGame('player'));
 document.getElementById('btnDemo').addEventListener('click', ()=>startGame('demo'));
+
+// ============================================================
+// 左右雙人對戰（2026-10-21，業主：「index.html 可以選左右雙人對戰」，參考展場照片：一台筆電接兩支遙控器）
+//   - 同一台電腦、畫面左右分割：左＝P1 藍隊 Striker（藍半場在左，跟計分板「藍左紅右」一致），右＝P2 紅隊 Striker
+//   - 搖桿：依瀏覽器的搖桿編號，第 1 支→P1（左）、第 2 支→P2（右）；只有一支時給 P1，P2 用鍵盤
+//   - 鍵盤：P1＝W/S 升降、A/D 旋轉、T/G 前後、F/H 側飛；P2＝I/K 升降、J/L 旋轉、方向鍵 前後／側飛（都是 Mode 2 左手油門）
+//   - 隊友：「只有兩人 1v1」（其餘 4 台用 benched 退場，同連線對戰的「不上場」）或「加 AI 隊友 3v3」
+//   - 物理／計分／違規完全走原本的比賽流程（loop 的 state==='play' 分支），只是多讀一個人的輸入、畫兩次
+// ============================================================
+const DUO_KEY = 'hsinchuDroneDuoV1';
+const DUO = {
+  ai: false,
+  padSide: 0,          // 只有一支搖桿時，搖桿給哪一邊（0＝左 P1、1＝右 P2），另一人用整個鍵盤
+  cur: [{pad:null, keys:null}, {pad:null, keys:null}],   // 這一幀實際的分配（duoAssign 算）
+  sides: [
+    { d: drones[3], keys:{up:'KeyW', dn:'KeyS', yl:'KeyA', yr:'KeyD', fw:'KeyT', bk:'KeyG', lf:'KeyF', rt:'KeyH'} },
+    { d: drones[0], keys:{up:'KeyI', dn:'KeyK', yl:'KeyJ', yr:'KeyL', fw:'ArrowUp', bk:'ArrowDown', lf:'ArrowLeft', rt:'ArrowRight'} },
+  ],
+  cams: [new THREE.PerspectiveCamera(62, 1, 0.05, 200), new THREE.PerspectiveCamera(62, 1, 0.05, 200)],
+  camPos: [V3(0,3,0), V3(0,3,0)], camLook: [V3(0,1,0), V3(0,1,0)], snap: true,
+  lisPos: V3(0,3.5,6.5), lisLook: V3(0,1,0),
+  msgT: [0,0], padPrev: {},
+};
+try{ const o = JSON.parse(localStorage.getItem(DUO_KEY)||'{}')||{}; DUO.ai = !!o.ai; DUO.padSide = o.padSide===1 ? 1 : 0; }catch(e){}
+// 鍵盤配置：沒有搖桿／兩支搖桿時，兩人分用鍵盤左右兩半（sides[].keys）；
+// 只有一支搖桿時，鍵盤那個人獨用整個鍵盤，用跟單人模式一樣的美國手 WASD＋方向鍵
+const DUO_KB_FULL = {up:'KeyW', dn:'KeyS', yl:'KeyA', yr:'KeyD', fw:'ArrowUp', bk:'ArrowDown', lf:'ArrowLeft', rt:'ArrowRight'};
+const DUO_KB_TXT = {
+  full: '⌨️ 鍵盤：W/S 升降・A/D 旋轉・↑/↓ 前後・←/→ 側飛',
+  0: '鍵盤：W/S 升降・A/D 旋轉・T/G 前後・F/H 側飛',
+  1: '鍵盤：I/K 升降・J/L 旋轉・↑/↓ 前後・←/→ 側飛',
+};
+function duoSaveOpt(){ try{ localStorage.setItem(DUO_KEY, JSON.stringify({ai:DUO.ai, padSide:DUO.padSide})); }catch(err){} }
+function duoAssign(){   // 依目前接了幾支搖桿決定每邊用什麼操作
+  const ps = duoPads();
+  if(ps.length >= 2){                    // 兩支搖桿：第 1 支→左、第 2 支→右（鍵盤分半當備用）
+    DUO.cur = [{pad:ps[0], keys:DUO.sides[0].keys, kb:0}, {pad:ps[1], keys:DUO.sides[1].keys, kb:1}];
+  }else if(ps.length === 1){             // 一支搖桿＋鍵盤：搖桿那邊不吃鍵盤，鍵盤那邊用完整 WASD＋方向鍵
+    const v = DUO.padSide;
+    DUO.cur[v]   = {pad:ps[0], keys:null, kb:null};
+    DUO.cur[1-v] = {pad:null, keys:DUO_KB_FULL, kb:'full'};
+  }else{                                 // 沒有搖桿：兩人分用鍵盤左右兩半
+    DUO.cur = [{pad:null, keys:DUO.sides[0].keys, kb:0}, {pad:null, keys:DUO.sides[1].keys, kb:1}];
+  }
+  DUO.nPads = ps.length;
+}
+function duoSideOf(d){ return DUO.sides[0].d===d ? 0 : DUO.sides[1].d===d ? 1 : -1; }
+function duoSyncOpt(){
+  document.querySelectorAll('#mfDuoOpt button[data-v]').forEach(b=>b.classList.toggle('sel', (b.dataset.v==='1') === DUO.ai));
+  document.querySelectorAll('#mfDuoOpt button[data-pad]').forEach(b=>b.classList.toggle('sel', +b.dataset.pad === DUO.padSide));
+}
+document.querySelectorAll('#mfDuoOpt button').forEach(b=>b.addEventListener('click', e=>{
+  e.stopPropagation();
+  if(b.dataset.v !== undefined) DUO.ai = b.dataset.v === '1';
+  if(b.dataset.pad !== undefined) DUO.padSide = +b.dataset.pad;
+  duoSaveOpt(); duoSyncOpt();
+}));
+function duoPads(){   // 已連接的搖桿，依瀏覽器編號排序（第 1 支→P1、第 2 支→P2）
+  const ps = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+  return ps.filter(g=>g && g.connected).sort((a,b)=>a.index-b.index);
+}
+function duoReadInput(s, gp, k){
+  const i = s.d.input;
+  i.pitch = i.roll = i.yawRate = i.throttle = 0;
+  if(k){
+    i.pitch    = (keys[k.fw]?1:0) - (keys[k.bk]?1:0);
+    i.roll     = (keys[k.rt]?1:0) - (keys[k.lf]?1:0);
+    i.yawRate  = ((keys[k.yl]?1:0) - (keys[k.yr]?1:0)) * YAW_RATE;
+    i.throttle = (keys[k.up]?1:0) - (keys[k.dn]?1:0);
+  }
+  if(gp){   // 搖桿軸對應與單人模式相同（readInputInto）
+    i.yawRate  = clamp(i.yawRate  - padDZ(gp.axes[0]||0)*YAW_RATE, -YAW_RATE, YAW_RATE);
+    i.throttle = clamp(i.throttle - padDZ(gp.axes[1]||0), -1, 1);
+    i.roll     = clamp(i.roll     + padDZ(gp.axes[2]||0), -1, 1);
+    i.pitch    = clamp(i.pitch    - padDZ(gp.axes[3]||0), -1, 1);
+  }
+}
+function duoReadAll(){
+  duoAssign();
+  DUO.sides.forEach((s,v)=>duoReadInput(s, DUO.cur[v].pad, DUO.cur[v].keys));
+}
+function duoPollButtons(){
+  for(const gp of duoPads()){
+    const prev = DUO.padPrev[gp.index] || (DUO.padPrev[gp.index] = {});
+    const btn = n=>{ const v = !!(gp.buttons[n] && gp.buttons[n].pressed); const f = v && !prev[n]; prev[n] = v; return f; };
+    if(state==='menu') continue;
+    if(btn(9)){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); }
+    if(btn(3)) camMode = (camMode+1)%3;
+    if(btn(8)) restart();
+  }
+}
+function duoApplyBench(){
+  drones.forEach(d=>{
+    const b = !DUO.ai && duoSideOf(d) < 0;
+    d.benched = b;
+    setDroneVisible(d, !b);
+  });
+}
+function duoStart(){
+  startGame('duo');                       // 共用比賽流程（計分板、計時、restart）
+  duoApplyBench();
+  drones.forEach(d=>d.reset());
+  document.body.classList.add('duo');
+  document.querySelector('#telemetry b').textContent = '雙人對戰';
+  DUO.snap = true; DUO.msgT = [0,0];
+}
+document.getElementById('btnDuo').addEventListener('click', duoStart);
+function duoCleanup(){
+  if(!document.body.classList.contains('duo')) return;
+  document.body.classList.remove('duo');
+  if(!NET.connected) drones.forEach(d=>{ if(d.benched){ d.benched = false; d.reset(); } setDroneVisible(d, true); });
+  [0,1].forEach(v=>{ const m = document.getElementById('duoM'+v); if(m) m.style.opacity = 0; });
+}
+function duoMsg(v, text, color, dur){
+  const m = document.getElementById('duoM'+v); if(!m) return;
+  m.textContent = text; m.style.color = color; m.style.opacity = 1; DUO.msgT[v] = dur;
+}
+const duoRay = new THREE.Raycaster();
+function duoFrame(dt){
+  duoAssign();
+  DUO.lisPos.set(0,0,0); DUO.lisLook.set(0,0,0);
+  DUO.sides.forEach((s,v)=>{
+    // ---- 鏡頭（與單人 updateCamera 相同的三種視角，C 鍵／△ 共用切換）----
+    const d = s.d, fwd = V3(Math.sin(d.yaw),0,Math.cos(d.yaw));
+    let dp, dl;
+    if(camMode===0){ dp = d.pos.clone().addScaledVector(fwd,-2.2).add(V3(0,1.0,0)); dl = d.pos.clone().addScaledVector(fwd,1.6); }
+    else if(camMode===1){ dp = d.pos.clone().add(V3(0,0.12,0)).addScaledVector(fwd,0.15); dl = d.pos.clone().addScaledVector(fwd,4).add(V3(0,0.3,0)); }
+    else { dp = V3(-d.attackDir*5.0, 3.0, 0); dl = V3(d.attackDir*0.6, 0.9, 0); }   // 全場：站在自家球門後方看向對方
+    const k = (camMode===1 || DUO.snap) ? 1 : Math.min(1, dt*5.5);
+    DUO.camPos[v].lerp(dp, k); DUO.camLook[v].lerp(dl, k);
+    const cam = DUO.cams[v];
+    cam.position.copy(DUO.camPos[v]); cam.lookAt(DUO.camLook[v]);
+    DUO.lisPos.addScaledVector(cam.position, 0.5); DUO.lisLook.addScaledVector(DUO.camLook[v], 0.5);
+    // ---- 遮擋半透明：各畫面各自計算（畫之前才套用到材質，見 duoRender）----
+    let hit = null;
+    if(camMode!==1){
+      const dir = d.pos.clone().sub(cam.position), dist = dir.length();
+      if(dist > 0.3){ duoRay.set(cam.position, dir.multiplyScalar(1/dist)); duoRay.far = dist;
+        hit = new Set(duoRay.intersectObjects(occluders, false).map(h=>h.object)); }
+    }
+    for(const o of occluders){
+      const op = o.userData.duoOp || (o.userData.duoOp = [1,1]);
+      op[v] += (((hit && hit.has(o)) ? 0.22 : 1.0) - op[v]) * Math.min(1, dt*9);
+    }
+    // ---- HUD ----
+    const cur = DUO.cur[v], gp = cur.pad;
+    document.getElementById('duoSpd'+v).textContent = d.vel.length().toFixed(1);
+    document.getElementById('duoAlt'+v).textContent = Math.max(0,d.pos.y-DRONE_R).toFixed(1);
+    document.getElementById('duoThr'+v).textContent = Math.round(d.thrustN/(MASS*G)*100);
+    const a = document.getElementById('duoArm'+v);
+    a.textContent = d.canScore ? '已解鎖' : '需回防'; a.className = d.canScore ? 'armed' : 'disarmed';
+    const pe = document.getElementById('duoPad'+v);
+    if(gp){ pe.textContent = '🎮 搖桿 ✓'; pe.title = gp.id; pe.style.color = '#7dffa9'; }
+    else if(cur.kb === 'full'){ pe.textContent = '⌨️ 鍵盤操作'; pe.title = ''; pe.style.color = '#9fc1ff'; }
+    else { pe.textContent = '🎮 搖桿未偵測（接上後按一下搖桿）'; pe.title = ''; pe.style.color = '#fbbf24'; }
+    const ke = document.getElementById('duoKb'+v), kt = cur.kb===null ? '' : DUO_KB_TXT[cur.kb];
+    if(ke.textContent !== kt){ ke.textContent = kt; ke.style.display = kt ? '' : 'none'; }
+    if(DUO.msgT[v] > 0){ DUO.msgT[v] -= dt; if(DUO.msgT[v] <= 0) document.getElementById('duoM'+v).style.opacity = 0; }
+  });
+  DUO.snap = false;
+}
+function duoRender(){
+  const W = innerWidth, H = innerHeight, hw = Math.floor(W/2);
+  renderer.setScissorTest(true);
+  for(let v=0; v<2; v++){
+    const cam = DUO.cams[v], x = v===0 ? 0 : W-hw;
+    if(Math.abs(cam.aspect - hw/H) > 1e-4){ cam.aspect = hw/H; cam.updateProjectionMatrix(); }
+    for(const o of occluders){     // 套用這個畫面自己的遮擋淡出
+      const m = o.material, op = o.userData.duoOp ? o.userData.duoOp[v] : 1;
+      m.opacity = op; const tr = op < 0.985; m.transparent = tr; m.depthWrite = !tr;
+    }
+    renderer.setViewport(x, 0, hw, H); renderer.setScissor(x, 0, hw, H);
+    renderer.render(scene, cam);
+  }
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, W, H);
+}
 
 // ============================================================
 // 連線對戰（Host 權威模擬 + Trystero P2P）
@@ -3278,7 +3505,7 @@ const MF_SCENE_BG = {
   neon:'linear-gradient(180deg,#0b0d2a 0%,#3a1060 55%,#ff3db4 100%)',
   orbit:'radial-gradient(circle at 75% 85%,#3f7fd8 0 22%,#0a1a3a 23%,#000 70%)',
 };
-const MF_MODE_BTN = {player:'btnPlayer', practice:'btnPractice', demo:'btnDemo', campaign:'btnCampaign', race:'btnRace', net:'btnNet'};
+const MF_MODE_BTN = {player:'btnPlayer', practice:'btnPractice', demo:'btnDemo', campaign:'btnCampaign', race:'btnRace', net:'btnNet', duo:'btnDuo'};
 function mfShow(stage){
   MF.stage = stage;
   document.querySelectorAll('#menuFlow .mfStage').forEach(s=>s.classList.toggle('on', s.id === 'mfS' + stage));
@@ -3290,6 +3517,8 @@ function mfShow(stage){
     sp.classList.toggle('done', sp.dataset.s < n);
   });
   document.getElementById('mfBack').classList.toggle('show', n !== '1');
+  document.getElementById('menuFlow').classList.toggle('duo', n === '3' && MF.mode === 'duo');   // 雙人對戰：第 3 步多一列「1v1／3v3」
+  duoSyncOpt();
   if(n === '3') mfBuildScenes();
 }
 function mfBuildScenes(){
@@ -4711,6 +4940,7 @@ function loop(){
 
     // 控制
     if(mode==='player') readPlayerInput();
+    else if(mode==='duo') duoReadAll();
     else if(mode==='net' && NET.mySlot>=0) readInputInto(drones[NET.mySlot].input);
     drones.forEach((d,i)=>{
       if(mode==='net'){
@@ -4722,6 +4952,8 @@ function loop(){
           else d.input = {pitch:0,roll:0,yawRate:0,throttle:0}; // 尚未收到輸入前先懸停
         }
         // 自己的機：input 已由上面 readInputInto 寫入
+      }else if(mode==='duo'){
+        if(duoSideOf(d)<0 && !d.benched) aiThink(d, dt);   // 兩位真人以外：AI 隊友（或 1v1 時退場）
       }else if(!d.isPlayer || mode==='demo'){
         aiThink(d, dt);
       }
@@ -4778,12 +5010,14 @@ function loop(){
     else if(f.m.opacity>0.01) f.m.opacity *= Math.pow(0.001, dt);
   }
   if(msgTimer>0){ msgTimer-=dt; if(msgTimer<=0) msgEl.style.opacity=0; }
-  updateOccluders(dt);
+  const duoOn = mode==='duo' && state!=='menu';
+  if(!duoOn) updateOccluders(dt);
   updateHUD();
   updateCamera(dt);
-  sfx.updateEngines(drones, camera.position, camLook, state==='play',
+  if(duoOn) duoFrame(dt);                       // 左右兩個鏡頭＋各自的遮擋半透明／HUD
+  sfx.updateEngines(drones, duoOn ? DUO.lisPos : camera.position, duoOn ? DUO.lisLook : camLook, state==='play',
                     state==='play' && sceneById(curScene).stands);   // 觀眾聲：只有比賽中＋有看台的場景   // 各機依與鏡頭的距離/方位即時調整音量與定位
-  renderer.render(scene, camera);
+  if(duoOn) duoRender(); else renderer.render(scene, camera);
 }
 loop();
 </script>
