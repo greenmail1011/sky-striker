@@ -174,6 +174,10 @@
   #mfDuoOpt .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
   #mfDuoOpt small{color:#7c88a8;font-size:12px}
   #menuFlow.duo #mfDuoOpt,#menuFlow.prac #mfDuoOpt{display:flex}
+  #raceDuoOpt{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;margin:0 0 8px;font-size:13px;color:#b9c6e4}
+  #raceDuoOpt .sceneBtn{padding:5px 12px;font-size:13px}
+  .duoP .racei{display:none} body.duoRace .duoP .racei{display:inline;font-weight:800;color:#ffd75a} body.duoRace .duoP .arm{display:none}
+  body.duoRace #raceHUD .row{display:none}
   #mfDuoOpt .rTeam,#mfDuoOpt .rPlayers,#mfDuoOpt .rPad{display:none}
   #menuFlow.duo .rTeam,#menuFlow.prac .rPlayers,#menuFlow.duo .rPad,#menuFlow.pracDuo .rPad{display:flex}
   .duoP .prac{display:none} body.duoPrac .duoP .prac{display:inline} body.duoPrac .duoP .arm{display:none}
@@ -446,12 +450,12 @@
   <div id="duoDiv"></div>
   <div class="duoP" id="duoP0"><span class="who">P1 藍隊 Striker</span>
     <span>速度 <span class="v" id="duoSpd0">0.0</span> m/s</span><span>高度 <span class="v" id="duoAlt0">0.0</span> m</span>
-    <span>推力 <span class="v" id="duoThr0">0</span>%</span><span class="arm">得分權 <span id="duoArm0" class="armed">已解鎖</span></span><span class="prac">🎯 穿越 <span class="v" id="duoCnt0">0</span> 次</span>
+    <span>推力 <span class="v" id="duoThr0">0</span>%</span><span class="arm">得分權 <span id="duoArm0" class="armed">已解鎖</span></span><span class="prac">🎯 穿越 <span class="v" id="duoCnt0">0</span> 次</span><span class="racei" id="duoRace0"></span>
     <span class="pad" id="duoPad0">—</span>
     <span class="kb" id="duoKb0"></span></div>
   <div class="duoP" id="duoP1"><span class="who">P2 紅隊 Striker</span>
     <span>速度 <span class="v" id="duoSpd1">0.0</span> m/s</span><span>高度 <span class="v" id="duoAlt1">0.0</span> m</span>
-    <span>推力 <span class="v" id="duoThr1">0</span>%</span><span class="arm">得分權 <span id="duoArm1" class="armed">已解鎖</span></span><span class="prac">🎯 穿越 <span class="v" id="duoCnt1">0</span> 次</span>
+    <span>推力 <span class="v" id="duoThr1">0</span>%</span><span class="arm">得分權 <span id="duoArm1" class="armed">已解鎖</span></span><span class="prac">🎯 穿越 <span class="v" id="duoCnt1">0</span> 次</span><span class="racei" id="duoRace1"></span>
     <span class="pad" id="duoPad1">—</span>
     <span class="kb" id="duoKb1"></span></div>
   <div class="duoMsg" id="duoM0"></div><div class="duoMsg" id="duoM1"></div>
@@ -524,7 +528,7 @@
       <div class="mfCards">
         <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic">🎯</div><b>圓環練習</b><span>自由飛行穿越圓環<br>先熟悉搖桿・可雙人</span></button>
         <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 2</span><div class="ic">🏆</div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
-        <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 3</span><div class="ic">🏁</div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄</span></button>
+        <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 3</span><div class="ic">🏁</div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄・可雙人</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS2match">
@@ -610,6 +614,8 @@
       <div id="raceHeadTtl">🏁 飛行賽道</div>
       <div id="raceTotal">⭐ 0 / 45</div>
     </div>
+    <div id="raceDuoOpt">人數：<button class="sceneBtn" data-rd="0">👤 單人</button><button class="sceneBtn" data-rd="1">👥 雙人（左右分割）</button>
+      <span id="raceDuoPad">　只有一支搖桿時給：<button class="sceneBtn" data-rpad="0">◀ 左 P1 藍</button><button class="sceneBtn" data-rpad="1">右 P2 紅 ▶</button></span></div>
     <div id="raceModes"></div>
     <div id="raceModeDesc"></div>
     <div id="raceMaps"></div>
@@ -727,7 +733,7 @@ const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
 // 飛行邊界（Drone.step 用）：平常＝場地；飛行賽道模式會暫時放大成開放空間（raceSetArena）
 const ARENA = { hx: FIELD.hx, hz: FIELD.hz, h: FIELD.h };
-const RING = { R: 0.26, tube: 0.04, y: 1.6, x: 2.2 }; // 球門框內徑開口
+const RING = { R: 0.20, Ro: 0.35, depth: 0.05, y: 1.6, x: 2.2 }; // 2026-10-21 業主實際球框：內徑 40cm（R＝開口半徑）、外徑 70cm、厚 5cm 的平板圓環
 // 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
 // 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
 // 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
@@ -1612,22 +1618,79 @@ buildSceneBar();
 setScene((()=>{ try{ return localStorage.getItem(SCENE_SAVE_KEY) || SCENES[0].id; }catch(e){ return SCENES[0].id; } })());
 
 // ---------- 圓形球門框 ----------
+// 2026-10-21 依業主實際球框照片重做：平板圓環（內徑 40cm、外徑 70cm、厚 5cm），正反兩面同一張印刷圖——
+// 左側紅白棋盤格、右側藍白棋盤格、上下彩虹漸層；上方（原「科技領航」字的位置）是電子計分板，下方印「富志科技」。
+// 兩個框正面圖案一樣，隊色靠「外圈側邊發光帶」（進球時綠白爆閃）＋內圈箭頭紋＋點光源區分。
+const ringFaceTex = (()=>{
+  const S = 1024, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g = cv.getContext('2d'), c = S/2, ro = c, ri = c*RING.R/RING.Ro, rm = (ri+ro)/2;
+  const gr = g.createLinearGradient(0,0,S,0);          // 彩虹漸層（紅→橘→黃→綠→藍）
+  [[0,'#e3141f'],[.32,'#ee3a1c'],[.45,'#f6941c'],[.53,'#f7dc1e'],[.62,'#9fd36a'],[.72,'#4aa3e0'],[1,'#3b7fd4']].forEach(([o,col])=>gr.addColorStop(o,col));
+  g.fillStyle = gr; g.fillRect(0,0,S,S);
+  const checker = (a0, a1, col)=>{                    // 角度範圍內的棋盤格（canvas 角度：0＝右、90°＝下）
+    g.save(); g.beginPath(); g.moveTo(c,c); g.arc(c,c,ro,a0,a1); g.closePath(); g.clip();
+    g.fillStyle = '#ffffff'; g.fillRect(0,0,S,S);
+    g.fillStyle = col; const q = 36;
+    for(let y=0;y<S;y+=q) for(let x=0;x<S;x+=q) if(((x/q)+(y/q))%2===0) g.fillRect(x,y,q,q);
+    g.restore();
+  };
+  const d2r = Math.PI/180;
+  checker(122*d2r, 238*d2r, '#e3141f');               // 左：紅白
+  checker(-58*d2r, 58*d2r, '#3b82d6');                // 右：藍白
+  // 下方弧形文字「富志科技」（字頭朝圓心）
+  const txt = '富志科技', span = 62*d2r;
+  g.fillStyle = '#111'; g.font = '900 104px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for(let i=0;i<txt.length;i++){
+    const a = 90*d2r + span/2 - i*span/(txt.length-1);
+    g.save(); g.translate(c + Math.cos(a)*rm, c + Math.sin(a)*rm); g.rotate(a - 90*d2r); g.fillText(txt[i], 0, 4); g.restore();
+  }
+  // 計分板後方的底色帶（上方中央）
+  g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 6;
+  g.beginPath(); g.arc(c,c,ro-3,0,Math.PI*2); g.stroke();
+  g.beginPath(); g.arc(c,c,ri+3,0,Math.PI*2); g.stroke();
+  const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+  return t;
+})();
+function makeChevronTex(color){                        // 內圈：隊色／白色箭頭紋（照片內圈的紅白箭頭）
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0,0,256,64);
+  g.fillStyle = '#' + new THREE.Color(color).getHexString();
+  for(let k=0;k<4;k++){ const x = k*64; g.beginPath(); g.moveTo(x,0); g.lineTo(x+30,0); g.lineTo(x+60,32); g.lineTo(x+30,64); g.lineTo(x,64); g.lineTo(x+30,32); g.closePath(); g.fill(); }
+  const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding;
+  t.wrapS = THREE.RepeatWrapping; t.repeat.set(6, 1);
+  return t;
+}
 function makeGoalRing(x, color){
   const grp = new THREE.Group();
-  const torus = new THREE.Mesh(
-    new THREE.TorusGeometry(RING.R + RING.tube, RING.tube, 16, 48),  // RING.R 為內徑開口
-    new THREE.MeshStandardMaterial({color:0x222630, emissive:color, emissiveIntensity:2.8, roughness:.4})
-  );
-  torus.rotation.y = Math.PI/2;
+  const hd = RING.depth/2;
+  // 正反兩面（各自朝外，文字都不會左右顛倒）
+  const faceMat = new THREE.MeshStandardMaterial({map:ringFaceTex, emissive:0xffffff, emissiveMap:ringFaceTex,
+    emissiveIntensity:.28, roughness:.7});
+  const faceGeo = new THREE.RingGeometry(RING.R, RING.Ro, 96, 1);
+  [1,-1].forEach(sx=>{
+    const f = new THREE.Mesh(faceGeo, faceMat);
+    f.position.x = sx*hd; f.rotation.y = sx>0 ? Math.PI/2 : -Math.PI/2;
+    grp.add(f);
+  });
+  // 外圈側邊：隊色發光帶（沿用 torus 這個名字，進球爆閃 ringPulse 直接改它的 emissive）
+  const torus = new THREE.Mesh(new THREE.CylinderGeometry(RING.Ro, RING.Ro, RING.depth, 72, 1, true),
+    new THREE.MeshStandardMaterial({color:0x222630, emissive:color, emissiveIntensity:2.8, roughness:.4, side:THREE.DoubleSide}));
+  torus.rotation.z = Math.PI/2;
   grp.add(torus);
-  // 2026-07-22 拿掉：原本內圈光膜（disc，填滿開口）+ 外圈光暈（halo，蓋到開口邊緣一點）
-  // 業主反映「穿越環不要有半透明的部分」——那層霧會擋住開口，瞄準穿框時看不清楚實際邊界，
-  // 勿再加回蓋住開口的半透明物件；框本身 emissiveIntensity:2.8 已經夠亮夠顯眼，不需要額外光膜。
+  // 內圈：隊色箭頭紋
+  const chev = makeChevronTex(color);
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(RING.R, RING.R, RING.depth, 64, 1, true),
+    new THREE.MeshStandardMaterial({map:chev, emissive:0xffffff, emissiveMap:chev, emissiveIntensity:.35, roughness:.6, side:THREE.BackSide}));
+  inner.rotation.z = Math.PI/2;
+  grp.add(inner);
+  // 開口完全鏤空（業主 2026-07-22：勿加蓋住開口的半透明物件）
   // 懸吊織帶：球門以白色吊帶自頂部框架垂吊（照片實景，非固定桿）
   const strapMat = new THREE.MeshStandardMaterial({color:0xe9e5d8, roughness:.85, side:THREE.DoubleSide});
   const ceilY = FIELD.h - RING.y;          // 群組座標中的頂部高度
   [[0.12,0.35],[-0.12,-0.35]].forEach(([z0,z1])=>{
-    const a = V3(0, RING.R+RING.tube*2-0.02, z0), b = V3(0, ceilY, z1);
+    const a = V3(0, Math.sqrt(RING.Ro*RING.Ro - z0*z0) - 0.01, z0), b = V3(0, ceilY, z1);
     const dvec = b.clone().sub(a);
     const strap = new THREE.Mesh(
       new THREE.BoxGeometry(0.045, dvec.length(), 0.008), strapMat);
@@ -1646,30 +1709,23 @@ function makeGoalRing(x, color){
 const ringEast = makeGoalRing( RING.x, 0x1166ff);  // 紅場上的藍框：藍隊進攻目標
 const ringWest = makeGoalRing(-RING.x, 0xff1133);  // 藍場上的紅框：紅隊進攻目標
 
-// ---------- 球門電子計分板（2026-10-09 新增，業主要求「球門也要有電子顯示計分，像無人機足球的電子球門」） ----------
-// 依業主提供的實際電子球門照片：小型黑底白框顯示器直接坐在圓框頂端，紅色七段兩位數，
-// 顯示「穿過這個框」的次數（VS／示範賽／連線＝該框的進球數，練習＝該框的穿越次數），進球時數字閃爍。
-// 兩面都有螢幕（朝 +x 與 −x），不擋開口；闖關與飛行賽道模式隱藏。
-// 內容沒變就不重畫 canvas（key 比對），每幀成本很低。碰撞：collideRing 內含計分板方塊的推出。
-const BOARD = { y: RING.R + RING.tube*2 + 0.095, hw: 0.17, hh: 0.085, ht: 0.03 };   // 相對球門中心的高度、半寬(z)、半高、半厚(x)
+// ---------- 球門電子計分板（2026-10-09 新增；2026-10-21 改：嵌在球框正面上方，原「科技領航」字的位置） ----------
+// 黑底白框、紅色七段兩位數，顯示「穿過這個框」的次數（VS／示範賽／連線＝該框的進球數，練習＝該框的穿越次數），進球時數字閃爍。
+// 正反兩面各一塊，貼在框面上（不突出、不另外做碰撞）；闖關與飛行賽道模式隱藏。內容沒變就不重畫 canvas。
+const BOARD = { y: (RING.R + RING.Ro)/2, w: 0.20, h: 0.10 };   // 板中心相對球門中心的高度、寬、高
 function addGoalBoard(ring){
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
   const tex = new THREE.CanvasTexture(cv);
   tex.encoding = THREE.sRGBEncoding;
   tex.anisotropy = 4;
   const board = new THREE.Group();
-  const housing = new THREE.Mesh(
-    new THREE.BoxGeometry(BOARD.ht*2, BOARD.hh*2+0.01, BOARD.hw*2+0.01),
-    new THREE.MeshStandardMaterial({color:0x111318, roughness:.5, metalness:.3}));
-  board.add(housing);
   const scrMat = new THREE.MeshBasicMaterial({map:tex, toneMapped:false});
   [1,-1].forEach(sx=>{
-    const scr = new THREE.Mesh(new THREE.PlaneGeometry(BOARD.hw*2, BOARD.hh*2), scrMat);
-    scr.position.x = sx*(BOARD.ht+0.002);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(BOARD.w, BOARD.h), scrMat);
+    scr.position.set(sx*(RING.depth/2+0.003), BOARD.y, 0);
     scr.rotation.y = sx>0 ? Math.PI/2 : -Math.PI/2;   // 兩面各自朝外，文字都不會左右顛倒
     board.add(scr);
   });
-  board.position.set(0, BOARD.y, 0);
   ring.grp.add(board);
   ring.board = {grp: board, cv, ctx: cv.getContext('2d'), tex, key: ''};
 }
@@ -2009,43 +2065,25 @@ function collideDrones(){
 
 // ---------- 球門框（圓環剛體）碰撞 ----------
 function collideRing(d, ring){
-  const rel = V3(d.pos.x-ring.x, d.pos.y-ring.y, d.pos.z-ring.z);
-  const radial = Math.hypot(rel.y, rel.z);
-  if(radial<1e-4) return;
-  // 圓環上最近點（圓環中心線半徑 = 內徑 + 管徑）
-  const RC = RING.R + RING.tube;
-  const P = V3(ring.x, ring.y+rel.y/radial*RC, ring.z+rel.z/radial*RC);
+  // 2026-10-21：平板圓環剛體（x 方向厚 RING.depth、半徑 RING.R～RING.Ro）——找圓環實體上離球心最近的點推出
+  const hx = RING.depth/2;
+  const rx = d.pos.x-ring.x, ry = d.pos.y-ring.y, rz = d.pos.z-ring.z;
+  const radial = Math.hypot(ry, rz);
+  const uy = radial>1e-4 ? ry/radial : 1, uz = radial>1e-4 ? rz/radial : 0;
+  const qr = clamp(radial, RING.R, RING.Ro);
+  const P = V3(ring.x + clamp(rx,-hx,hx), ring.y + uy*qr, ring.z + uz*qr);
   const diff = d.pos.clone().sub(P);
   const dist = diff.length();
-  const minD = DRONE_R + RING.tube;
-  if(dist<minD && dist>1e-5){
-    const n = diff.multiplyScalar(1/dist);
-    d.pos.copy(P).addScaledVector(n, minD);
-    const vn = d.vel.dot(n);
-    if(vn<0){
-      d.vel.addScaledVector(n, -vn*(1+0.5));
-      d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
-      if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
-    }
-  }
-  // 電子計分板（球門上方的方塊）：球體對方塊推出，闖關模式計分板隱藏時不碰撞
-  if(ring.board && ring.board.grp.visible){
-    const cx = ring.x, cy = ring.y + BOARD.y, cz = ring.z;
-    const qx = clamp(d.pos.x, cx-BOARD.ht, cx+BOARD.ht);
-    const qy = clamp(d.pos.y, cy-BOARD.hh, cy+BOARD.hh);
-    const qz = clamp(d.pos.z, cz-BOARD.hw, cz+BOARD.hw);
-    const dx = d.pos.x-qx, dy = d.pos.y-qy, dz = d.pos.z-qz;
-    const dd = Math.hypot(dx,dy,dz);
-    if(dd < DRONE_R && dd > 1e-5){
-      const n = V3(dx/dd, dy/dd, dz/dd);
-      d.pos.set(qx,qy,qz).addScaledVector(n, DRONE_R);
-      const vn = d.vel.dot(n);
-      if(vn<0){
-        d.vel.addScaledVector(n, -vn*1.5);
-        d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
-        if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
-      }
-    }
+  if(dist >= DRONE_R) return;
+  let n;
+  if(dist > 1e-5) n = diff.multiplyScalar(1/dist);
+  else { n = V3(Math.sign(rx)||1, 0, 0); P.x = ring.x + n.x*hx; }   // 球心卡進板子裡：往最近的板面推出
+  d.pos.copy(P).addScaledVector(n, DRONE_R);
+  const vn = d.vel.dot(n);
+  if(vn<0){
+    d.vel.addScaledVector(n, -vn*(1+0.5));
+    d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
+    if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
   }
 }
 
@@ -2538,14 +2576,21 @@ addEventListener('keyup', e=>{ keys[e.code]=false; });
 // ---------- 搖桿支援（PS4/Xbox，Gamepad API；模式二：左桿=油門/旋轉、右桿=前後/側飛） ----------
 let padIndex = null;
 const padPrev = {};
+let padMsgT = 0;
+function padConnectedMsg(){ const n = performance.now(); if(n - padMsgT < 5000) return; padMsgT = n; flashMsg('🎮 搖桿已連接', '#7dffa9', 2.2); }
 addEventListener('gamepadconnected', e=>{
   if(!e.gamepad) return;
-  padIndex = e.gamepad.index;
-  flashMsg('🎮 搖桿已連接', '#7dffa9', 2.2);
+  if(padIndex === null) padIndex = e.gamepad.index;
+  padConnectedMsg();
 });
 addEventListener('gamepaddisconnected', e=>{
   if(e.gamepad && padIndex===e.gamepad.index) padIndex = null;
-  flashMsg('搖桿已中斷，改用鍵盤', '#fbbf24', 2);
+  // 2026-10-21 業主反映「搖桿能正常操作，卻跳出中斷訊息」：遙控器模擬器接收器（USB）常會一次註冊好幾個
+  // 搖桿裝置、或在開頁時拔插重連一次，其中一個消失就觸發這個事件。改成：等 0.8 秒確認「真的一支都不剩」才提示。
+  setTimeout(()=>{
+    const any = navigator.getGamepads && Array.from(navigator.getGamepads()).some(g=>g && g.connected);
+    if(!any) flashMsg('搖桿已中斷，改用鍵盤', '#fbbf24', 2);
+  }, 800);
 });
 const padDZ = v => Math.abs(v)<0.13 ? 0 : (v-Math.sign(v)*0.13)/0.87;  // 搖桿死區
 function getPad(){
@@ -2555,14 +2600,14 @@ function getPad(){
   for(const g of pads){
     if(g && g.connected){
       padIndex = g.index;
-      flashMsg('🎮 搖桿已連接', '#7dffa9', 2.2);
+      padConnectedMsg();
       return g;
     }
   }
   return null;
 }
 function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
-  if(mode==='duo'){ duoPollButtons(); return; }       // 雙人對戰：兩支搖桿都能暫停／重賽／切視角
+  if(DUO.on){ duoPollButtons(); return; }       // 雙人對戰：兩支搖桿都能暫停／重賽／切視角
   const gp = getPad(); if(!gp) return;
   const btn = n=>{
     const v = !!(gp.buttons[n] && gp.buttons[n].pressed);
@@ -2953,6 +2998,8 @@ const DUO = {
   ai: false,
   kind: 'match',       // 'match' 足球比賽 | 'practice' 圓環練習
   pracDuo: false,      // 圓環練習選「雙人」
+  raceDuo: false,      // 飛行賽道選「雙人」
+  on: false,           // 目前是否在左右分割畫面（雙人比賽／雙人練習／雙人賽道）
   pracCnt: [0,0], pracCD: [{E:0,W:0},{E:0,W:0}],
   padSide: 0,          // 只有一支搖桿時，搖桿給哪一邊（0＝左 P1、1＝右 P2），另一人用整個鍵盤
   cur: [{pad:null, keys:null}, {pad:null, keys:null}],   // 這一幀實際的分配（duoAssign 算）
@@ -2965,7 +3012,7 @@ const DUO = {
   lisPos: V3(0,3.5,6.5), lisLook: V3(0,1,0),
   msgT: [0,0], padPrev: {},
 };
-try{ const o = JSON.parse(localStorage.getItem(DUO_KEY)||'{}')||{}; DUO.ai = !!o.ai; DUO.padSide = o.padSide===1 ? 1 : 0; DUO.pracDuo = !!o.pracDuo; }catch(e){}
+try{ const o = JSON.parse(localStorage.getItem(DUO_KEY)||'{}')||{}; DUO.ai = !!o.ai; DUO.padSide = o.padSide===1 ? 1 : 0; DUO.pracDuo = !!o.pracDuo; DUO.raceDuo = !!o.raceDuo; }catch(e){}
 // 鍵盤配置：沒有搖桿／兩支搖桿時，兩人分用鍵盤左右兩半（sides[].keys）；
 // 只有一支搖桿時，鍵盤那個人獨用整個鍵盤，用跟單人模式一樣的美國手 WASD＋方向鍵
 const DUO_KB_FULL = {up:'KeyW', dn:'KeyS', yl:'KeyA', yr:'KeyD', fw:'ArrowUp', bk:'ArrowDown', lf:'ArrowLeft', rt:'ArrowRight'};
@@ -2974,7 +3021,7 @@ const DUO_KB_TXT = {
   0: '鍵盤：W/S 升降・A/D 旋轉・T/G 前後・F/H 側飛',
   1: '鍵盤：I/K 升降・J/L 旋轉・↑/↓ 前後・←/→ 側飛',
 };
-function duoSaveOpt(){ try{ localStorage.setItem(DUO_KEY, JSON.stringify({ai:DUO.ai, padSide:DUO.padSide, pracDuo:DUO.pracDuo})); }catch(err){} }
+function duoSaveOpt(){ try{ localStorage.setItem(DUO_KEY, JSON.stringify({ai:DUO.ai, padSide:DUO.padSide, pracDuo:DUO.pracDuo, raceDuo:DUO.raceDuo})); }catch(err){} }
 function duoAssign(){   // 依目前接了幾支搖桿決定每邊用什麼操作
   const ps = duoPads();
   if(ps.length >= 2){                    // 兩支搖桿：第 1 支→左、第 2 支→右（鍵盤分半當備用）
@@ -3050,22 +3097,22 @@ function duoStart(){
   drones.forEach(d=>d.reset());
   document.body.classList.add('duo');
   document.body.classList.remove('duoPrac');
-  DUO.kind = 'match';
+  DUO.kind = 'match'; DUO.on = true;
   document.querySelector('#telemetry b').textContent = '雙人對戰';
   DUO.snap = true; DUO.msgT = [0,0];
 }
 document.getElementById('btnDuo').addEventListener('click', duoStart);
 function duoCleanup(){
   if(!document.body.classList.contains('duo')) return;
-  document.body.classList.remove('duo', 'duoPrac');
-  DUO.kind = 'match';
+  document.body.classList.remove('duo', 'duoPrac', 'duoRace');
+  DUO.kind = 'match'; DUO.on = false;
   if(!NET.connected) drones.forEach(d=>{ if(d.benched){ d.benched = false; d.reset(); } setDroneVisible(d, true); });
   [0,1].forEach(v=>{ const m = document.getElementById('duoM'+v); if(m) m.style.opacity = 0; });
 }
 // ---- 雙人圓環練習（2026-10-21，業主：「圓環練習也可以分兩人」）----
 function duoStartPractice(){
   startPractice();                        // 共用單人練習的進場流程（藏計分板、清闖關、開音效…）
-  mode = 'duo'; DUO.kind = 'practice';
+  mode = 'duo'; DUO.kind = 'practice'; DUO.on = true;
   document.getElementById('practiceHUD').style.display = 'none';   // 計數改在左右兩邊各自的面板
   document.body.classList.add('duo', 'duoPrac');
   document.querySelector('#telemetry b').textContent = '雙人練習';
@@ -3081,7 +3128,7 @@ function duoPracReset(){
   ringEast.passes = 0; ringWest.passes = 0;
   setState('play');
 }
-function duoRestart(){ if(DUO.kind === 'practice') duoPracReset(); else restart(); }
+function duoRestart(){ if(DUO.kind === 'practice') duoPracReset(); else if(DUO.kind === 'race') raceRestart(); else restart(); }
 function duoCheckPracticePass(dt){
   DUO.sides.forEach((s,v)=>{
     const d = s.d, cd = DUO.pracCD[v];
@@ -3113,6 +3160,7 @@ function duoFrame(dt){
     let dp, dl;
     if(camMode===0){ dp = d.pos.clone().addScaledVector(fwd,-2.2).add(V3(0,1.0,0)); dl = d.pos.clone().addScaledVector(fwd,1.6); }
     else if(camMode===1){ dp = d.pos.clone().add(V3(0,0.12,0)).addScaledVector(fwd,0.15); dl = d.pos.clone().addScaledVector(fwd,4).add(V3(0,0.3,0)); }
+    else if(DUO.kind === 'race'){ dp = d.pos.clone().addScaledVector(fwd,-4.5).add(V3(0,2.6,0)); dl = d.pos.clone().addScaledVector(fwd,2); }   // 賽道：高位遠景追視
     else { dp = V3(-d.attackDir*5.0, 3.0, 0); dl = V3(d.attackDir*0.6, 0.9, 0); }   // 全場：站在自家球門後方看向對方
     const k = (camMode===1 || DUO.snap) ? 1 : Math.min(1, dt*5.5);
     DUO.camPos[v].lerp(dp, k); DUO.camLook[v].lerp(dl, k);
@@ -3136,6 +3184,7 @@ function duoFrame(dt){
     document.getElementById('duoAlt'+v).textContent = Math.max(0,d.pos.y-DRONE_R).toFixed(1);
     document.getElementById('duoThr'+v).textContent = Math.round(d.thrustN/(MASS*G)*100);
     document.getElementById('duoCnt'+v).textContent = DUO.pracCnt[v];
+    if(DUO.kind === 'race') document.getElementById('duoRace'+v).textContent = raceDuoHUDText(v);
     const a = document.getElementById('duoArm'+v);
     a.textContent = d.canScore ? '已解鎖' : '需回防'; a.className = d.canScore ? 'armed' : 'disarmed';
     const pe = document.getElementById('duoPad'+v);
@@ -4489,6 +4538,10 @@ let raceData = null, raceGroup = null, raceHidden = [];
 let raceGateObjs = [], raceCoinObjs = [], raceObs = [], raceArrow = null, raceDotsHi = null;
 let raceIdx = 0, raceTime = 0, raceHits = 0, raceHitCd = 0, raceCD = 0, raceCDShown = 0, raceDone = false, raceCoinGot = 0;
 const racePrevPos = V3(0,0,0);
+// 2026-10-21 雙人賽道（業主：「飛行賽道也可以選雙人畫面」）：mode 仍是 'race'（沿用賽道的建置／HUD／清理流程），
+// raceDuo＝true 時兩台機（DUO.sides：左 P1 藍、右 P2 紅）同時比賽，各自的進度存在 raceRacers[]，畫面用雙人分割。
+let raceDuo = false, raceRacers = [], raceArrow2 = null, raceDuoEndT = 0;
+const RACE_DUO_GRACE = 20;   // 第一個人完賽後，另一人還有 20 秒可以衝線
 
 // 把比賽場地（網牆、充氣管、球門＋計分板、看台、廣告板…）藏起來，只留 EVA 地墊、燈光、場景環境、無人機
 function raceHideArena(){
@@ -4522,7 +4575,7 @@ function raceClear(){
     scene.remove(raceGroup);
     raceGroup.traverse(o=>{ if(o.geometry && o.geometry!==raceCoinGeo) o.geometry.dispose(); });
   }
-  raceGroup = null; raceGateObjs = []; raceCoinObjs = []; raceObs = []; raceArrow = null; raceDotsHi = null;
+  raceGroup = null; raceGateObjs = []; raceCoinObjs = []; raceObs = []; raceArrow = null; raceArrow2 = null; raceDotsHi = null;
 }
 function raceBuild(){
   raceClear();
@@ -4616,6 +4669,7 @@ function raceBuild(){
   racePrevPos.copy(player.pos);
   raceIdx = 0; raceTime = 0; raceHits = 0; raceHitCd = 0; raceDone = false; raceCoinGot = 0;
   raceCD = 3.0; raceCDShown = 4;
+  if(raceDuo) raceDuoSetup(g0);
   raceRefreshGates();
   raceUpdateHUD();
   const M = RACE_MODES.find(m=>m.id===raceModeId);
@@ -4631,11 +4685,13 @@ function raceObsDist(o, p){
   return Math.hypot(Math.max(dh,0), dv);
 }
 function raceRefreshGates(){
+  if(raceDuo && raceRacers.length) raceIdx = Math.min(...raceRacers.map(r=>r.idx));   // 兩人都過了才變灰
   raceGateObjs.forEach((G,k)=>{
     if(k < raceIdx){ G.mat.emissive.setHex(0x3a4050); G.mat.emissiveIntensity = .25; G.lbl.visible = false; }
     else if(k === raceIdx){ G.mat.emissive.setHex(G.fin ? 0xffd23d : 0x39ff8a); G.mat.emissiveIntensity = 2.4; G.lbl.visible = true; }
     else { G.mat.emissive.setHex(G.fin ? 0xffd23d : G.base); G.mat.emissiveIntensity = G.fin ? 1.2 : .9; G.lbl.visible = k < raceIdx + 3 || G.fin; }
   });
+  if(raceDuo) raceRacers.forEach(r=>{ const G = raceGateObjs[r.idx]; if(G && !r.done){ G.mat.emissive.setHex(G.fin ? 0xffd23d : 0x39ff8a); G.mat.emissiveIntensity = 2.4; G.lbl.visible = true; } });
   // 目前這一段航線（上一道門 → 下一道門）亮綠色
   if(raceData && raceDotsHi){
     const n = raceData.C.length - 1, cur = raceData.gates[raceIdx];
@@ -4652,30 +4708,30 @@ function raceRefreshGates(){
 }
 
 // ---------- 碰撞（回傳撞擊速度，0＝沒撞到） ----------
-function raceBounce(n, restitution){
-  const vn = player.vel.dot(n);
+function raceBounce(n, restitution, d=player){
+  const vn = d.vel.dot(n);
   if(vn >= 0) return 0;
-  player.vel.addScaledVector(n, -vn*(1+restitution));
-  player.disturb = Math.min(1, player.disturb + Math.min(0.6, -vn*0.1));
+  d.vel.addScaledVector(n, -vn*(1+restitution));
+  d.disturb = Math.min(1, d.disturb + Math.min(0.6, -vn*0.1));
   if(-vn > 1.0) sfx.hit(Math.min(1, -vn/8));
   return -vn;
 }
-function raceCollideGate(c){
-  const rx = player.pos.x-c.x, ry = player.pos.y-c.y, rz = player.pos.z-c.z;
+function raceCollideGate(c, dr=player){
+  const rx = dr.pos.x-c.x, ry = dr.pos.y-c.y, rz = dr.pos.z-c.z;
   const ux = -c.nz, uz = c.nx;                         // 拱門平面內的水平方向
   const a = rx*c.nx + rz*c.nz, b = rx*ux + rz*uz;      // a：沿航線方向距離，b/ry：平面內座標
   const radial = Math.hypot(b, ry);
   if(radial < 1e-4) return 0;
   const RC = c.r + RACE_GT;
   const P = V3(c.x + ux*b/radial*RC, c.y + ry/radial*RC, c.z + uz*b/radial*RC);
-  const diff = player.pos.clone().sub(P), dist = diff.length(), minD = DRONE_R + RACE_GT;
+  const diff = dr.pos.clone().sub(P), dist = diff.length(), minD = DRONE_R + RACE_GT;
   if(dist >= minD || dist < 1e-5 || Math.abs(a) > minD + 0.01) return 0;
   const n = diff.multiplyScalar(1/dist);
-  player.pos.copy(P).addScaledVector(n, minD);
-  return raceBounce(n, 0.5);
+  dr.pos.copy(P).addScaledVector(n, minD);
+  return raceBounce(n, 0.5, dr);
 }
-function raceCollideObs(o){
-  const p = player.pos;
+function raceCollideObs(o, dr=player){
+  const p = dr.pos;
   if(o.t==='box'){
     const qx = clamp(p.x, o.x-o.hx, o.x+o.hx), qy = clamp(p.y, o.y-o.hy, o.y+o.hy), qz = clamp(p.z, o.z-o.hz, o.z+o.hz);
     const dx = p.x-qx, dy = p.y-qy, dz = p.z-qz, d = Math.hypot(dx,dy,dz);
@@ -4688,36 +4744,36 @@ function raceCollideObs(o){
       else if(py<=pz){ n = V3(0,Math.sign(p.y-o.y)||1,0); p.y = o.y + n.y*(o.hy+DRONE_R); }
       else{ n = V3(0,0,Math.sign(p.z-o.z)||1); p.z = o.z + n.z*(o.hz+DRONE_R); }
     }
-    return raceBounce(n, 0.45);
+    return raceBounce(n, 0.45, dr);
   }
   // 直立柱（地面到 h）
   if(p.y > o.h + DRONE_R) return 0;
   const dx = p.x-o.x, dz = p.z-o.z, d = Math.hypot(dx,dz), minD = o.r + DRONE_R;
   if(p.y > o.h){   // 柱頂
-    if(d < o.r){ p.y = o.h + DRONE_R; return raceBounce(V3(0,1,0), 0.35); }
+    if(d < o.r){ p.y = o.h + DRONE_R; return raceBounce(V3(0,1,0), 0.35, dr); }
     return 0;
   }
   if(d >= minD || d < 1e-5) return 0;
   const n = V3(dx/d, 0, dz/d);
   p.x = o.x + n.x*minD; p.z = o.z + n.z*minD;
-  return raceBounce(n, 0.5);
+  return raceBounce(n, 0.5, dr);
 }
 // 場景飛行條件（同闖關 campApplyEnv，只是不帶關卡風）
-function raceApplyEnv(h, t){
+function raceApplyEnv(h, t, dr=player){
   const S = sceneById(raceSceneId).fly || {};
   const bx = S.wind ? S.wind.x : 0, bz = S.wind ? S.wind.z : 0, gu = S.gust || 0;
   if(bx || bz || gu){
     const gx = gu ? Math.sin(t*0.70)*Math.sin(t*1.90+1.3)*gu : 0;
     const gz = gu ? Math.sin(t*0.55+2.1)*Math.sin(t*1.40)*gu : 0;
-    player.vel.x += (bx + gx)*h; player.vel.z += (bz + gz)*h;
+    dr.vel.x += (bx + gx)*h; dr.vel.z += (bz + gz)*h;
   }
-  if(S.updraft) player.vel.y += S.updraft*(0.75 + 0.25*Math.sin(t*0.9))*h;
+  if(S.updraft) dr.vel.y += S.updraft*(0.75 + 0.25*Math.sin(t*0.9))*h;
   const dm = S.dragMul === undefined ? 1 : S.dragMul;
   if(dm !== 1){
-    const sp = player.vel.length();
+    const sp = dr.vel.length();
     if(sp > 1e-4){
       const back = (1 - dm) * (DRAG_K1*sp + DRAG_K2*sp*sp) / MASS * h;
-      player.vel.addScaledVector(player.vel.clone().multiplyScalar(1/sp), back);
+      dr.vel.addScaledVector(dr.vel.clone().multiplyScalar(1/sp), back);
     }
   }
 }
@@ -4826,6 +4882,7 @@ function raceFinish(ok, reason){
 // ---------- 每幀畫面 ----------
 function raceAnimate(t){
   if(mode !== 'race' || !raceData) return;
+  if(raceDuo){ raceDuoAnimate(t); return; }
   const G = raceGateObjs[raceIdx];
   if(G) G.mat.emissiveIntensity = 2.0 + Math.sin(t*6)*0.9;
   raceCoinObjs.forEach(m=>{ if(m.visible){ m.rotation.y = t*2.6 + m.userData.ph; } });
@@ -4862,6 +4919,8 @@ function raceStart(sid){
   if(NET.connected) netTeardown();
   campExitCleanup();                              // 清掉闖關殘留（內含 raceExitCleanup）
   raceSceneId = sid;
+  raceDuo = DUO.raceDuo;
+  if(raceDuo){ DUO.on = true; DUO.kind = 'race'; DUO.snap = true; DUO.msgT = [0,0]; document.body.classList.add('duo','duoRace'); }
   setScene(sid);
   ['netPanel','campPanel','campMapPanel','racePanel','overlay','campResult','raceResult','scoreboard','practiceHUD']
     .forEach(k=>document.getElementById(k).style.display='none');
@@ -4882,6 +4941,7 @@ function raceRestart(){
   setState('play');
 }
 function raceExitCleanup(){
+  if(raceDuo){ raceDuo = false; raceRacers = []; duoCleanup(); }
   if(!raceGroup && !raceHidden.length) return;
   raceClear(); raceShowArena(); raceSetArena(false);
   raceData = null;
@@ -4927,12 +4987,161 @@ function raceOpenPanel(){
   campMenuChrome(false);
   ['netPanel','campPanel','campMapPanel'].forEach(k=>document.getElementById(k).style.display='none');
   document.getElementById('racePanel').style.display = 'block';
+  raceSyncDuoOpt();
   raceBuildPanel();
 }
 function raceClosePanel(){
   document.getElementById('racePanel').style.display = 'none';
   campMenuChrome(true);
 }
+// ---------- 雙人賽道 ----------
+function raceDuoSetup(g0){
+  drones.forEach(d=>setDroneVisible(d, duoSideOf(d) >= 0));
+  const dx = g0.x-RACE_START.x, dz = g0.z-RACE_START.z, L = Math.hypot(dx,dz) || 1;
+  const rx = -dz/L, rz = dx/L;                       // 面向第一道門時的「右」
+  raceArrow2 = raceArrow.clone(); raceArrow2.material = raceArrow.material.clone();
+  raceGroup.add(raceArrow2);
+  raceRacers = DUO.sides.map((sd,v)=>{
+    const d = sd.d, off = v===0 ? -0.6 : 0.6;        // P1 站左邊、P2 站右邊
+    d.reset();
+    d.pos.set(RACE_START.x + rx*off, DRONE_R, RACE_START.z + rz*off); d.vel.set(0,0,0);
+    d.yaw = Math.atan2(g0.x-d.pos.x, g0.z-d.pos.z); d.prevX = d.pos.x;
+    return {d, v, idx:0, time:0, hits:0, hitCd:0, done:false, ok:false, reason:'', coins:0,
+            prev:d.pos.clone(), start:d.pos.clone(), arrow: v===0 ? raceArrow2 : raceArrow, col: v===0 ? 0x5aa8ff : 0xff6b6b};
+  });
+  raceDuoEndT = 0;
+}
+const raceDuoTotal = r => r.time + (raceModeId === 'nohit' ? r.hits*RACE_PENALTY : 0);
+function raceDuoStep(h, t){
+  if(raceDone || state !== 'play' || !raceData) return;
+  if(raceCD > 0){                                    // 倒數：兩台機停在起飛坪
+    raceCD -= h;
+    raceRacers.forEach(r=>{ r.d.pos.copy(r.start); r.d.vel.set(0,0,0); r.d.input = {pitch:0, roll:0, yawRate:0, throttle:0}; r.prev.copy(r.d.pos); });
+    const sec = Math.ceil(raceCD);
+    if(sec !== raceCDShown && sec > 0){ raceCDShown = sec; flashMsg(String(sec), '#ffd75a', 0.8); sfx.warn(); }
+    if(raceCD <= 0){ flashMsg('GO!', '#7dffa9', 0.9); sfx.whistle(); }
+    return;
+  }
+  raceTime += h;
+  const n = raceData.gates.length;
+  raceRacers.forEach(r=>{
+    const d = r.d;
+    r.prev.copy(d.pos);
+    const vy0 = d.vel.y;
+    d.step(h);
+    raceApplyEnv(h, t, d);
+    let impact = 0;
+    raceGateObjs.forEach(G=>{ impact = Math.max(impact, raceCollideGate(G.c, d)); });
+    raceObs.forEach(o=>{ impact = Math.max(impact, raceCollideObs(o, d)); });
+    if(d.pos.y <= DRONE_R + 0.002 && vy0 < -1.5) impact = Math.max(impact, -vy0);
+    if(r.done) return;                               // 完賽／出局後還能飛，但不再計分
+    r.time += h;
+    r.hitCd = Math.max(0, r.hitCd - h);
+    if(impact > 0.6 && r.hitCd <= 0){
+      r.hits++; r.hitCd = 0.5;
+      if(raceModeId === 'nohit'){
+        duoMsg(r.v, '💥 碰撞 ' + r.hits + ' / 3　+' + RACE_PENALTY + ' 秒', '#f87171', 0.8);
+        if(r.hits >= 3){ raceDuoFinishOne(r, false, '撞 3 次出局'); return; }
+      }else duoMsg(r.v, '💥 碰撞', '#f87171', 0.45);
+    }
+    const c = raceData.gates[r.idx];
+    if(c){
+      const s0 = (r.prev.x-c.x)*c.nx + (r.prev.z-c.z)*c.nz;
+      const s1 = (d.pos.x-c.x)*c.nx + (d.pos.z-c.z)*c.nz;
+      if(s0 < 0 && s1 >= 0){
+        const b = -(d.pos.x-c.x)*c.nz + (d.pos.z-c.z)*c.nx, ry = d.pos.y-c.y;
+        if(Math.hypot(b, ry) < c.r - DRONE_R*0.5){
+          r.idx++;
+          if(r.idx >= n){ raceDuoFinishOne(r, true); }
+          else { sfx.coin(1.5); duoMsg(r.v, '✓ ' + r.idx + ' / ' + n, '#7dffa9', 0.6); }
+          raceRefreshGates();
+        }
+      }
+    }
+    for(const m of raceCoinObjs){                    // 星幣：誰先碰到算誰的
+      if(m.visible && m.position.distanceTo(d.pos) < 0.42){ m.visible = false; r.coins++; sfx.coin(); }
+    }
+    if(raceTime >= RACE_LIMIT) raceDuoFinishOne(r, false, '時間到');
+  });
+  if(raceDuoEndT > 0 && raceTime >= raceDuoEndT)
+    raceRacers.forEach(r=>{ if(!r.done) raceDuoFinishOne(r, false, '未在時限內完賽'); });
+  if(raceRacers.every(r=>r.done)) raceDuoResult();
+}
+function raceDuoFinishOne(r, ok, reason){
+  r.done = true; r.ok = ok; r.reason = reason || '';
+  if(ok){
+    sfx.goal();
+    duoMsg(r.v, '🏁 完賽！' + raceDuoTotal(r).toFixed(1) + ' 秒', '#ffd75a', 3);
+    if(!raceDuoEndT) raceDuoEndT = raceTime + RACE_DUO_GRACE;
+    const o = raceRacers[1-r.v];
+    if(o && !o.done) duoMsg(o.v, '對手已完賽！剩 ' + RACE_DUO_GRACE + ' 秒', '#fbbf24', 2.5);
+  }else duoMsg(r.v, reason, '#f87171', 3);
+  raceRefreshGates();
+}
+function raceDuoResult(){
+  raceDone = true;
+  setState('over');
+  const D = raceData, n = D.gates.length, M = RACE_MODES.find(m=>m.id===raceModeId);
+  const [a, b] = raceRacers;
+  // 勝負：先比有沒有完賽；都完賽 → 收集賽比星幣（同數比時間）、其他比總成績；都沒完賽 → 比通過幾道門
+  const score = r => r.ok ? (raceModeId === 'coins' ? [2, r.coins, -raceDuoTotal(r)] : [2, -raceDuoTotal(r), 0])
+                          : [1, r.idx, -raceDuoTotal(r)];
+  const sa = score(a), sb = score(b);
+  let cmp = 0; for(let k=0;k<3 && !cmp;k++) cmp = Math.sign(sa[k]-sb[k]);
+  const NAME = ['P1 藍隊', 'P2 紅隊'];
+  const ttl = document.getElementById('raceResultTitle');
+  ttl.textContent = cmp > 0 ? '🏆 ' + NAME[0] + ' 獲勝！' : cmp < 0 ? '🏆 ' + NAME[1] + ' 獲勝！' : '平手！';
+  ttl.className = '';
+  ttl.style.color = cmp > 0 ? '#60a5fa' : cmp < 0 ? '#f87171' : '';
+  document.getElementById('raceResultSub').textContent = '👥 雙人賽　' + sceneById(raceSceneId).emoji + ' ' + D.T.name + '　' + M.emoji + ' ' + M.name;
+  document.getElementById('raceStars').innerHTML = '';
+  const line = (r, k)=>{
+    let t = '<b style="color:' + (k===0 ? '#60a5fa' : '#f87171') + '">' + NAME[k] + '</b>　';
+    t += r.ok ? '完賽 <em>總成績</em>' + raceDuoTotal(r).toFixed(1) + ' s' : (r.reason + '（通過 ' + r.idx + ' / ' + n + ' 道門）');
+    if(raceModeId === 'coins') t += '　<em>星幣</em>' + r.coins;
+    else t += '　<em>碰撞</em>' + r.hits + (raceModeId === 'nohit' ? '（+' + r.hits*RACE_PENALTY + ' s）' : '');
+    return t;
+  };
+  document.getElementById('raceStats').innerHTML = line(a,0) + '<br>' + line(b,1) +
+    '<br><span style="color:#7c88a8">雙人賽成績不列入個人最佳紀錄</span>';
+  document.getElementById('raceResult').style.display = 'flex';
+  raceRacers.forEach(r=>{ if(r.arrow) r.arrow.visible = false; });
+}
+function raceDuoAnimate(t){
+  raceCoinObjs.forEach(m=>{ if(m.visible){ m.rotation.y = t*2.6 + m.userData.ph; } });
+  raceRacers.forEach(r=>{
+    const G = raceGateObjs[r.idx];
+    if(G && !r.done) G.mat.emissiveIntensity = 2.0 + Math.sin(t*6)*0.9;
+    const c = raceData.gates[r.idx], A = r.arrow;
+    if(!A) return;
+    A.visible = !!c && !r.done && !raceDone;
+    if(c && A.visible){
+      A.position.set(r.d.pos.x, r.d.pos.y + 0.36, r.d.pos.z);
+      A.lookAt(c.x, c.y, c.z);
+      A.material.color.setHex(raceCD > 0 ? 0xffd75a : r.col);
+    }
+  });
+}
+function raceDuoHUDText(v){
+  const r = raceRacers[v]; if(!r || !raceData) return '';
+  const n = raceData.gates.length;
+  let t = '🏁 ' + Math.min(r.idx, n) + '/' + n + '　⏱ ' + raceDuoTotal(r).toFixed(1) + 's　';
+  t += raceModeId === 'coins' ? '⭐ ' + r.coins : '💥 ' + r.hits + (raceModeId === 'nohit' ? '/3' : '');
+  if(r.done) t += r.ok ? '　✅' : '　❌';
+  return t;
+}
+// 賽道選單：人數切換（單人／雙人）＋只有一支搖桿時給哪邊
+function raceSyncDuoOpt(){
+  document.querySelectorAll('#raceDuoOpt button[data-rd]').forEach(b=>b.classList.toggle('on', (b.dataset.rd==='1') === DUO.raceDuo));
+  document.querySelectorAll('#raceDuoOpt button[data-rpad]').forEach(b=>b.classList.toggle('on', +b.dataset.rpad === DUO.padSide));
+  document.getElementById('raceDuoPad').style.display = DUO.raceDuo ? '' : 'none';
+}
+document.querySelectorAll('#raceDuoOpt button').forEach(b=>b.addEventListener('click', e=>{
+  e.stopPropagation();
+  if(b.dataset.rd !== undefined) DUO.raceDuo = b.dataset.rd === '1';
+  if(b.dataset.rpad !== undefined) DUO.padSide = +b.dataset.rpad;
+  duoSaveOpt(); raceSyncDuoOpt(); duoSyncOpt();
+}));
 document.getElementById('btnRace').addEventListener('click', raceOpenPanel);
 document.getElementById('btnRaceBack').addEventListener('click', raceClosePanel);
 document.getElementById('btnRaceRetry').addEventListener('click', raceRestart);
@@ -4987,6 +5196,11 @@ function loop(){
       campStep(H, t);
       acc -= H;
     }
+  }else if(mode==='race' && raceDuo && state==='play'){
+    // ---- 雙人飛行賽道：兩台機同一條賽道，各自計門／計時／碰撞，星幣先搶先贏 ----
+    duoReadAll();
+    acc += dt;
+    while(acc >= H){ raceDuoStep(H, t); acc -= H; }
   }else if(mode==='race' && state==='play'){
     // ---- 飛行賽道：只有玩家機，開放空間（邊界已放大），障礙物／拱門碰撞與過門判定在 raceStep ----
     readPlayerInput();
@@ -5074,7 +5288,7 @@ function loop(){
     else if(f.m.opacity>0.01) f.m.opacity *= Math.pow(0.001, dt);
   }
   if(msgTimer>0){ msgTimer-=dt; if(msgTimer<=0) msgEl.style.opacity=0; }
-  const duoOn = mode==='duo' && state!=='menu';
+  const duoOn = DUO.on && state!=='menu';
   if(!duoOn) updateOccluders(dt);
   updateHUD();
   updateCamera(dt);
