@@ -733,7 +733,7 @@ const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
 // 飛行邊界（Drone.step 用）：平常＝場地；飛行賽道模式會暫時放大成開放空間（raceSetArena）
 const ARENA = { hx: FIELD.hx, hz: FIELD.hz, h: FIELD.h };
-const RING = { R: 0.20, Ro: 0.35, depth: 0.20, y: 1.6, x: 2.2 }; // 2026-10-21 業主實際球框：內徑 40cm（R＝開口半徑）、外徑 70cm、厚 20cm 的圓環
+const RING = { R: 0.40*0.20/0.35, Ro: 0.40, depth: 0.20, y: 1.6, x: 2.2 }; // 2026-10-21 業主：外徑 80cm、內徑等比例放大（≈45.7cm，R＝開口半徑）、厚 20cm 的圓環（原 70/40cm）
 // 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
 // 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
 // 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
@@ -1618,7 +1618,7 @@ buildSceneBar();
 setScene((()=>{ try{ return localStorage.getItem(SCENE_SAVE_KEY) || SCENES[0].id; }catch(e){ return SCENES[0].id; } })());
 
 // ---------- 圓形球門框 ----------
-// 2026-10-21 依業主實際球框照片重做：圓環（內徑 40cm、外徑 70cm、厚 20cm），正反兩面同一張印刷圖——
+// 2026-10-21 依業主實際球框照片重做：圓環（外徑 80cm、內徑≈45.7cm、厚 20cm），正反兩面同一張印刷圖——
 // 左側紅白棋盤格、右側藍白棋盤格、上下彩虹漸層；上方（原「科技領航」字的位置）是電子計分板，下方印「富志科技」。
 // 兩個框正面圖案一樣，隊色靠「外圈側邊發光帶」（進球時綠白爆閃）＋內圈箭頭紋＋點光源區分。
 const ringFaceTex = (()=>{
@@ -1641,9 +1641,11 @@ const ringFaceTex = (()=>{
   const txt = '富志科技', span = 62*d2r;
   g.fillStyle = '#111'; g.font = '900 104px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
   g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.strokeStyle = '#ffffff'; g.lineWidth = 16; g.lineJoin = 'round';
   for(let i=0;i<txt.length;i++){
     const a = 90*d2r + span/2 - i*span/(txt.length-1);
-    g.save(); g.translate(c + Math.cos(a)*rm, c + Math.sin(a)*rm); g.rotate(a - 90*d2r); g.fillText(txt[i], 0, 4); g.restore();
+    g.save(); g.translate(c + Math.cos(a)*rm, c + Math.sin(a)*rm); g.rotate(a - 90*d2r);
+    g.strokeText(txt[i], 0, 4); g.fillText(txt[i], 0, 4); g.restore();   // 白色外框：黑字壓在彩虹底上不吃字（業主 2026-10-21）
   }
   // 計分板後方的底色帶（上方中央）
   g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 6;
@@ -1713,7 +1715,7 @@ const ringWest = makeGoalRing(-RING.x, 0xff1133);  // 藍場上的紅框：紅�
 // ---------- 球門電子計分板（2026-10-09 新增；2026-10-21 改：嵌在球框正面上方，原「科技領航」字的位置） ----------
 // 黑底白框、紅色七段兩位數，顯示「穿過這個框」的次數（VS／示範賽／連線＝該框的進球數，練習＝該框的穿越次數），進球時數字閃爍。
 // 正反兩面各一塊，貼在框面上（不突出、不另外做碰撞）；闖關與飛行賽道模式隱藏。內容沒變就不重畫 canvas。
-const BOARD = { y: (RING.R + RING.Ro)/2, w: 0.20, h: 0.10 };   // 板中心相對球門中心的高度、寬、高
+const BOARD = { y: (RING.R + RING.Ro)/2, w: 0.20*RING.Ro/0.35, h: 0.10*RING.Ro/0.35 };   // 跟著球框等比例   // 板中心相對球門中心的高度、寬、高
 function addGoalBoard(ring){
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
   const tex = new THREE.CanvasTexture(cv);
