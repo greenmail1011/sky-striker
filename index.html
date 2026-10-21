@@ -733,7 +733,7 @@ const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
 // 飛行邊界（Drone.step 用）：平常＝場地；飛行賽道模式會暫時放大成開放空間（raceSetArena）
 const ARENA = { hx: FIELD.hx, hz: FIELD.hz, h: FIELD.h };
-const RING = { R: 0.20, Ro: 0.35, depth: 0.05, y: 1.6, x: 2.2 }; // 2026-10-21 業主實際球框：內徑 40cm（R＝開口半徑）、外徑 70cm、厚 5cm 的平板圓環
+const RING = { R: 0.20, Ro: 0.35, depth: 0.10, y: 1.6, x: 2.2 }; // 2026-10-21 業主實際球框：內徑 40cm（R＝開口半徑）、外徑 70cm、厚 10cm 的平板圓環
 // 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
 // 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
 // 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
@@ -1618,7 +1618,7 @@ buildSceneBar();
 setScene((()=>{ try{ return localStorage.getItem(SCENE_SAVE_KEY) || SCENES[0].id; }catch(e){ return SCENES[0].id; } })());
 
 // ---------- 圓形球門框 ----------
-// 2026-10-21 依業主實際球框照片重做：平板圓環（內徑 40cm、外徑 70cm、厚 5cm），正反兩面同一張印刷圖——
+// 2026-10-21 依業主實際球框照片重做：平板圓環（內徑 40cm、外徑 70cm、厚 10cm），正反兩面同一張印刷圖——
 // 左側紅白棋盤格、右側藍白棋盤格、上下彩虹漸層；上方（原「科技領航」字的位置）是電子計分板，下方印「富志科技」。
 // 兩個框正面圖案一樣，隊色靠「外圈側邊發光帶」（進球時綠白爆閃）＋內圈箭頭紋＋點光源區分。
 const ringFaceTex = (()=>{
