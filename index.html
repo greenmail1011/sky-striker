@@ -173,7 +173,10 @@
   #mfDuoOpt{display:none;flex-direction:column;gap:8px;align-items:center;margin:-4px 0 14px;font-size:14px;color:#b9c6e4}
   #mfDuoOpt .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
   #mfDuoOpt small{color:#7c88a8;font-size:12px}
-  #menuFlow.duo #mfDuoOpt{display:flex}
+  #menuFlow.duo #mfDuoOpt,#menuFlow.prac #mfDuoOpt{display:flex}
+  #mfDuoOpt .rTeam,#mfDuoOpt .rPlayers,#mfDuoOpt .rPad{display:none}
+  #menuFlow.duo .rTeam,#menuFlow.prac .rPlayers,#menuFlow.duo .rPad,#menuFlow.pracDuo .rPad{display:flex}
+  .duoP .prac{display:none} body.duoPrac .duoP .prac{display:inline} body.duoPrac .duoP .arm{display:none}
   #mfDuoOpt button{padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#dfe7f7;font-size:14px;cursor:pointer;font-family:inherit}
   #mfDuoOpt button.sel{background:rgba(255,190,90,.22);border-color:#ffbe5a;color:#fff;font-weight:800}
   #duoHUD{display:none}
@@ -443,12 +446,12 @@
   <div id="duoDiv"></div>
   <div class="duoP" id="duoP0"><span class="who">P1 藍隊 Striker</span>
     <span>速度 <span class="v" id="duoSpd0">0.0</span> m/s</span><span>高度 <span class="v" id="duoAlt0">0.0</span> m</span>
-    <span>推力 <span class="v" id="duoThr0">0</span>%</span><span>得分權 <span id="duoArm0" class="armed">已解鎖</span></span>
+    <span>推力 <span class="v" id="duoThr0">0</span>%</span><span class="arm">得分權 <span id="duoArm0" class="armed">已解鎖</span></span><span class="prac">🎯 穿越 <span class="v" id="duoCnt0">0</span> 次</span>
     <span class="pad" id="duoPad0">—</span>
     <span class="kb" id="duoKb0"></span></div>
   <div class="duoP" id="duoP1"><span class="who">P2 紅隊 Striker</span>
     <span>速度 <span class="v" id="duoSpd1">0.0</span> m/s</span><span>高度 <span class="v" id="duoAlt1">0.0</span> m</span>
-    <span>推力 <span class="v" id="duoThr1">0</span>%</span><span>得分權 <span id="duoArm1" class="armed">已解鎖</span></span>
+    <span>推力 <span class="v" id="duoThr1">0</span>%</span><span class="arm">得分權 <span id="duoArm1" class="armed">已解鎖</span></span><span class="prac">🎯 穿越 <span class="v" id="duoCnt1">0</span> 次</span>
     <span class="pad" id="duoPad1">—</span>
     <span class="kb" id="duoKb1"></span></div>
   <div class="duoMsg" id="duoM0"></div><div class="duoMsg" id="duoM1"></div>
@@ -519,7 +522,7 @@
     <div class="mfStage" id="mfS2train">
       <div class="mfQ">飛行訓練：照順序一步一步來</div>
       <div class="mfCards">
-        <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic">🎯</div><b>圓環練習</b><span>自由飛行穿越圓環<br>先熟悉搖桿</span></button>
+        <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic">🎯</div><b>圓環練習</b><span>自由飛行穿越圓環<br>先熟悉搖桿・可雙人</span></button>
         <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 2</span><div class="ic">🏆</div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
         <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 3</span><div class="ic">🏁</div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄</span></button>
       </div>
@@ -535,8 +538,9 @@
     <div class="mfStage" id="mfS3">
       <div class="mfQ">選一個場地</div>
       <div id="mfDuoOpt">
-        <div class="row">隊伍：<button data-v="0">⬜ 只有兩人（1v1）</button><button data-v="1">🤖 加 AI 隊友（3v3）</button></div>
-        <div class="row">只有一支搖桿時，搖桿給：<button data-pad="0">◀ 左邊 P1 藍</button><button data-pad="1">右邊 P2 紅 ▶</button><small>另一人用鍵盤</small></div>
+        <div class="row rPlayers">人數：<button data-pd="0">👤 單人</button><button data-pd="1">👥 雙人（左右分割畫面）</button></div>
+        <div class="row rTeam">隊伍：<button data-v="0">⬜ 只有兩人（1v1）</button><button data-v="1">🤖 加 AI 隊友（3v3）</button></div>
+        <div class="row rPad">只有一支搖桿時，搖桿給：<button data-pad="0">◀ 左邊 P1 藍</button><button data-pad="1">右邊 P2 紅 ▶</button><small>另一人用鍵盤</small></div>
       </div>
       <div class="mfScenes" id="mfScenes"></div>
       <button class="mfGo" id="mfGo">開始 ▶</button>
@@ -1705,7 +1709,7 @@ function updateGoalBoards(){
     b.grp.visible = show;
     if(!show) return;
     // 每個球門顯示「穿過這個框」的次數：西框(紅)＝紅隊進球、東框(藍)＝藍隊進球；練習模式＝這個框的穿越次數
-    const num = mode==='practice' ? (ring.passes||0) : (ring===ringWest ? score.red.g : score.blue.g);
+    const num = (mode==='practice' || (mode==='duo' && DUO.kind==='practice')) ? (ring.passes||0) : (ring===ringWest ? score.red.g : score.blue.g);
     const blinkOff = ringPulse && ringPulse.ring===ring && ringPulse.t<1.4 && Math.sin(ringPulse.t*14) < 0;
     const key = num + '|' + blinkOff;
     if(key !== b.key){ b.key = key; drawGoalBoard(ring, num, blinkOff ? '#3a0a0a' : '#ff2a1a'); }
@@ -2510,6 +2514,7 @@ addEventListener('keydown', e=>{
     if(mode==='practice') restartPractice();
     else if(mode==='campaign') campRestart();
     else if(mode==='race') raceRestart();
+    else if(mode==='duo') duoRestart();
     else restart();
   }
   if(e.code==='KeyM' && state!=='menu'){   // 返回模式選單
@@ -2946,6 +2951,9 @@ document.getElementById('btnDemo').addEventListener('click', ()=>startGame('demo
 const DUO_KEY = 'hsinchuDroneDuoV1';
 const DUO = {
   ai: false,
+  kind: 'match',       // 'match' 足球比賽 | 'practice' 圓環練習
+  pracDuo: false,      // 圓環練習選「雙人」
+  pracCnt: [0,0], pracCD: [{E:0,W:0},{E:0,W:0}],
   padSide: 0,          // 只有一支搖桿時，搖桿給哪一邊（0＝左 P1、1＝右 P2），另一人用整個鍵盤
   cur: [{pad:null, keys:null}, {pad:null, keys:null}],   // 這一幀實際的分配（duoAssign 算）
   sides: [
@@ -2957,16 +2965,16 @@ const DUO = {
   lisPos: V3(0,3.5,6.5), lisLook: V3(0,1,0),
   msgT: [0,0], padPrev: {},
 };
-try{ const o = JSON.parse(localStorage.getItem(DUO_KEY)||'{}')||{}; DUO.ai = !!o.ai; DUO.padSide = o.padSide===1 ? 1 : 0; }catch(e){}
+try{ const o = JSON.parse(localStorage.getItem(DUO_KEY)||'{}')||{}; DUO.ai = !!o.ai; DUO.padSide = o.padSide===1 ? 1 : 0; DUO.pracDuo = !!o.pracDuo; }catch(e){}
 // 鍵盤配置：沒有搖桿／兩支搖桿時，兩人分用鍵盤左右兩半（sides[].keys）；
 // 只有一支搖桿時，鍵盤那個人獨用整個鍵盤，用跟單人模式一樣的美國手 WASD＋方向鍵
 const DUO_KB_FULL = {up:'KeyW', dn:'KeyS', yl:'KeyA', yr:'KeyD', fw:'ArrowUp', bk:'ArrowDown', lf:'ArrowLeft', rt:'ArrowRight'};
 const DUO_KB_TXT = {
-  full: '⌨️ 鍵盤：W/S 升降・A/D 旋轉・↑/↓ 前後・←/→ 側飛',
+  full: 'W/S 升降・A/D 旋轉・↑/↓ 前後・←/→ 側飛（跟單人模式一樣）',
   0: '鍵盤：W/S 升降・A/D 旋轉・T/G 前後・F/H 側飛',
   1: '鍵盤：I/K 升降・J/L 旋轉・↑/↓ 前後・←/→ 側飛',
 };
-function duoSaveOpt(){ try{ localStorage.setItem(DUO_KEY, JSON.stringify({ai:DUO.ai, padSide:DUO.padSide})); }catch(err){} }
+function duoSaveOpt(){ try{ localStorage.setItem(DUO_KEY, JSON.stringify({ai:DUO.ai, padSide:DUO.padSide, pracDuo:DUO.pracDuo})); }catch(err){} }
 function duoAssign(){   // 依目前接了幾支搖桿決定每邊用什麼操作
   const ps = duoPads();
   if(ps.length >= 2){                    // 兩支搖桿：第 1 支→左、第 2 支→右（鍵盤分半當備用）
@@ -2984,11 +2992,15 @@ function duoSideOf(d){ return DUO.sides[0].d===d ? 0 : DUO.sides[1].d===d ? 1 : 
 function duoSyncOpt(){
   document.querySelectorAll('#mfDuoOpt button[data-v]').forEach(b=>b.classList.toggle('sel', (b.dataset.v==='1') === DUO.ai));
   document.querySelectorAll('#mfDuoOpt button[data-pad]').forEach(b=>b.classList.toggle('sel', +b.dataset.pad === DUO.padSide));
+  document.querySelectorAll('#mfDuoOpt button[data-pd]').forEach(b=>b.classList.toggle('sel', (b.dataset.pd==='1') === DUO.pracDuo));
+  const mf = document.getElementById('menuFlow');
+  mf.classList.toggle('pracDuo', mf.classList.contains('prac') && DUO.pracDuo);
 }
 document.querySelectorAll('#mfDuoOpt button').forEach(b=>b.addEventListener('click', e=>{
   e.stopPropagation();
   if(b.dataset.v !== undefined) DUO.ai = b.dataset.v === '1';
   if(b.dataset.pad !== undefined) DUO.padSide = +b.dataset.pad;
+  if(b.dataset.pd !== undefined) DUO.pracDuo = b.dataset.pd === '1';
   duoSaveOpt(); duoSyncOpt();
 }));
 function duoPads(){   // 已連接的搖桿，依瀏覽器編號排序（第 1 支→P1、第 2 支→P2）
@@ -3022,7 +3034,7 @@ function duoPollButtons(){
     if(state==='menu') continue;
     if(btn(9)){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); }
     if(btn(3)) camMode = (camMode+1)%3;
-    if(btn(8)) restart();
+    if(btn(8)) duoRestart();
   }
 }
 function duoApplyBench(){
@@ -3037,15 +3049,55 @@ function duoStart(){
   duoApplyBench();
   drones.forEach(d=>d.reset());
   document.body.classList.add('duo');
+  document.body.classList.remove('duoPrac');
+  DUO.kind = 'match';
   document.querySelector('#telemetry b').textContent = '雙人對戰';
   DUO.snap = true; DUO.msgT = [0,0];
 }
 document.getElementById('btnDuo').addEventListener('click', duoStart);
 function duoCleanup(){
   if(!document.body.classList.contains('duo')) return;
-  document.body.classList.remove('duo');
+  document.body.classList.remove('duo', 'duoPrac');
+  DUO.kind = 'match';
   if(!NET.connected) drones.forEach(d=>{ if(d.benched){ d.benched = false; d.reset(); } setDroneVisible(d, true); });
   [0,1].forEach(v=>{ const m = document.getElementById('duoM'+v); if(m) m.style.opacity = 0; });
+}
+// ---- 雙人圓環練習（2026-10-21，業主：「圓環練習也可以分兩人」）----
+function duoStartPractice(){
+  startPractice();                        // 共用單人練習的進場流程（藏計分板、清闖關、開音效…）
+  mode = 'duo'; DUO.kind = 'practice';
+  document.getElementById('practiceHUD').style.display = 'none';   // 計數改在左右兩邊各自的面板
+  document.body.classList.add('duo', 'duoPrac');
+  document.querySelector('#telemetry b').textContent = '雙人練習';
+  duoPracReset();
+  DUO.snap = true; DUO.msgT = [0,0];
+}
+function duoPracReset(){
+  drones.forEach(d=>{
+    const h = duoSideOf(d) >= 0;
+    d.reset(); d.benched = !h; setDroneVisible(d, h);
+  });
+  DUO.pracCnt = [0,0]; DUO.pracCD = [{E:0,W:0},{E:0,W:0}];
+  ringEast.passes = 0; ringWest.passes = 0;
+  setState('play');
+}
+function duoRestart(){ if(DUO.kind === 'practice') duoPracReset(); else restart(); }
+function duoCheckPracticePass(dt){
+  DUO.sides.forEach((s,v)=>{
+    const d = s.d, cd = DUO.pracCD[v];
+    cd.E = Math.max(0, cd.E - dt); cd.W = Math.max(0, cd.W - dt);
+    [['E', ringEast], ['W', ringWest]].forEach(([key, ring])=>{
+      if(cd[key] > 0) return;
+      if((d.prevX-ring.x)*(d.pos.x-ring.x) >= 0) return;             // 沒有穿過框平面
+      if(Math.hypot(d.pos.y-ring.y, d.pos.z-ring.z) >= RING.R - DRONE_R + 0.05) return;
+      cd[key] = 0.6;
+      DUO.pracCnt[v]++;
+      ring.passes = (ring.passes||0) + 1;
+      duoMsg(v, '✓ 穿越成功！第 ' + DUO.pracCnt[v] + ' 次', '#7dffa9', 1.1);
+      sfx.goal();
+      ringPulse = {ring, t:0};
+    });
+  });
 }
 function duoMsg(v, text, color, dur){
   const m = document.getElementById('duoM'+v); if(!m) return;
@@ -3083,6 +3135,7 @@ function duoFrame(dt){
     document.getElementById('duoSpd'+v).textContent = d.vel.length().toFixed(1);
     document.getElementById('duoAlt'+v).textContent = Math.max(0,d.pos.y-DRONE_R).toFixed(1);
     document.getElementById('duoThr'+v).textContent = Math.round(d.thrustN/(MASS*G)*100);
+    document.getElementById('duoCnt'+v).textContent = DUO.pracCnt[v];
     const a = document.getElementById('duoArm'+v);
     a.textContent = d.canScore ? '已解鎖' : '需回防'; a.className = d.canScore ? 'armed' : 'disarmed';
     const pe = document.getElementById('duoPad'+v);
@@ -3518,6 +3571,7 @@ function mfShow(stage){
   });
   document.getElementById('mfBack').classList.toggle('show', n !== '1');
   document.getElementById('menuFlow').classList.toggle('duo', n === '3' && MF.mode === 'duo');   // 雙人對戰：第 3 步多一列「1v1／3v3」
+  document.getElementById('menuFlow').classList.toggle('prac', n === '3' && MF.mode === 'practice');   // 圓環練習：第 3 步多一列「單人／雙人」
   duoSyncOpt();
   if(n === '3') mfBuildScenes();
 }
@@ -3551,6 +3605,7 @@ document.querySelectorAll('#menuFlow [data-mode]').forEach(b=>b.addEventListener
 }));
 document.getElementById('mfGo').addEventListener('click', e=>{
   e.stopPropagation();
+  if(MF.mode === 'practice' && DUO.pracDuo){ duoStartPractice(); return; }   // 雙人圓環練習
   const id = MF_MODE_BTN[MF.mode];
   if(id) document.getElementById(id).click();
 });
@@ -4900,6 +4955,15 @@ function loop(){
     const mm = Math.floor(Math.max(0,timeLeft)/60), ss = Math.floor(Math.max(0,timeLeft)%60);
     tEl.textContent = mm+':'+String(ss).padStart(2,'0');
     tEl.className = timeLeft<=10 ? 'danger' : timeLeft<=30 ? 'warn' : '';
+  }else if(mode==='duo' && DUO.kind==='practice' && state==='play'){
+    // ---- 雙人圓環練習：兩台機各自飛、各自計數（兩機不互撞，專心練穿框）----
+    duoReadAll();
+    acc += dt;
+    while(acc >= H){
+      DUO.sides.forEach(s=>{ s.d.step(H); collideRing(s.d, ringEast); collideRing(s.d, ringWest); });
+      duoCheckPracticePass(H);
+      acc -= H;
+    }
   }else if(mode==='practice' && state==='play'){
     // ---- 練習模式：只有玩家機在場上，無比分／時間／AI 對手，專心練習穿框操作 ----
     readPlayerInput();
