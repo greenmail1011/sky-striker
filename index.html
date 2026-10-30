@@ -169,11 +169,14 @@
   #overlay .credit{margin-top:14px}
   /* 選單開著時把比賽 HUD（計分板、操作說明、飛行數據、搖桿…）藏起來，畫面才乾淨 */
   /* ---- 示範賽連續對戰開關（2026-10-30）---- */
-  #demoLoop{position:fixed;top:12px;right:16px;z-index:30;pointer-events:auto;cursor:pointer;font-family:inherit;padding:7px 14px;border-radius:999px;
+  #hudTgl{position:fixed;top:12px;right:16px;z-index:30;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  body.netMode #hudTgl{top:58px}
+  #hudTgl button{pointer-events:auto;cursor:pointer;font-family:inherit;padding:7px 14px;border-radius:999px;
     border:1px solid rgba(255,255,255,.25);background:rgba(10,14,30,.72);color:#c9d5ee;font-size:13px;font-weight:700;backdrop-filter:blur(4px)}
-  #demoLoop.on{background:rgba(125,255,169,.2);border-color:#7dffa9;color:#fff}
-  #demoLoop:hover{border-color:#fff}
-  body.touch.phone #demoLoop{top:auto;bottom:14px;right:10px;font-size:12px;padding:5px 10px}
+  #hudTgl button.on{background:rgba(125,255,169,.2);border-color:#7dffa9;color:#fff}
+  #hudTgl button:hover{border-color:#fff}
+  body.inMenu #hudTgl,body.replaying #hudTgl{display:none!important}
+  body.touch.phone #hudTgl{top:auto;bottom:14px;right:10px} body.touch.phone #hudTgl button{font-size:12px;padding:5px 10px}
   /* ---- 進球關鍵回放（2026-10-30）---- */
   #rpBtn{position:fixed;bottom:58px;left:50%;transform:translateX(-50%);z-index:30;pointer-events:auto;cursor:pointer;font-family:inherit;
     padding:7px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(10,14,30,.72);color:#e8eefc;font-size:14px;font-weight:700;
@@ -503,7 +506,10 @@
 </div>
 <div class="hud" id="msg"></div>
 <button class="hud" id="rpBtn" style="display:none">🎬 回放</button>
-<button class="hud" id="demoLoop" style="display:none" title="打開後，每場結束會自動開始下一場">🔁 連續對戰：關</button>
+<div id="hudTgl" style="display:none">
+  <button id="rpToggle" title="關掉後：進球不切回放片段、不出現回放按鈕、示範賽也不自動回放">🎬 回放：開</button>
+  <button id="demoLoop" style="display:none" title="打開後，每場結束會自動開始下一場">🔁 連續對戰：關</button>
+</div>
 <div id="rpUI">
   <div class="rpBar rpTop"></div><div class="rpBar rpBot"></div>
   <div id="rpFlash"></div>
@@ -845,12 +851,12 @@ const DRAG_K1 = 0.14, DRAG_K2 = 0.10;  // 線性 + 平方空氣阻力（小機�
 // 這是全域參數，AI 飛手共用同一套 step()，衝刺絕對速度會等比例變慢，但 aiThink/flyToward
 // 的 skill、aggro、maxV 倍率差異（見下方「AI 設計」相關常數）仍保留，攻防相對強弱不受影響；
 // 若之後覺得比賽整體變慢、衝刺不夠猛，優先調高 Striker 衝刺的 maxV 倍率，不要把阻力調回去。
-const REST_DRONE = 0.55;        // 機體互撞恢復係數
+const REST_DRONE = 0.68;        // 機體互撞恢復係數（2026-10-31 由 0.55 調高：護籠有彈性，撞得越大力彈得越開）
 const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
 // 飛行邊界（Drone.step 用）：平常＝場地；飛行賽道模式會暫時放大成開放空間（raceSetArena）
 const ARENA = { hx: FIELD.hx, hz: FIELD.hz, h: FIELD.h };
-const RING = { R: 0.20, Ro: 0.35, depth: 0.10, y: 1.6, x: 2.2 }; // 2026-10-21 業主比賽規格：內徑 40cm（R＝開口半徑，球的 2 倍）、外徑 70cm；2026-10-31 業主指定厚度改 10cm（原 20cm）
+const RING = { R: 0.20, Ro: 0.35, depth: 0.10, y: 2.25, x: 2.2 }; // 2026-10-21 業主比賽規格：內徑 40cm（R＝開口半徑，球的 2 倍）、外徑 70cm；2026-10-31 業主指定厚度改 10cm（原 20cm）；中心高 1.6 → 2.25m（業主給的比賽照片：球門吊在頂部橫管正下方，框頂離橫管很近）
 // 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
 // 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
 // 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
@@ -936,29 +942,29 @@ function makeNetTexture(){
   const cv = document.createElement('canvas'); cv.width=cv.height=128;
   const g = cv.getContext('2d');
   g.clearRect(0,0,128,128);
-  g.strokeStyle='rgba(240,244,250,.95)'; g.lineWidth=2;
+  g.strokeStyle='rgba(14,16,20,.95)'; g.lineWidth=2.4;   // 2026-10-31 依比賽照片改黑色網
   g.beginPath(); g.moveTo(0,0); g.lineTo(0,128); g.moveTo(0,0); g.lineTo(128,0); g.stroke();
   const t = new THREE.CanvasTexture(cv);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
 const netTex = makeNetTexture();
-function netWall(w,h,rx,ry,px,py,pz,repX,repY){
+function netWall(w,h,rx,ry,px,py,pz,repX,repY,op=0.6){
   const tex = netTex.clone(); tex.needsUpdate=true;
   tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(repX,repY);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h),
-    new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:.2, side:THREE.DoubleSide, depthWrite:false}));
+    new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:op, side:THREE.DoubleSide, depthWrite:false}));
   m.rotation.x = rx; m.rotation.y = ry; m.position.set(px,py,pz);
   scene.add(m);
 }
 netWall(FIELD.hx*2, FIELD.h, 0, 0,          0, FIELD.h/2, -FIELD.hz, FIELD.hx*4, FIELD.h*2); // 後牆
-netWall(FIELD.hx*2, FIELD.h, 0, 0,          0, FIELD.h/2,  FIELD.hz, FIELD.hx*4, FIELD.h*2); // 前牆
+netWall(FIELD.hx*2, FIELD.h, 0, 0,          0, FIELD.h/2,  FIELD.hz, FIELD.hx*4, FIELD.h*2, 0.16); // 前牆＝觀眾面：半透明，方便觀賞
 netWall(FIELD.hz*2, FIELD.h, 0, Math.PI/2, -FIELD.hx, FIELD.h/2, 0, FIELD.hz*4, FIELD.h*2); // 左牆
 netWall(FIELD.hz*2, FIELD.h, 0, Math.PI/2,  FIELD.hx, FIELD.h/2, 0, FIELD.hz*4, FIELD.h*2); // 右牆
 netWall(FIELD.hx*2, FIELD.hz*2, Math.PI/2, 0, 0, FIELD.h, 0, FIELD.hx*4, FIELD.hz*4);        // 天花網
 
-// ---------- 充氣管框架（依實際場地照片：藍半場藍管、紅半場紅管、中央白柱） ----------
-const TUBE_R = 0.13;                       // 充氣管半徑（粗管，PVC 充氣感）
+// ---------- 充氣管框架（2026-10-31 依業主給的比賽照片重做：藍、紅兩個半場各自一座充氣框，在中線並排接在一起） ----------
+const TUBE_R = 0.16;                       // 充氣管半徑（照片的管子很粗，約 30cm 直徑；原 0.13）
 const VINYL = { blue:0x1f66cc, red:0xcf3434, white:0xece8dc };
 const capMats = {};                        // 端帽材質快取（同色共用）
 function vinylCapMat(hex){
@@ -981,22 +987,22 @@ function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
   });
 }
 {
+  // 照片的結構：每個半場是一座獨立的充氣框（藍／紅），中線處兩座並排 → 中間的直柱和頂部橫管是「一藍一紅兩根並排」。
+  //   直柱：四角＋中線兩側；地面一圈底管；頂部一圈頂管＋中線橫管＋兩個球門正上方各一根橫管（球門就吊在這根下面）。
+  //   沒有中段橫管（舊版照「後牆中段橫管」是另一個場地的照片）。
   const xo = FIELD.hx + TUBE_R, zo = FIELD.hz + TUBE_R;  // 管中心在網外側
-  const yb = TUBE_R, yt = FIELD.h, ym = FIELD.h*0.5;
-  [-zo, zo].forEach(z=>{
-    [yb, yt].forEach(y=>{                                   // 底/頂長邊：半藍半紅
-      airTube(-xo, y, z, 0, y, z, VINYL.blue);
-      airTube(  0, y, z, xo, y, z, VINYL.red);
+  const yb = TUBE_R, yt = FIELD.h, xm = TUBE_R;          // xm：中線兩根並排的偏移
+  [[-1, VINYL.blue], [1, VINYL.red]].forEach(([sx, c])=>{
+    const xe = sx*xo, xc = sx*xm;                        // 這個半場的端線、中線側
+    [-zo, zo].forEach(z=>{
+      [yb, yt].forEach(y=> airTube(xc, y, z, xe, y, z, c));   // 長邊底管／頂管
+      airTube(xe, yb, z, xe, yt, z, c);                        // 端角直柱
+      airTube(xc, yb, z, xc, yt, z, c);                        // 中線側直柱（與另一色並排）
     });
+    [yb, yt].forEach(y=> airTube(xe, y, -zo, xe, y, zo, c));  // 端線底管／頂管
+    airTube(xc, yt, -zo, xc, yt, zo, c);                       // 中線頂部橫管
+    airTube(sx*RING.x, yt, -zo, sx*RING.x, yt, zo, c);         // 球門正上方的頂部橫管（球門吊在這裡）
   });
-  airTube(-xo, ym, -zo, 0, ym, -zo, VINYL.blue);            // 後牆中段橫管（照片）
-  airTube(  0, ym, -zo, xo, ym, -zo, VINYL.red);
-  [[-xo, VINYL.blue],[xo, VINYL.red]].forEach(([x,c])=>{    // 短邊：底/頂/中段
-    [yb, yt, ym].forEach(y=> airTube(x, y, -zo, x, y, zo, c));
-    [-zo, zo].forEach(z=> airTube(x, yb, z, x, yt, z, c));  // 四角直柱
-  });
-  [-zo, zo].forEach(z=> airTube(0, yb, z, 0, yt, z, VINYL.white)); // 中央白柱（紅藍分界）
-  airTube(0, yt, -zo, 0, yt, zo, VINYL.white);              // 頂部中央白橫管
 }
 
 // ---------- 觀眾席與廣告板（氛圍） ----------
@@ -2058,6 +2064,7 @@ function buildDroneMesh(teamColor, isStriker, tailHex){
 }
 
 // ---------- 無人機物理實體 ----------
+const _crQ = new THREE.Quaternion(), _crV = new THREE.Vector3();
 class Drone{
   constructor(team, role, spawn, yaw0){
     this.team = team;               // 'red' | 'blue'
@@ -2200,44 +2207,108 @@ class Drone{
       onDroneSnag(this);
     }
   }
-  startCrash(){     // 失去平衡墜機：推力只剩一點點、機身翻滾掉到地上，躺 1～2.4 秒後飛控重新解鎖才能再起飛
+  startCrash(){     // 失去平衡墜機：推力只剩一點點、機身翻滾掉到地上 → 在地上滾一段 → 翻正／嘗試起飛（可能失敗）
     if(this.crash) return;
-    this.crash = {phase:'fall', t:0, spin:V3((Math.random()-0.5)*8, (Math.random()-0.5)*6, (Math.random()-0.5)*8)};
-    this.snag = 0; this.lost = 0; this.disturb = 1; this.dash = false;
+    this.crash = {phase:'fall', t:0, tries:0, spin:V3((Math.random()-0.5)*12, (Math.random()-0.5)*6, (Math.random()-0.5)*12)};
+    if(!this.rollQ) this.rollQ = new THREE.Quaternion();
+    this.rollQ.identity();
+    this.snag = 0; this.lost = 0; this.disturb = 1; this.dash = false; this.tiltP = this.tiltR = 0;
     onDroneCrash(this);
   }
+  // 墜機後的各階段（2026-10-31，業主：「被撞到地上翻滾多遠，甚至會在地上嘗試起飛，或反烏龜」）
+  //   fall   失去平衡掉下來（機身亂翻）；落地太快會彈一下
+  //   ground 在地上滾：球形護籠會滾，滾多遠看落地時的水平速度（地面滾動阻力）；停下後等飛控重新解鎖
+  //   turtle 肚子朝上 → 反烏龜：螺旋槳反轉把自己翻正（彈起一點點）
+  //   hop    嘗試起飛：側躺時可能失敗（跳一下又倒回地上，再試一次）；最多失敗 2 次
   stepCrash(h){
     const C = this.crash; C.t += h;
     this.prevX = this.pos.x;
+    const spinBy = (ax, ay, az, ang)=>{ _crQ.setFromAxisAngle(_crV.set(ax, ay, az).normalize(), ang); this.rollQ.premultiply(_crQ); };
+    const walls = (k)=>{
+      const bx = ARENA.hx-DRONE_R, bz = ARENA.hz-DRONE_R;
+      if(Math.abs(this.pos.x) > bx){ this.pos.x = Math.sign(this.pos.x)*bx; this.vel.x *= -k; }
+      if(Math.abs(this.pos.z) > bz){ this.pos.z = Math.sign(this.pos.z)*bz; this.vel.z *= -k; }
+      if(this.pos.y > ARENA.h-DRONE_R){ this.pos.y = ARENA.h-DRONE_R; this.vel.y = -Math.abs(this.vel.y)*0.3; }
+    };
+    const roll = ()=>{   // 在地上滾：沿速度方向滾動（角度＝距離／半徑），速度被地面吃掉
+      const vh = Math.hypot(this.vel.x, this.vel.z);
+      if(vh > 0.02){
+        spinBy(this.vel.z, 0, -this.vel.x, vh*h/DRONE_R);
+        const dec = Math.min(vh, (0.5 + 0.35*vh)*h);   // EVA 軟墊上的滾動阻力
+        this.vel.x -= this.vel.x/vh*dec; this.vel.z -= this.vel.z/vh*dec;
+      }else{ this.vel.x = this.vel.z = 0; }
+      return vh;
+    };
+    const upness = ()=> _crV.set(0,1,0).applyQuaternion(this.rollQ).y;   // 1＝正立、-1＝肚子朝上
     if(C.phase === 'fall'){
       this.thrustN = MASS*G*(0.1 + Math.random()*0.25);
       const acc = V3((Math.random()-0.5)*2, this.thrustN/MASS - G, (Math.random()-0.5)*2);
       const sp = this.vel.length();
-      if(sp > 1e-4) acc.addScaledVector(this.vel.clone().normalize(), -(DRAG_K1*sp + DRAG_K2*sp*sp)/MASS);
+      if(sp > 1e-4) acc.addScaledVector(this.vel.clone().normalize(), -0.4*(DRAG_K1*sp + DRAG_K2*sp*sp)/MASS);   // 螺旋槳幾乎停了，阻力比飛行時小
       this.vel.addScaledVector(acc, h); this.pos.addScaledVector(this.vel, h);
-      this.tiltP = clamp(this.tiltP + C.spin.x*h*0.35, -1, 1);
-      this.tiltR = clamp(this.tiltR + C.spin.z*h*0.35, -1, 1);
+      spinBy(C.spin.x, 0.001, C.spin.z, Math.hypot(C.spin.x, C.spin.z)*h);
       this.yaw += C.spin.y*h;
-      this.disturb = 1;
-      const bx = ARENA.hx-DRONE_R, bz = ARENA.hz-DRONE_R;
-      if(Math.abs(this.pos.x) > bx){ this.pos.x = Math.sign(this.pos.x)*bx; this.vel.x *= -0.3; }
-      if(Math.abs(this.pos.z) > bz){ this.pos.z = Math.sign(this.pos.z)*bz; this.vel.z *= -0.3; }
-      if(this.pos.y > ARENA.h-DRONE_R){ this.pos.y = ARENA.h-DRONE_R; this.vel.y = -Math.abs(this.vel.y)*0.3; }
-      if(this.pos.y <= DRONE_R){           // 落地：側躺在地上
-        this.pos.y = DRONE_R; this.vel.set(0,0,0);
-        C.phase = 'ground'; C.t = 0; C.wait = 1.0 + Math.random()*1.4;
-        const a = Math.random()*Math.PI*2; this.tiltP = Math.cos(a)*0.95; this.tiltR = Math.sin(a)*0.95;
-        this.disturb = 0;
-        try{ sfx.hit(0.5); }catch(e){}
+      this.disturb = 0.6;
+      walls(0.35);
+      if(this.pos.y <= DRONE_R){
+        this.pos.y = DRONE_R;
+        if(this.vel.y < -1.6){                       // 摔得快：彈起來一下，水平速度保留大部分（會滾更遠）
+          this.vel.y = -this.vel.y*0.32; this.vel.x *= 0.92; this.vel.z *= 0.92;
+          C.spin.multiplyScalar(0.6);
+          try{ sfx.hit(Math.min(1, 0.3 - this.vel.y*0.1)); }catch(e){}
+        }else{
+          this.vel.y = 0; C.phase = 'ground'; C.t = 0; C.still = 0;
+          C.wait = 0.8 + Math.random()*1.2;
+          this.disturb = 0;
+          try{ sfx.hit(0.4); }catch(e){}
+        }
       }
       this.propSpin += 4*h;
-    }else{
-      this.vel.set(0,0,0); this.pos.y = DRONE_R; this.thrustN = 0; this.disturb = 0;
-      if(C.t >= C.wait){                   // 飛控重新解鎖：恢復操控（剛起飛會有點晃）
-        this.crash = null; this.tiltP = this.tiltR = 0; this.disturb = 0.35;
-        onDroneRecover(this);
+    }else if(C.phase === 'ground'){
+      this.pos.y = DRONE_R; this.vel.y = 0; this.thrustN = 0; this.disturb = 0;
+      this.pos.x += this.vel.x*h; this.pos.z += this.vel.z*h;
+      const vh = roll(); walls(0.4);
+      if(vh < 0.05) C.still += h;                    // 停下來之後才開始算等待時間
+      if(C.still >= C.wait){
+        if(upness() < -0.7){ C.phase = 'turtle'; C.t = 0; C.dur = 0.55 + Math.random()*0.4; C.q0 = this.rollQ.clone(); onDroneTurtle(this); }
+        else this.crashHop(C, upness());
+      }
+    }else if(C.phase === 'turtle'){                // 反烏龜：螺旋槳反轉，把自己翻正
+      const k = Math.min(1, C.t/C.dur);
+      this.rollQ.copy(C.q0).slerp(_crQ.identity(), k*k*(3-2*k));
+      this.pos.y = DRONE_R + Math.sin(k*Math.PI)*0.07;
+      this.thrustN = MASS*G*0.6; this.propSpin -= 30*h;
+      if(k >= 1){ this.pos.y = DRONE_R; this.crashHop(C, 1); }
+    }else{                                           // hop：嘗試起飛
+      this.vel.y -= G*h*(C.ok ? 0.15 : 1);
+      this.pos.addScaledVector(this.vel, h);
+      this.thrustN = MASS*G*(C.ok ? 1.3 : 0.7 + Math.random()*0.5); this.propSpin += 30*h;
+      walls(0.4);
+      if(C.ok){                                      // 成功：在空中把姿態拉正、交回操控
+        this.rollQ.slerp(_crQ.identity(), Math.min(1, h*9));
+        this.disturb = 0.5;
+        if(C.t > 0.28){
+          this.crash = null; this.rollQ.identity(); this.tiltP = this.tiltR = 0; this.disturb = 0.45;
+          onDroneRecover(this);
+        }
+      }else{                                         // 失敗：一邊跳一邊歪掉，又摔回地上
+        spinBy(C.spin.x, 0.001, C.spin.z, Math.hypot(C.spin.x, C.spin.z)*h);
+        this.disturb = 0.8;
+        if(this.pos.y <= DRONE_R && this.vel.y < 0){
+          this.pos.y = DRONE_R; this.vel.y = 0;
+          C.phase = 'ground'; C.t = 0; C.still = 0; C.wait = 0.4 + Math.random()*0.6; this.disturb = 0;
+          try{ sfx.hit(0.3); }catch(e){}
+        }
       }
     }
+  }
+  crashHop(C, up){   // 起飛嘗試：側躺得越歪越容易失敗；高等級飛手比較會救
+    C.tries++;
+    const pOk = clamp(0.45 + 0.5*Math.max(0, up) + 0.15*(C.tries-1) + 0.04*((this.lv||3)-3), 0.15, 0.97);
+    C.ok = C.tries >= 3 || Math.random() < pOk;
+    C.phase = 'hop'; C.t = 0;
+    this.vel.set((Math.random()-0.5)*0.6, C.ok ? 1.1 : 0.9 + Math.random()*0.5, (Math.random()-0.5)*0.6);
+    if(!C.ok){ C.spin.set((Math.random()-0.5)*14, 0, (Math.random()-0.5)*14); onDroneHopFail(this); }
   }
   // ---- 視覺同步 ----
   syncMesh(t){
@@ -2253,6 +2324,7 @@ class Drone{
     const qTilt = new THREE.Quaternion().setFromUnitVectors(UP, dir);
     const qYaw  = new THREE.Quaternion().setFromAxisAngle(UP, this.yaw);
     this.mesh.grp.quaternion.copy(qTilt).multiply(qYaw);
+    if(this.crash && this.rollQ) this.mesh.grp.quaternion.premultiply(this.rollQ);   // 墜機時的翻滾／側躺／肚子朝上
     // 被撞翻滾搖晃
     if(this.disturb>0.02){
       const w = this.disturb;
@@ -2296,8 +2368,10 @@ function crashResist(d){   // 越高級的飛手越救得回來：AI Lv1 ×1.15 
   if(mode==='net' && NET.slotOwners && NET.slotOwners[drones.indexOf(d)]) return 1;
   return 1.3 - 0.12*(d.lv||1);
 }
-function onDroneCrash(d){ crashMsgTo(d, '💥 墜機！等飛控重新解鎖再起飛', '#fb923c', 1.6); }
+function onDroneCrash(d){ crashMsgTo(d, '💥 墜機！', '#fb923c', 1.4); }
 function onDroneRecover(d){ crashMsgTo(d, '⬆ 可以重新起飛了', '#7dffa9', 1.2); }
+function onDroneTurtle(d){ crashMsgTo(d, '🐢 翻過來了！反烏龜中…', '#fbbf24', 1.0); }
+function onDroneHopFail(d){ crashMsgTo(d, '起飛失敗，再試一次…', '#fb923c', 0.9); }
 function onDroneSnag(d){ crashMsgTo(d, '🕸 勾到網了！', '#fbbf24', 1.0); }
 // ---------- 建立 3v3 ----------
 const drones = [];
@@ -2329,6 +2403,14 @@ function collideDrones(){
     if(vn>0){
       const imp = n.clone().multiplyScalar(vn*(1+REST_DRONE)/2);
       a.vel.sub(imp); b.vel.add(imp);
+      if(vn > 1.2){   // 大力撞：被撞的一方再多彈開一點、帶一點往上下左右的亂偏（不會每次都彈一樣的方向）
+        const extra = (vn-1.2)*0.22;
+        const va0 = a.vel.dot(n), vb0 = -b.vel.dot(n);
+        const sa = vb0 > va0 ? 1 : 0.5, sb = va0 > vb0 ? 1 : 0.5;
+        a.vel.addScaledVector(n, -extra*sa); b.vel.addScaledVector(n, extra*sb);
+        a.vel.x += (Math.random()-0.5)*extra*0.6; a.vel.y += (Math.random()-0.5)*extra*0.5; a.vel.z += (Math.random()-0.5)*extra*0.6;
+        b.vel.x += (Math.random()-0.5)*extra*0.6; b.vel.y += (Math.random()-0.5)*extra*0.5; b.vel.z += (Math.random()-0.5)*extra*0.6;
+      }
       const k = Math.min(1, vn*0.16);
       a.disturb = Math.min(1, a.disturb+k);
       b.disturb = Math.min(1, b.disturb+k);
@@ -3708,6 +3790,12 @@ const DEMO_LOOP = {on:false, nextT:0, shown:'' };
 try{ DEMO_LOOP.on = localStorage.getItem(DEMO_LOOP_KEY) === '1'; }catch(e){}
 function demoLoopTick(dt){
   const show = mode==='demo' && state!=='menu' && !REPLAY.on;
+  // 右上角開關列：比賽類模式都顯示（回放開關），連續對戰只在示範賽出現
+  const tg = document.getElementById('hudTgl'), tShow = rpMatchMode() && state!=='menu';
+  if(tg.style.display !== (tShow ? 'flex' : 'none')) tg.style.display = tShow ? 'flex' : 'none';
+  document.body.classList.toggle('netMode', mode==='net');
+  const rt = document.getElementById('rpToggle'), rtx = '🎬 回放：' + (REPLAY.enabled ? '開' : '關');
+  if(rt.textContent !== rtx){ rt.textContent = rtx; rt.classList.toggle('on', REPLAY.enabled); }
   let txt = '🔁 連續對戰：' + (DEMO_LOOP.on ? '開' : '關');
   if(show && DEMO_LOOP.on && state==='over'){
     DEMO_LOOP.nextT -= dt;
@@ -5961,7 +6049,8 @@ const REC = {t:0, acc:0, buf:[]};
 const REPLAY = {on:false, clips:[], pending:[], idx:-1, ph:0, playing:true, speed:'auto', cam:'dir', loop:true,
   auto:false, autoAt:0, prevState:null, endHold:0, lastPh:0, shake:0, orbitA:0.6, orbitE:0.35, orbitR:1.7, dragging:false,
   camPos:V3(0,3,6), camLook:V3(0,1,0), snap:true, btnShowT:0, fov:null};
-const _rpProxy = {mesh:null, role:'', wobblePhase:0, pos:V3(0,0,0), vel:V3(0,0,0), yaw:0, tiltP:0, tiltR:0, disturb:0, propSpin:0, canScore:true};
+const _rpProxy = {mesh:null, role:'', wobblePhase:0, pos:V3(0,0,0), vel:V3(0,0,0), yaw:0, tiltP:0, tiltR:0, disturb:0, propSpin:0, canScore:true,
+  crash:null, rollQ:new THREE.Quaternion()};
 const _rpQ1 = new THREE.Quaternion(), _rpQ2 = new THREE.Quaternion();
 function rpMatchMode(){ return mode==='player' || mode==='demo' || mode==='net' || (mode==='duo' && DUO.kind==='match'); }
 function rpRecord(dt){
@@ -5970,7 +6059,8 @@ function rpRecord(dt){
   if(REC.acc < 1/RP_FPS) return;
   REC.acc = 0;
   const f = {t:REC.t, d:drones.map(d=>[d.pos.x, d.pos.y, d.pos.z, d.yaw, d.tiltP, d.tiltR, d.disturb, d.propSpin,
-      d.vel.x, d.vel.y, d.vel.z, d.canScore?1:0, (d.benched || d.mesh.grp.visible===false)?0:1]),
+      d.vel.x, d.vel.y, d.vel.z, d.canScore?1:0, (d.benched || d.mesh.grp.visible===false)?0:1,
+      d.crash?1:0, d.rollQ?d.rollQ.x:0, d.rollQ?d.rollQ.y:0, d.rollQ?d.rollQ.z:0, d.rollQ?d.rollQ.w:1]),
     r:[ringEast, ringWest].map(R=>[R.grp.position.x, R.grp.position.y, R.grp.position.z,
       R.grp.quaternion.x, R.grp.quaternion.y, R.grp.quaternion.z, R.grp.quaternion.w])};
   REC.buf.push(f);
@@ -5978,7 +6068,18 @@ function rpRecord(dt){
   // 進球後再錄 1.6 秒，片段才算完整
   for(let i=REPLAY.pending.length-1; i>=0; i--) if(REC.t >= REPLAY.pending[i].goalT + RP_POST) rpFinalize(REPLAY.pending[i]);
 }
+// 回放開關（2026-10-31，業主：「回放不回放也有開關」）：記在 localStorage，關掉就不切片段、不出按鈕、示範賽不自動回放
+REPLAY.enabled = true;
+try{ REPLAY.enabled = localStorage.getItem('hsinchuDroneReplayOnV1') !== '0'; }catch(e){}
+document.getElementById('rpToggle').addEventListener('click', e=>{
+  e.stopPropagation();
+  REPLAY.enabled = !REPLAY.enabled;
+  try{ localStorage.setItem('hsinchuDroneReplayOnV1', REPLAY.enabled ? '1' : '0'); }catch(err){}
+  if(!REPLAY.enabled){ REPLAY.autoAt = 0; REPLAY.btnShowT = 0; }
+  rpUpdateBtn(true);
+});
 function rpOnGoal(data){
+  if(!REPLAY.enabled) return;
   if(!rpMatchMode()) return;
   const clip = {goalT:REC.t, team:data.team, ring:data.ring, scorer: data.team==='red' ? 0 : 3, frames:null,
     n: REPLAY.clips.length + REPLAY.pending.length + 1,
@@ -6092,6 +6193,9 @@ function rpTick(dt, t){
     P.propSpin = a[7]+(b[7]-a[7])*k;
     P.vel.set(a[8]+(b[8]-a[8])*k, a[9]+(b[9]-a[9])*k, a[10]+(b[10]-a[10])*k);
     P.canScore = (k < 0.5 ? a : b)[11] === 1;
+    const cr = (k < 0.5 ? a : b);
+    P.crash = cr[13] === 1 ? true : null;
+    if(P.crash){ _rpQ1.set(a[14]||0, a[15]||0, a[16]||0, a[17]===undefined?1:a[17]); _rpQ2.set(b[14]||0, b[15]||0, b[16]||0, b[17]===undefined?1:b[17]); P.rollQ.copy(_rpQ1).slerp(_rpQ2, k); }
     Drone.prototype.syncMesh.call(P, tw);
   });
   [ringEast, ringWest].forEach((R, i)=>{
@@ -6184,7 +6288,7 @@ function rpSyncUI(){
 }
 let rpBtnState = '';
 function rpUpdateBtn(force){
-  const show = !REPLAY.on && REPLAY.clips.length + REPLAY.pending.length > 0 && rpMatchMode()
+  const show = REPLAY.enabled && !REPLAY.on && REPLAY.clips.length + REPLAY.pending.length > 0 && rpMatchMode()
     && (state==='play' || state==='pause' || state==='over');
   const hot = show && REPLAY.btnShowT > 0;
   const n = REPLAY.clips.length + REPLAY.pending.length;
