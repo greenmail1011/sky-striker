@@ -612,6 +612,7 @@
   <b>↑ / ↓</b> 前進 / 後退<br>
   <b>← / →</b> 左 / 右側飛<br>
   <b>C</b> 視角（追視/機載/全場）<br>
+  <b>🖱 拖曳畫面</b> 轉視角・<b>滾輪</b> 遠近・<b>雙擊</b> 回預設<br>
   <b>P</b> 暫停&nbsp;<b>R</b> 重來&nbsp;<b>M</b> 模式選單<br>
   <b>🎮 搖桿</b> 左桿=油門/旋轉、右桿=前後/側飛<br>
   <b>&nbsp;</b> △視角&nbsp;OPTIONS暫停&nbsp;SHARE重賽
@@ -669,7 +670,7 @@
     得分後 Striker 必須<b>飛回己方半場</b>重新解鎖得分權。<br>
     衝撞是合法戰術——但被撞會暫時失控翻滾！一節 <b>3 分鐘</b>。<br>
     <b>違規扣分：</b>非 Striker 穿框＝進攻違規；於己方球門區逗留逾 3 秒＝防守違規（守門）。<br>
-    <b>最終分數 ＝ 得分 − 進攻違規 − 防守違規</b>，最終分數高者勝。<br>
+    <b>最終分數 ＝ 得分 − 進攻違規 − 防守違規</b>（終場若為負分，記為 0 分），最終分數高者勝。<br>
     玩家模式中你操控<b>紅隊 Striker</b>；示範賽則由 AI 全自動對戰。<br>
     <b>尾燈辨識：</b>紅隊 Striker 藍燈、藍隊 Striker 紅燈；防守機：紅隊黃／綠、藍隊白／紫。
   </div>
@@ -987,22 +988,23 @@ function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
   });
 }
 {
-  // 照片的結構：每個半場是一座獨立的充氣框（藍／紅），中線處兩座並排 → 中間的直柱和頂部橫管是「一藍一紅兩根並排」。
-  //   直柱：四角＋中線兩側；地面一圈底管；頂部一圈頂管＋中線橫管＋兩個球門正上方各一根橫管（球門就吊在這根下面）。
+  // 照片的結構：藍、紅兩半場的充氣框在中線相接，中線的直柱和頂部橫管是藍色。
+  //   直柱：四角＋中線（藍色，業主 2026-10-31 更正）；地面一圈底管；頂部一圈頂管＋中線橫管＋兩個球門正上方各一根橫管（球門就吊在這根下面）。
   //   沒有中段橫管（舊版照「後牆中段橫管」是另一個場地的照片）。
   const xo = FIELD.hx + TUBE_R, zo = FIELD.hz + TUBE_R;  // 管中心在網外側
-  const yb = TUBE_R, yt = FIELD.h, xm = TUBE_R;          // xm：中線兩根並排的偏移
+  const yb = TUBE_R, yt = FIELD.h;
   [[-1, VINYL.blue], [1, VINYL.red]].forEach(([sx, c])=>{
-    const xe = sx*xo, xc = sx*xm;                        // 這個半場的端線、中線側
+    const xe = sx*xo;                                    // 這個半場的端線
     [-zo, zo].forEach(z=>{
-      [yb, yt].forEach(y=> airTube(xc, y, z, xe, y, z, c));   // 長邊底管／頂管
+      [yb, yt].forEach(y=> airTube(0, y, z, xe, y, z, c));    // 長邊底管／頂管（接到中線的藍柱）
       airTube(xe, yb, z, xe, yt, z, c);                        // 端角直柱
-      airTube(xc, yb, z, xc, yt, z, c);                        // 中線側直柱（與另一色並排）
     });
     [yb, yt].forEach(y=> airTube(xe, y, -zo, xe, y, zo, c));  // 端線底管／頂管
-    airTube(xc, yt, -zo, xc, yt, zo, c);                       // 中線頂部橫管
     airTube(sx*RING.x, yt, -zo, sx*RING.x, yt, zo, c);         // 球門正上方的頂部橫管（球門吊在這裡）
   });
+  // 中線：照片上是「藍色」直柱＋藍色頂部橫管（業主更正：不是一半藍一半紅）
+  [-zo, zo].forEach(z=> airTube(0, yb, z, 0, yt, z, VINYL.blue));
+  airTube(0, yt, -zo, 0, yt, zo, VINYL.blue);
 }
 
 // ---------- 觀眾席與廣告板（氛圍） ----------
@@ -2465,7 +2467,9 @@ function collideRing(d, ring){
 
 // ---------- 計分與違規（最終分 = 得分 − 進攻違規 − 防守違規） ----------
 const score = {red:{g:0,o:0,d:0}, blue:{g:0,o:0,d:0}};
-const finalScore = t => score[t].g - score[t].o - score[t].d;
+const rawScore = t => score[t].g - score[t].o - score[t].d;
+// 2026-10-31 業主：「時間到時最終分結算，如果是負分，記為 0 分」→ 比賽中照實顯示（可能是負的），終場結算才把負分記為 0
+const finalScore = t => (state === 'over' ? Math.max(0, rawScore(t)) : rawScore(t));
 const FOUL_ZONE = 1.0;     // 己方球門禁區半徑 m
 const FOUL_TIME = 3.0;     // 逗留逾此秒數 → 防守違規（守門）
 
@@ -2500,9 +2504,10 @@ function playFx(data){
     sfx.warn();
   }else if(data.type==='end'){
     sfx.buzzer();
-    const rF = finalScore('red'), bF = finalScore('blue');
+    const rF = Math.max(0, rawScore('red')), bF = Math.max(0, rawScore('blue'));
     const res = rF>bF ? '紅隊獲勝！🏆' : bF>rF ? '藍隊獲勝！🏆' : '平手！';
-    flashMsg('最終 ' + bF + ' : ' + rF + '　' + res + '（按 R 重賽）',
+    const neg = (rawScore('red') < 0 || rawScore('blue') < 0) ? '（負分記為 0）' : '';
+    flashMsg('最終 ' + bF + ' : ' + rF + neg + '　' + res + '（按 R 重賽）',
       rF>bF ? '#f87171' : bF>rF ? '#60a5fa' : '#ffe680', 9999);
   }
 }
@@ -3686,6 +3691,38 @@ function camDrone(){
   if(mode==='net') return NET.mySlot>=0 ? drones[NET.mySlot] : null;
   return player;
 }
+// 滑鼠／手指拖曳調整觀看角度（2026-10-31，業主：「我也要能夠透過滑鼠調整觀看角度」）
+//   拖曳畫面＝轉動視角（追視：繞著飛機轉；全場：繞著場地轉；機載：左右上下看）、滾輪＝拉近拉遠、雙擊＝回到預設。
+//   每種視角各自記住自己的調整；搖桿、按鈕上的拖曳不受影響（只吃在 3D 畫面上的拖曳）。
+const CAMV = [{yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}];
+(function(){
+  const cv = renderer.domElement;
+  let drag = null;
+  const usable = ()=> !REPLAY.on && state !== 'menu' && !DUO.on && document.getElementById('overlay').style.display === 'none';
+  cv.addEventListener('pointerdown', e=>{
+    if(!usable() || e.button > 0) return;
+    drag = {id:e.pointerId, x:e.clientX, y:e.clientY};
+    try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  cv.addEventListener('pointermove', e=>{
+    if(!drag || e.pointerId !== drag.id || !usable()) return;
+    const v = CAMV[camMode] || CAMV[0];
+    v.yaw   -= (e.clientX - drag.x)*0.006;
+    v.pitch += (e.clientY - drag.y)*0.005;
+    const lim = camMode===1 ? [-0.8, 0.8] : camMode===2 ? [-0.4, 1.0] : [-0.6, 0.9];
+    v.pitch = clamp(v.pitch, lim[0], lim[1]);
+    drag.x = e.clientX; drag.y = e.clientY;
+  });
+  const up = e=>{ if(drag && e.pointerId === drag.id) drag = null; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e=>{
+    if(!usable()) return;
+    e.preventDefault();
+    const v = CAMV[camMode] || CAMV[0];
+    v.zoom = clamp(v.zoom * (e.deltaY > 0 ? 1.1 : 0.9), camMode===2 ? 0.4 : 0.5, camMode===2 ? 1.8 : 3);
+  }, {passive:false});
+  cv.addEventListener('dblclick', ()=>{ if(usable()) Object.assign(CAMV[camMode] || CAMV[0], {yaw:0, pitch:0, zoom:1}); });
+})();
 function updateCamera(dt){
   let dp, dl;
   if(state==='menu' && mode!=='net' && document.getElementById('overlay').style.display!=='none'){
@@ -3700,14 +3737,21 @@ function updateCamera(dt){
   const cd = camDrone();
   if(!cd){ camMode = 2; }
   const fwd = cd ? V3(Math.sin(cd.yaw),0,Math.cos(cd.yaw)) : V3(0,0,1);
-  if(camMode===0){          // 第三人稱追視
-    dp = cd.pos.clone().addScaledVector(fwd,-2.2).add(V3(0,1.0,0));
-    dl = cd.pos.clone().addScaledVector(fwd,1.6);
-  }else if(camMode===1){    // 機載 FPV
+  const cv = CAMV[camMode] || CAMV[0];
+  if(camMode===0){          // 第三人稱追視（預設＝機後 2.2m、上方 1m；拖曳可繞著飛機轉）
+    const by = (cd ? cd.yaw : 0) + cv.yaw, p = 0.4266 + cv.pitch, R = 2.417*cv.zoom;
+    const hx = Math.sin(by), hz = Math.cos(by);
+    dp = cd.pos.clone().add(V3(-hx*Math.cos(p)*R, Math.sin(p)*R, -hz*Math.cos(p)*R));
+    dl = cd.pos.clone().add(V3(hx*1.6, 0, hz*1.6));
+  }else if(camMode===1){    // 機載 FPV（拖曳＝轉頭看）
+    const by = cd.yaw + cv.yaw;
+    const lx = Math.sin(by)*Math.cos(cv.pitch), lz = Math.cos(by)*Math.cos(cv.pitch), ly = -Math.sin(cv.pitch);
     dp = cd.pos.clone().add(V3(0,0.12,0)).addScaledVector(fwd,0.15);
-    dl = cd.pos.clone().addScaledVector(fwd,4).add(V3(0,0.3,0));
-  }else{                    // 全場轉播
-    dp = V3(0, 3.6, 5.6); dl = V3(0, 0.9, 0);   // 貼近場地，場地為主角
+    dl = dp.clone().add(V3(lx*4, ly*4 + 0.18, lz*4));
+  }else{                    // 全場轉播（預設＝(0,3.6,5.6) 看場中；拖曳可繞著場地轉）
+    const p = 0.4495 + cv.pitch, R = 6.217*cv.zoom, by = cv.yaw;
+    dl = V3(0, 0.9, 0);
+    dp = dl.clone().add(V3(Math.sin(by)*Math.cos(p)*R, Math.sin(p)*R, Math.cos(by)*Math.cos(p)*R));
   }
   const k = camMode===1 ? 1 : Math.min(1, dt*5.5);
   camPos.lerp(dp, k); camLook.lerp(dl, k);
@@ -3780,6 +3824,7 @@ function restart(){
 }
 function endMatch(){
   setState('over');
+  updateScore();                                // 終場結算：負分記為 0
   fireFx({type:'end'});
   DEMO_LOOP.nextT = 6;                          // 示範賽連續對戰：結果停 6 秒再開下一場
 }
