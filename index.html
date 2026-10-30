@@ -2043,9 +2043,10 @@ function s3CageGeometry(){
 }
 function buildDroneMesh(teamColor, isStriker, tailHex){
   const grp = new THREE.Group();
-  // 球形護籠：S3 樣式（白色、不規則網格、底部開口）；微微帶隊色的自發光＝內部燈條照亮球籠的感覺
+  // 球形護籠：S3 樣式（不規則網格、底部開口）。2026-10-31 業主：「白色機一眼看不出隊伍，架構不變，顏色調為紅藍框架」→ 護籠用隊色
+  const cageHex = teamColor === 0xff4455 ? 0xd8323c : 0x2f6fe0;
   const cage = new THREE.Mesh(s3CageGeometry(), new THREE.MeshStandardMaterial({
-    color:0xf1f1ee, roughness:.5, metalness:0, emissive:teamColor, emissiveIntensity: isStriker ? 0.32 : 0.22, side:THREE.DoubleSide}));
+    color:new THREE.Color(cageHex).convertSRGBToLinear(), roughness:.45, metalness:0, emissive:teamColor, emissiveIntensity:0.18, side:THREE.DoubleSide}));
   grp.add(cage);
   // 環形燈：WS2812B LED 燈條 12 顆（白，赤道）＋深色燈條基座
   const strip = new THREE.Mesh(
@@ -2060,6 +2061,7 @@ function buildDroneMesh(teamColor, isStriker, tailHex){
     transparent:true, opacity:0.85, blending:THREE.AdditiveBlending, depthWrite:false});
   for(let k=0; k<12; k++){
     const a = k/12*Math.PI*2;
+    if(Math.abs(angDiff(a, Math.PI)) < 0.75) continue;   // 機尾那一段留給尾燈（業主：尾燈之外的環形燈＝自己的隊色）
     const px = new THREE.Mesh(ledGeo, ledMat);
     px.position.set(Math.sin(a)*(DRONE_R-0.0085), 0, Math.cos(a)*(DRONE_R-0.0085));
     grp.add(px);
@@ -2069,26 +2071,29 @@ function buildDroneMesh(teamColor, isStriker, tailHex){
   // 尾燈：WS2812B 4 顆（特別明亮），與環形燈同在最大球徑赤道上（local −z 為機尾）；顏色見 TAIL_COLORS
   const tailC = tailHex !== undefined ? tailHex : 0xffdd22;
   const tailGeo = new THREE.SphereGeometry(0.011, 8, 6);   // 燈珠略大
-  const tailMat = new THREE.MeshBasicMaterial({color: new THREE.Color(tailC).lerp(new THREE.Color(0xffffff), 0.3)});   // 燈珠中心偏白＝更亮
+  const tailMat = new THREE.MeshBasicMaterial({color: new THREE.Color(tailC).lerp(new THREE.Color(0xffffff), isStriker ? 0.1 : 0.3)});   // 燈珠中心偏白＝更亮（攻擊手少偏白，顏色才飽和）
   const tailGlowMat = new THREE.SpriteMaterial({map:glowTex, color:tailC,
-    transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
-  for(let k=0; k<4; k++){
-    const a = Math.PI + (k-1.5)/3*(Math.PI/3.5);   // 機尾 180°±26° 扇形展開
+    transparent:true, opacity: isStriker ? 0.55 : 1, blending:THREE.AdditiveBlending, depthWrite:false});   // 攻擊手 6 顆光暈會疊在一起，個別調淡才不會疊成白色
+  // 攻擊手的尾燈要「很明顯」（業主：紅隊攻擊手很明顯的藍色尾燈、藍隊攻擊手紅色尾燈）：6 顆、光暈更大、點光源更亮
+  const nTail = isStriker ? 6 : 4, tailSpan = isStriker ? Math.PI/2.6 : Math.PI/3.5, tailGlowS = isStriker ? 0.15 : 0.1;
+  for(let k=0; k<nTail; k++){
+    const a = Math.PI + (k-(nTail-1)/2)/(nTail-1)*tailSpan;   // 機尾扇形展開
     const tl = new THREE.Mesh(tailGeo, tailMat);
     tl.position.set(Math.sin(a)*(DRONE_R-0.011), 0, Math.cos(a)*(DRONE_R-0.011));
     grp.add(tl);
     const sp = new THREE.Sprite(tailGlowMat);   // 尾燈光暈更大更亮
-    sp.scale.set(0.1,0.1,1); sp.position.copy(tl.position); grp.add(sp);
+    sp.scale.set(tailGlowS, tailGlowS, 1); sp.position.copy(tl.position); grp.add(sp);
   }
-  const tailGlow = new THREE.PointLight(tailC, 1.1, 1.5);   // 同色點光源照亮周圍
+  const tailGlow = new THREE.PointLight(tailC, isStriker ? 2.0 : 1.1, isStriker ? 2.2 : 1.5);   // 同色點光源照亮周圍
   tailGlow.position.set(0, 0, -DRONE_R*0.9); grp.add(tailGlow);
   // 機身
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.028,0.05),
     new THREE.MeshStandardMaterial({color:0xe2e2de, roughness:.55, metalness:.05}));   // S3：白色機身
   grp.add(body);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.018,12,8),
-    new THREE.MeshStandardMaterial({color:new THREE.Color(0xd23a32).convertSRGBToLinear(), roughness:.35, metalness:.1}));   // S3：紅色電池
+  // 中間燈號：機身正中央一顆隊色燈（業主：中間燈號＝自己的隊伍色）
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.016,12,8), new THREE.MeshBasicMaterial({color:ledCore}));
   dome.position.y = 0.02; grp.add(dome);
+  const domeGlow = new THREE.Sprite(ringGlowMat); domeGlow.scale.set(0.07, 0.07, 1); domeGlow.position.y = 0.02; grp.add(domeGlow);
   // 四支機臂與旋翼
   const props = [];
   const armMat = new THREE.MeshStandardMaterial({color:0xe6e6e2, roughness:.6});   // S3：白色機架
@@ -2114,7 +2119,7 @@ function buildDroneMesh(teamColor, isStriker, tailHex){
         emissiveIntensity:0.8, side:THREE.DoubleSide, roughness:.6}));
     ribbon.rotation.order = 'YXZ';
     scene.add(ribbon);   // 獨立於機身：緞帶受重力下垂，不隨機身翻轉
-    const beacon = new THREE.PointLight(0xff2233, 0.5, 1.8);
+    const beacon = new THREE.PointLight(teamColor, 0.5, 1.8);   // 隊色
     grp.add(beacon);
   }
   grp.traverse(o=>{ if(o.isMesh) o.castShadow = true; });
