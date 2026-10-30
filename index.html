@@ -1676,7 +1676,7 @@ function buildOrbit(){
     arm.position.set(x*0.7,y*0.6,z*0.7); arm.rotation.z=Math.PI/2; G.add(arm);
   });
   // 場地甲板：同天空之城，apron 關掉後需要一塊底
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.4, 5.6),   // 2026-10-31 由 4.6 加深：場邊選手站在 z≈−2.2
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.4, 4.6),   // 2026-10-31 由 7.6 加長：選手區在兩端 x≈±3.6
     new THREE.MeshStandardMaterial({color:envSRGB(0x60697a), roughness:.5, metalness:.8}));
   deck.position.y = -0.22; deck.receiveShadow = true; G.add(deck);
   for(let i=0;i<4;i++){                          // 甲板下的桁架支撐
@@ -6496,7 +6496,7 @@ function rpKey(e){   // 回放中的鍵盤（比賽的按鍵這時都不作用�
 //   - 模型 assets/pilot.glb：MakeHuman 官方素材（CC0，可放公開 repo），經 github.com/kblood/CharacterCreator
 //     的 CC0 輸出檔（output/base_body.glb、clothing_tshirt/jeans/shoes、hair_short02）烘焙成「成年男性＋T恤
 //     ＋牛仔褲＋球鞋＋短髮＋號碼背心」一個檔（1.4MB，53 根骨頭 game_engine 骨架）。授權說明 assets/pilot_LICENSE.txt。
-//   - 6 位選手站在場外後方（−z 遠側，不擋觀眾面），各隊站自己半場那側；每位對應 drones[i]。
+//   - 6 位選手站在兩端的選手區（藍隊在藍場 −x 那端、紅隊在紅場 +x 那端，面向場內）；每位對應 drones[i]。
 //   - 只讀各機的「畫面狀態」（mesh 位置、input、crash），不碰物理 → 回放／示範賽／連線對戰都相容。
 //   - 載入失敗（或沒網路抓不到 GLTFLoader）就不顯示選手，比賽完全不受影響。
 //   - 會動：頭與上身跟著自己那台機轉、手上的遙控器搖桿跟實際輸入動、隨輸入身體微側傾、呼吸／重心晃動、
@@ -6516,9 +6516,11 @@ const PILOT_VEST = {
           harasser:{bg:'#1f5fd6', fg:'#ffffff', txt:'6', sub:'場地球員'} },
 };
 const PILOT_TEAM_TRIM = {red:'#ff3b4a', blue:'#3b8bff'};
-// 站位：x＝自己半場那側（紅 +x、藍 −x）、z＝場地後方（廣告板 −1.9 與看台 −3.1 之間）
-const PILOT_SPOT = { striker:0.95, defender:1.7, harasser:2.45 };
-const PILOT_Z = -2.22;
+// 站位（2026-10-31 業主更正，附比賽照片：「選手應該站在選手區，也就是左右兩側，而非裁判的位置」）：
+//   選手區＝場地兩個短邊外面——藍隊站藍場（−x）那端、紅隊站紅場（+x）那端，面向場內；長邊後方是裁判位置，不站人。
+//   PILOT_X＝離場地中心的距離（端網 3.0、充氣管外緣約 3.3、端邊看台 4.3 起）；PILOT_SPOT＝沿端線的 z 位置（+z＝觀眾面）
+const PILOT_X = 3.62;
+const PILOT_SPOT = { striker:0.05, defender:0.9, harasser:-0.85 };
 // 每人 T 恤／髮色／身高略有不同，看起來不像複製人
 const PILOT_LOOK = [
   {shirt:'#f2f2f0', hair:'#1b1410', s:1.00}, {shirt:'#2b2f38', hair:'#120d0a', s:0.975}, {shirt:'#8c96a3', hair:'#2a1c13', s:1.02},
@@ -6611,7 +6613,8 @@ function pilotBuild(d, i){
   root.add(model);
   const look = PILOT_LOOK[i % PILOT_LOOK.length];
   const sgn = d.team === 'red' ? 1 : -1;
-  root.position.set(sgn * PILOT_SPOT[d.role], 0, PILOT_Z);
+  root.position.set(sgn * PILOT_X, 0, PILOT_SPOT[d.role]);
+  root.rotation.y = -sgn * Math.PI/2;                  // 面向場內（藍隊朝 +x、紅隊朝 −x）
   root.scale.setScalar(look.s);
   const B = {};
   model.traverse(o=>{
@@ -6752,9 +6755,9 @@ function pilotPose(P, dt, t){
 
   // 2) 看自己的機：目標方向（root 局部）
   const tgt = d.mesh.grp.getWorldPosition(_pv[4]);
-  const head0 = root.localToWorld(_pv[3].set(0, 1.62, 0.03));
-  const dx = tgt.x - head0.x, dy = tgt.y - head0.y, dz = tgt.z - head0.z;
-  let wantYaw = Math.atan2(dx, dz);                                // 0＝正前方（+z）
+  const tl = root.worldToLocal(_pv[3].copy(tgt));                  // 目標轉到選手自己的座標（選手面向 local +z）
+  const dx = tl.x, dy = tl.y - 1.62, dz = tl.z - 0.03;
+  let wantYaw = Math.atan2(dx, dz);                                // 0＝正前方
   let wantPitch = -Math.atan2(dy, Math.hypot(dx, dz));             // 正＝低頭
   wantYaw = THREE.MathUtils.clamp(wantYaw, -1.45, 1.45);
   wantPitch = THREE.MathUtils.clamp(wantPitch, -0.6, 0.55);
