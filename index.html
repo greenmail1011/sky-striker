@@ -168,6 +168,12 @@
   .mfBack.show{visibility:visible} .mfBack:hover{color:#fff;border-color:#fff}
   #overlay .credit{margin-top:14px}
   /* 選單開著時把比賽 HUD（計分板、操作說明、飛行數據、搖桿…）藏起來，畫面才乾淨 */
+  /* ---- 示範賽連續對戰開關（2026-10-30）---- */
+  #demoLoop{position:fixed;top:12px;right:16px;z-index:30;pointer-events:auto;cursor:pointer;font-family:inherit;padding:7px 14px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.25);background:rgba(10,14,30,.72);color:#c9d5ee;font-size:13px;font-weight:700;backdrop-filter:blur(4px)}
+  #demoLoop.on{background:rgba(125,255,169,.2);border-color:#7dffa9;color:#fff}
+  #demoLoop:hover{border-color:#fff}
+  body.touch.phone #demoLoop{top:auto;bottom:14px;right:10px;font-size:12px;padding:5px 10px}
   /* ---- 進球關鍵回放（2026-10-30）---- */
   #rpBtn{position:fixed;bottom:58px;left:50%;transform:translateX(-50%);z-index:30;pointer-events:auto;cursor:pointer;font-family:inherit;
     padding:7px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(10,14,30,.72);color:#e8eefc;font-size:14px;font-weight:700;
@@ -497,6 +503,7 @@
 </div>
 <div class="hud" id="msg"></div>
 <button class="hud" id="rpBtn" style="display:none">🎬 回放</button>
+<button class="hud" id="demoLoop" style="display:none" title="打開後，每場結束會自動開始下一場">🔁 連續對戰：關</button>
 <div id="rpUI">
   <div class="rpBar rpTop"></div><div class="rpBar rpBot"></div>
   <div id="rpFlash"></div>
@@ -657,7 +664,8 @@
     衝撞是合法戰術——但被撞會暫時失控翻滾！一節 <b>3 分鐘</b>。<br>
     <b>違規扣分：</b>非 Striker 穿框＝進攻違規；於己方球門區逗留逾 3 秒＝防守違規（守門）。<br>
     <b>最終分數 ＝ 得分 − 進攻違規 − 防守違規</b>，最終分數高者勝。<br>
-    玩家模式中你操控<b>紅隊 Striker</b>；示範賽則由 AI 全自動對戰。
+    玩家模式中你操控<b>紅隊 Striker</b>；示範賽則由 AI 全自動對戰。<br>
+    <b>尾燈辨識：</b>紅隊 Striker 藍燈、藍隊 Striker 紅燈；防守機：紅隊黃／綠、藍隊白／紫。
   </div>
   <div id="sceneBar">
     <span class="lbl">場　景</span>
@@ -1960,7 +1968,13 @@ const glowTex = (()=>{
   g.fillStyle=gr; g.fillRect(0,0,64,64);
   return new THREE.CanvasTexture(cv);
 })();
-function buildDroneMesh(teamColor, isStriker){
+// 尾燈顏色（2026-10-30 業主：「紅隊攻擊手尾燈是藍燈、藍隊攻擊手尾燈是紅燈；防守機尾燈要和攻擊手不同，彼此也不同，比較好辨識」）
+//   原本全部是黃色。現在：攻擊手＝對方隊色；四台防守機各一色（黃／綠／白／紫），不跟紅藍撞色。
+const TAIL_COLORS = {
+  red:  {striker:0x2f7bff, defender:0xffd21a, harasser:0x22ff6a},   // 紅隊：攻擊手藍、防守黃、騷擾綠
+  blue: {striker:0xff2a2a, defender:0xffffff, harasser:0xb44dff},   // 藍隊：攻擊手紅、防守白、騷擾紫
+};
+function buildDroneMesh(teamColor, isStriker, tailHex){
   const grp = new THREE.Group();
   // 球形護籠（測地線網格）
   const cage = new THREE.LineSegments(
@@ -1987,10 +2001,11 @@ function buildDroneMesh(teamColor, isStriker){
     const sp = new THREE.Sprite(ringGlowMat);   // 每顆燈珠帶光暈
     sp.scale.set(0.05,0.05,1); sp.position.copy(px.position); grp.add(sp);
   }
-  // 尾燈：WS2812B 4 顆（黃色、特別明亮），與環形燈同在最大球徑赤道上（local −z 為機尾）
+  // 尾燈：WS2812B 4 顆（特別明亮），與環形燈同在最大球徑赤道上（local −z 為機尾）；顏色見 TAIL_COLORS
+  const tailC = tailHex !== undefined ? tailHex : 0xffdd22;
   const tailGeo = new THREE.SphereGeometry(0.011, 8, 6);   // 燈珠略大
-  const tailMat = new THREE.MeshBasicMaterial({color:0xffe855});
-  const tailGlowMat = new THREE.SpriteMaterial({map:glowTex, color:0xffdd22,
+  const tailMat = new THREE.MeshBasicMaterial({color: new THREE.Color(tailC).lerp(new THREE.Color(0xffffff), 0.3)});   // 燈珠中心偏白＝更亮
+  const tailGlowMat = new THREE.SpriteMaterial({map:glowTex, color:tailC,
     transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
   for(let k=0; k<4; k++){
     const a = Math.PI + (k-1.5)/3*(Math.PI/3.5);   // 機尾 180°±26° 扇形展開
@@ -2000,7 +2015,7 @@ function buildDroneMesh(teamColor, isStriker){
     const sp = new THREE.Sprite(tailGlowMat);   // 尾燈光暈更大更亮
     sp.scale.set(0.1,0.1,1); sp.position.copy(tl.position); grp.add(sp);
   }
-  const tailGlow = new THREE.PointLight(0xffdd22, 1.1, 1.5);   // 黃色點光源照亮周圍
+  const tailGlow = new THREE.PointLight(tailC, 1.1, 1.5);   // 同色點光源照亮周圍
   tailGlow.position.set(0, 0, -DRONE_R*0.9); grp.add(tailGlow);
   // 機身
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.028,0.05),
@@ -2050,7 +2065,7 @@ class Drone{
     this.attackDir = team==='red' ? -1 : 1;   // 紅隊攻 −x 紅框、藍隊攻 +x 藍框（框在敵方半場）
     this.color = team==='red' ? 0xff4455 : 0x3388ff;
     this.spawn = spawn.clone(); this.yaw0 = yaw0;
-    this.mesh = buildDroneMesh(this.color, role==='striker');
+    this.mesh = buildDroneMesh(this.color, role==='striker', TAIL_COLORS[team][role]);
     this.pos = spawn.clone(); this.vel = V3(0,0,0);
     this.yaw = yaw0;
     this.tiltP = 0; this.tiltR = 0;           // 實際傾角狀態（pitch/roll 比例）
@@ -2517,9 +2532,10 @@ const AI_P = [null,
   {err:0.6, sDash:5.7, sApp:4.3, sRet:5.0, dfV:3.4, lead:0.35, hTrig:1.6, hV:4.6, hRest:[0.9,1.0], hLead:0.4,
    react:0.26, plug:0, cool:0, cover:0, scan:0.9, snipe:0, dodge:0.5, retX:1.4, threat:1.5, hes:0.6, fixYaw:true},
   {err:0.4, sDash:5.8, sApp:4.6, sRet:5.3, dfV:3.8, lead:0.5, hTrig:1.8, hV:4.8, hRest:[0.7,0.7], hLead:0.5,
-   react:0.18, plug:1.2, cool:1.4, cover:1, scan:0.4, snipe:0.42, dodge:0.8, retX:1.3, threat:1.8, hes:0.2, fixYaw:true, burst:true, snipeR:2.4, accK:2.2},
-  {err:0.25, sDash:6.0, sApp:4.9, sRet:5.6, dfV:4.2, lead:0.65, hTrig:2.0, hV:5.0, hRest:[0.5,0.5], hLead:0.55,
-   react:0.12, plug:1.6, cool:1.0, cover:2, scan:0.2, snipe:0.34, dodge:1.0, retX:1.2, threat:2.2, hes:0, fixYaw:true, burst:true, snipeR:3.0, accK:3.0},
+   react:0.18, plug:1.2, cool:1.4, cover:1, scan:0.4, snipe:0.42, dodge:0.8, retX:1.3, threat:1.8, hes:0.2, fixYaw:true, burst:true, snipeR:2.4, accK:2.4, brake:4.8, stopX:0.55},
+  {err:0.15, sDash:6.5, sApp:5.5, sRet:6.5, dfV:4.2, lead:0.65, hTrig:2.0, hV:5.0, hRest:[0.5,0.5], hLead:0.55,
+   react:0.12, plug:1.6, cool:1.0, cover:2, scan:0.12, snipe:0.27, dodge:1.0, retX:1.0, threat:2.2, hes:0, fixYaw:true, burst:true,
+   snipeR:3.6, accK:5.0, brake:5.6, stopX:0.6, abortD:0.38, abortW:0.18, clear:true},
 ];
 let AI_LV = 1;
 try{ const v = +localStorage.getItem(AI_LV_KEY); if(v>=1 && v<=5) AI_LV = v; }catch(e){}
@@ -2538,7 +2554,7 @@ function aiMatchLabel(){   // 開賽訊息用
 }
 function aiApplyLevels(){   // 每次開賽套用；連線對戰的 AI 代打維持 Lv1（大廳沒有難度選項）
   drones.forEach(d=>{ d.lv = mode==='net' ? 1 : mode==='demo' ? AI_DEMO[d.team] : AI_LV; d.zoneCool = 0; d.plugging = false;
-    d.read = null; d.readT = 0; d.lane = null; d.laneT = 0; d.feint = 0; d.dashV = null; });
+    d.read = null; d.readT = 0; d.lane = null; d.laneT = 0; d.feint = 0; d.dashV = null; d.detour = null; d.clearing = false; });
 }
 function aiThink(d, dt){
   const lv = d.lv || 1;
@@ -2563,6 +2579,35 @@ function laneClear(p, ring, foes){
 }
 const LANE_DIRS = [[0,0]].concat([0,1,2,3,4,5].map(k=>[Math.cos(k*Math.PI/3), Math.sin(k*Math.PI/3)]));
 const LANE_SLOPE = 0.33;   // 斜角進攻的最大偏斜（約 18°）：再斜，框的厚度會把有效開口吃掉
+// 繞框回防（2026-10-30，業主：「正式規則穿越球門之後不能從後往前直接穿回來」）
+//   穿過框之後人在框後方：先往旁邊／上下閃出框的外圈（外徑 0.35m＋機身 0.1m），閃出去之後才往回飛，
+//   回到框前方 0.35m 以外才恢復原本的路線。閃的方向在穿框當下決定一次：挑離敵機最遠、又順著目前偏移的那邊。
+const RING_CLEAR = RING.Ro + DRONE_R + 0.1;
+function aiDetour(d, ring, t, foes){
+  const dir = d.attackDir;
+  const relX = (d.pos.x - ring.x)*dir;                 // >0＝在框後方（已穿過）
+  if(relX < -0.35){ d.detour = null; return t; }       // 已經回到框前方夠遠：照原本路線
+  const oy = d.pos.y - ring.y, oz = d.pos.z - ring.z, off = Math.hypot(oy, oz);
+  if(!d.detour){
+    if(relX < 0) return t;                              // 還在框前方：不用繞（只有穿過框之後才要）
+    if(off >= RING_CLEAR + 0.05) return t;              // 本來就在外圈外面
+    let best = null, bs = -1e9;
+    for(const [ey, ez] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const py = ring.y + ey*(RING_CLEAR+0.12), pz = ring.z + ez*(RING_CLEAR+0.12);
+      if(py < 0.4 || py > FIELD.h-0.4 || Math.abs(pz) > FIELD.hz-0.35) continue;
+      let sc = (oy*ey + oz*ez)*2;                       // 順著目前的偏移方向比較快
+      for(const o of foes){ const q = Math.hypot(o.pos.x-(ring.x-dir*0.4), o.pos.y-py, o.pos.z-pz); sc += Math.min(q, 1.2); }
+      if(sc > bs){ bs = sc; best = [ey, ez]; }
+    }
+    d.detour = best || [-1, 0];
+  }
+  const [ey, ez] = d.detour;
+  const R = RING_CLEAR + 0.12;
+  if(off < RING_CLEAR){                                 // 還在框的投影範圍內：留在框後，先橫移／升降閃出去
+    return V3(ring.x + dir*Math.max(0.35, relX), ring.y + ey*R, ring.z + ez*R);
+  }
+  return V3(t.x, ring.y + ey*R, ring.z + ez*R);         // 已閃出外圈：保持這個偏移往回飛，過了框再回到原路線
+}
 function aiDodge(d, target, foes, P){   // 有敵機高速朝我衝來 → 往垂直方向閃（優先上下）
   if(!P.dodge) return;
   for(const o of foes){
@@ -2584,10 +2629,17 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
     // 得分後：機頭不轉，保持目前高度與側向「倒退」直線飛回己方半場解鎖（從框洞原路退出），
     // 跨過中線 0.4m 一解鎖就馬上往前再攻——影片裡強手 1.3 秒就能再穿一次框，靠的就是這個（2026-10-30）
     d.dash = false;
-    const t = P.burst
-      ? V3(-dir*P.retX, clamp(atkRing.y,0.7,FIELD.h-0.6), clamp(atkRing.z,-FIELD.hz+0.5,FIELD.hz-0.5))   // 沿框心軸線倒退：解鎖後直接就對準了
+    let t = P.burst
+      ? V3(-dir*P.retX, clamp(atkRing.y,0.7,FIELD.h-0.6), clamp(atkRing.z,-FIELD.hz+0.5,FIELD.hz-0.5))   // 過了框之後回到框心軸線：解鎖後直接就對準了
       : V3(-dir*P.retX, clamp(d.pos.y,0.7,FIELD.h-0.6), clamp(d.pos.z,-FIELD.hz+0.5,FIELD.hz-0.5));
+    t = aiDetour(d, atkRing, t, foes);                 // 規則：不能從框後直接穿回來 → 先閃出框的外圈
     aiDodge(d, t, foes, P);
+    if(P.burst && !d.detour){   // 全速回半場：速度＝剛好在中線後 0.6m 停下來的最大速度（跨過 0.4m 就解鎖）
+      const rem = Math.max(0.05, (d.pos.x + dir*0.6)*dir);
+      const u = t.clone().sub(d.pos); const L = u.length() || 1;
+      const vmax = Math.min(P.sRet*d.skill, Math.sqrt(2*P.brake*rem));
+      d.dashV = u.multiplyScalar(Math.min(vmax, L*3)/L);
+    }
     return [t, P.sRet*d.skill];
   }
   const rc = V3(atkRing.x, atkRing.y, atkRing.z);
@@ -2597,17 +2649,17 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
   const dashTo = ()=>{
     const u = rc.clone().sub(d.pos).normalize();
     if(P.burst){   // 全速衝：速度＝能在框後 0.55m（防護網前）停下來的最大速度
-      const rem = Math.max(0.05, (atkRing.x + dir*0.55 - d.pos.x)*dir);
-      d.dashV = u.clone().multiplyScalar(Math.min(P.sDash*d.skill, Math.sqrt(2*4.5*rem)));
+      const rem = Math.max(0.05, (atkRing.x + dir*P.stopX - d.pos.x)*dir);
+      d.dashV = u.clone().multiplyScalar(Math.min(P.sDash*d.skill, Math.sqrt(2*P.brake*rem)));
     }
     return rc.clone().addScaledVector(u, 0.8);
   };
   if(d.dash){
     d.dashT -= dt;
     if(d.dashT<=0 || before<=0 || d.disturb>0.75) d.dash = false;
-    else for(const o of foes){   // 正前方被堵死 → 放棄、馬上重掃路線
+    else for(const o of foes){   // 正前方被堵死 → 放棄、馬上重掃路線（大師比較敢硬闖：只看更近、更正的阻擋）
       const ahead = (o.pos.x-d.pos.x)*dir;
-      if(ahead>0.05 && ahead<0.5 && segDist(o.pos, d.pos, rc) < 0.22){ d.dash = false; d.laneT = 0; }
+      if(ahead>0.05 && ahead<(P.abortD||0.5) && segDist(o.pos, d.pos, rc) < (P.abortW||0.22)){ d.dash = false; d.laneT = 0; }
     }
     if(d.dash) return [dashTo(), P.sDash*d.skill];
   }
@@ -2638,8 +2690,9 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
       return [dashTo(), P.sDash*d.skill];
     }
   }
-  const t = d.lane.p.clone();
-  if(d.lane.clr < 0.3){   // 每條路都被堵：在門前左右上下晃（假動作），等對方堵門的人時間到退出
+  let t = d.lane.p.clone();
+  t = aiDetour(d, atkRing, t, foes);   // 沒進球卻跑到框後（被撞、擦框）：一樣要繞出外圈，不能從後面穿回來
+  if(d.lane.clr < 0.3 && !d.detour){   // 每條路都被堵：在門前左右上下晃（假動作），等對方堵門的人時間到退出
     t.z = clamp(t.z + Math.sin(d.feint*3.1)*0.35, -FIELD.hz+0.35, FIELD.hz-0.35);
     t.y = clamp(t.y + Math.sin(d.feint*2.3)*0.2, 0.45, FIELD.h-0.45);
   }
@@ -2709,6 +2762,27 @@ function aiThinkSmart(d, dt, P){
       if(P.cover && threat && mateOut){
         const g = aiGuardPoint(d, P, ownRing, R, P.cover>=2 && canPlug);
         d.plugging = g.plug; target = g.pt; maxV = P.dfV*d.skill; d.strat = 0;
+      }else if(P.clear && !threat && (()=>{   // 自家球門沒危險時才去清道（防守優先）
+        // 清道（Lv5）：自家前鋒有得分權、正在對方框前 2.8m 內 → 找出堵在「前鋒→框心」線上、離框 1m 內的敵機，撞開它
+        const my = drones.find(o=>o.team===d.team && o.role==='striker' && !o.benched);
+        if(!my || !my.canScore || (atkRing.x - my.pos.x)*d.attackDir > 2.8 || (atkRing.x - my.pos.x)*d.attackDir < 0.2) return false;
+        const rc = V3(atkRing.x, atkRing.y, atkRing.z);
+        let blk = null, bd = 0.32;
+        for(const o of drones){
+          if(o.team===d.team || o.benched || o.role==='striker') continue;
+          const fx = (atkRing.x - o.pos.x)*d.attackDir;
+          if(fx < 0 || fx > 1.1) continue;
+          const sd = segDist(o.pos, my.pos, rc);
+          if(sd < bd){ bd = sd; blk = o; }
+        }
+        if(!blk) return false;
+        d.clearTgt = blk; return true;
+      })()){
+        // 從側面撞（把它推離射門線），不要從正面推（會把它推進框裡、自己也可能穿框違規）
+        const b = d.clearTgt, my = drones.find(o=>o.team===d.team && o.role==='striker');
+        const sz = Math.sign(b.pos.z - my.pos.z) || 1;
+        target = V3(b.pos.x + b.vel.x*0.2, b.pos.y + b.vel.y*0.2, b.pos.z + b.vel.z*0.2 + sz*0.05);
+        d.clearing = true; d.plugging = false; maxV = P.hV*d.aggro;
       }else{
         d.plugging = false;
         const es = enemyStriker;
@@ -2761,9 +2835,14 @@ function aiThinkSmart(d, dt, P){
       }
       aiKeepOut(target, ownRing, d.attackDir, FOUL_ZONE+0.18);
     }
-    // 非 Striker 絕不穿對方球門（進攻違規）：目標點離對方框平面至少 0.6m
-    if(Math.abs(target.x-atkRing.x) < 0.6 && Math.hypot(target.y-atkRing.y, target.z-atkRing.z) < 0.6)
-      target.x = atkRing.x - d.attackDir*0.6;
+    // 非 Striker 絕不穿對方球門（進攻違規）：目標點離對方框平面至少 0.6m（清道時 0.32m，而且自己離框心軸線太近就先退）
+    const keep = d.clearing ? 0.32 : 0.6;
+    if(Math.abs(target.x-atkRing.x) < keep && Math.hypot(target.y-atkRing.y, target.z-atkRing.z) < 0.6)
+      target.x = atkRing.x - d.attackDir*keep;
+    if(d.clearing && (atkRing.x - d.pos.x)*d.attackDir < 0.35 && Math.hypot(d.pos.y-atkRing.y, d.pos.z-atkRing.z) < 0.5)
+      target.x = atkRing.x - d.attackDir*0.8;
+    if(!d.clearing) d.clearTgt = null;
+    d.clearing = false;
   }
   // 機頭方向（Lv3+，2026-10-30 依業主提供的比賽影片：「真實比賽是針對球門前後鑽縫隙，不是很多原地轉方向」）
   //   Striker：機頭一直朝進攻方向（在框前時微微對準框心，最多偏 35°），前進、倒退、平移都不轉頭
@@ -2844,6 +2923,7 @@ function aiThinkClassic(d, dt, P){   // Lv1（P=null）＝原本的 AI 一字不
           clamp(atkRing.y + (far? d.atkOffY:0), 0.5, FIELD.h-0.5),
           clamp(atkRing.z + (far? d.atkOffZ:0), -FIELD.hz+0.4, FIELD.hz-0.4));
         maxV = (P?P.sApp:3.9)*d.skill;
+        target = aiDetour(d, atkRing, target, drones.filter(o=>o.team!==d.team && !o.benched));   // 人在框後：先繞出外圈
         // 前方有敵機擋路 → 側向與垂直閃避
         for(const o of drones){
           if(o.team===d.team || o.benched) continue;
@@ -2857,6 +2937,7 @@ function aiThinkClassic(d, dt, P){   // Lv1（P=null）＝原本的 AI 一字不
       }
     }else{
       target = V3(-d.attackDir*1.5, 1.0+Math.abs(d.atkOffY), clamp(d.atkOffZ,-1,1)); // 回防解鎖
+      target = aiDetour(d, atkRing, target, drones.filter(o=>o.team!==d.team && !o.benched));   // 規則：不能從框後穿回來
       maxV = (P?P.sRet:4.6)*d.skill;   // 快速解鎖、立刻再進攻
     }
   }else if(d.role==='defender'){
@@ -3475,7 +3556,34 @@ function restart(){
 function endMatch(){
   setState('over');
   fireFx({type:'end'});
+  DEMO_LOOP.nextT = 6;                          // 示範賽連續對戰：結果停 6 秒再開下一場
 }
+// ---------- 示範賽「連續對戰」（2026-10-30，業主：「AI 對戰一場結束就停止，希望有可以持續對戰的按鈕可以開啟，也可以自己決定關閉」）
+//   右上角按鈕切換，記在 localStorage。打開時每場結束停 6 秒（看比分、可按回放），然後自動重賽；回放開著時會等看完。
+const DEMO_LOOP_KEY = 'hsinchuDroneDemoLoopV1';
+const DEMO_LOOP = {on:false, nextT:0, shown:'' };
+try{ DEMO_LOOP.on = localStorage.getItem(DEMO_LOOP_KEY) === '1'; }catch(e){}
+function demoLoopTick(dt){
+  const show = mode==='demo' && state!=='menu' && !REPLAY.on;
+  let txt = '🔁 連續對戰：' + (DEMO_LOOP.on ? '開' : '關');
+  if(show && DEMO_LOOP.on && state==='over'){
+    DEMO_LOOP.nextT -= dt;
+    if(DEMO_LOOP.nextT <= 0){ restart(); return; }
+    txt += '（' + Math.ceil(DEMO_LOOP.nextT) + ' 秒後下一場）';
+  }
+  const key = show + '|' + txt;
+  if(key === DEMO_LOOP.shown) return;
+  DEMO_LOOP.shown = key;
+  const b = document.getElementById('demoLoop');
+  b.style.display = show ? '' : 'none';
+  b.textContent = txt; b.classList.toggle('on', DEMO_LOOP.on);
+}
+document.getElementById('demoLoop').addEventListener('click', e=>{
+  e.stopPropagation();
+  DEMO_LOOP.on = !DEMO_LOOP.on; DEMO_LOOP.nextT = Math.max(DEMO_LOOP.nextT, 3);
+  try{ localStorage.setItem(DEMO_LOOP_KEY, DEMO_LOOP.on ? '1' : '0'); }catch(err){}
+  DEMO_LOOP.shown = '';
+});
 let mode = 'player';   // 'player' | 'demo' | 'net' | 'practice' | 'campaign' | 'race'
 function startGame(m){
   duoCleanup();
@@ -6134,6 +6242,7 @@ function loop(){
   // 視覺
   drones.forEach(d=>d.syncMesh(t));
   rpTick(dt, t);                                // 進球回放：錄影；回放中把模型擺到回放畫面
+  demoLoopTick(dt);                             // 示範賽連續對戰
   envAnimate(dt);
   if(mode==='campaign'){ campAnimate(t); campUpdateHUD(); }
   if(mode==='race'){ raceAnimate(t); raceUpdateHUD(); }
