@@ -168,6 +168,61 @@
   .mfBack.show{visibility:visible} .mfBack:hover{color:#fff;border-color:#fff}
   #overlay .credit{margin-top:14px}
   /* 選單開著時把比賽 HUD（計分板、操作說明、飛行數據、搖桿…）藏起來，畫面才乾淨 */
+  /* ---- 進球關鍵回放（2026-10-30）---- */
+  #rpBtn{position:fixed;bottom:58px;left:50%;transform:translateX(-50%);z-index:30;pointer-events:auto;cursor:pointer;font-family:inherit;
+    padding:7px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(10,14,30,.72);color:#e8eefc;font-size:14px;font-weight:700;
+    backdrop-filter:blur(4px);transition:transform .2s}
+  #rpBtn b{color:#ffd75a} #rpBtn small{opacity:.6;font-size:11px;margin-left:4px;border:1px solid rgba(255,255,255,.35);border-radius:4px;padding:0 4px}
+  #rpBtn:hover{transform:translateX(-50%) scale(1.06)}
+  #rpBtn.hot{font-size:19px;padding:11px 26px;color:#1a0f00;border:none;background:linear-gradient(90deg,#ffd75a,#ff8a3d);
+    box-shadow:0 0 0 0 rgba(255,190,80,.7);animation:rpHot 1.1s ease-out infinite}
+  #rpBtn.hot small{border-color:rgba(0,0,0,.35)}
+  @keyframes rpHot{0%{box-shadow:0 0 0 0 rgba(255,190,80,.7)}100%{box-shadow:0 0 0 20px rgba(255,190,80,0)}}
+  body.touch #rpBtn{bottom:14px}
+  #rpUI{position:fixed;inset:0;z-index:60;pointer-events:none;display:none;font-family:inherit}
+  #rpUI.on{display:block}
+  body.replaying .hud:not(#rpBtn),body.replaying #touchUI,body.replaying #touchToggle,body.replaying #duoHUD,body.replaying #duoDiv,
+  body.replaying .duoP,body.replaying .duoMsg,body.replaying #netBadge{visibility:hidden!important}
+  .rpBar{position:absolute;left:0;right:0;background:#000;animation:rpBar .35s ease-out both}
+  .rpTop{top:0;height:9vh} .rpBot{bottom:0;height:9vh}
+  @keyframes rpBar{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  .rpTop{transform-origin:top} .rpBot{transform-origin:bottom}
+  #rpHead{position:absolute;top:calc(9vh - 26px);left:22px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;text-shadow:0 2px 8px #000}
+  .rpRec{font-weight:900;letter-spacing:3px;font-size:14px;color:#fff;background:#d81f2a;padding:3px 10px 3px 8px;border-radius:5px;display:inline-flex;align-items:center;gap:6px}
+  .rpRec i{width:9px;height:9px;border-radius:50%;background:#fff;animation:rpBlink 1s steps(2) infinite}
+  @keyframes rpBlink{50%{opacity:0}}
+  #rpTitle{font-size:22px;font-weight:900;letter-spacing:1px} #rpSub{color:#c9d5ee;font-size:13px}
+  #rpGoal{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) scale(0);font-size:120px;font-weight:900;font-style:italic;letter-spacing:6px;
+    color:#fff;opacity:0;text-shadow:0 0 18px #ffd75a,0 0 40px #ff8a3d,0 6px 0 #b4410f}
+  #rpGoal.go{animation:rpGoal 1.8s cubic-bezier(.2,1.4,.4,1) forwards}
+  @keyframes rpGoal{0%{transform:translate(-50%,-50%) scale(3);opacity:0}12%{transform:translate(-50%,-50%) scale(.9);opacity:1}
+    22%{transform:translate(-50%,-50%) scale(1.05)}75%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(1.15);opacity:0}}
+  #rpFlash{position:absolute;inset:0;background:#fff;opacity:0}
+  #rpFlash.go{animation:rpFlash .5s ease-out}
+  @keyframes rpFlash{0%{opacity:.75}100%{opacity:0}}
+  #rpCtl{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:min(1100px,96vw);pointer-events:auto;
+    background:rgba(8,12,28,.82);border:1px solid rgba(140,170,255,.25);border-radius:14px;padding:8px 12px 6px;backdrop-filter:blur(6px);box-sizing:border-box}
+  .rpSeekRow{display:flex;align-items:center;gap:10px}
+  .rpSeekWrap{position:relative;flex:1;display:flex;align-items:center}
+  #rpSeek{width:100%;accent-color:#ffd75a;cursor:pointer;margin:6px 0}
+  #rpMark{position:absolute;top:50%;width:4px;height:18px;margin:-9px 0 0 -2px;background:#7dffa9;border-radius:2px;box-shadow:0 0 8px #7dffa9;pointer-events:none}
+  #rpTime{min-width:96px;text-align:right;font-variant-numeric:tabular-nums;color:#ffd75a;font-weight:800;font-size:14px}
+  .rpRow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:center}
+  .rpGrp{display:inline-flex;gap:4px;align-items:center;padding:2px;border-radius:10px;background:rgba(255,255,255,.04)}
+  #rpClipN{min-width:44px;text-align:center;font-size:13px;color:#c9d5ee;font-variant-numeric:tabular-nums}
+  #rpUI button{font-family:inherit;cursor:pointer;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:#e3eaf8;
+    padding:6px 10px;border-radius:8px;font-size:13px;line-height:1.1}
+  #rpUI button:hover{background:rgba(255,255,255,.16)}
+  #rpUI button.sel{background:rgba(255,215,90,.22);border-color:#ffd75a;color:#fff;font-weight:800}
+  #rpUI button.big{font-size:16px;padding:6px 16px;background:rgba(125,255,169,.18);border-color:#7dffa9}
+  #rpUI .rpClose{background:linear-gradient(90deg,#7dffa9,#5ad1ff);color:#06210f;border:none;font-weight:900;padding:7px 16px}
+  #rpHint{text-align:center;font-size:11px;color:#7c88a8;margin-top:5px}
+  #rpUI.auto #rpHint::after{content:'　·　自動回放播完會自己回到比賽'}
+  body.touch #rpHint{display:none}
+  body.touch.phone #rpGoal{font-size:64px}
+  body.touch.phone #rpCtl{padding:5px 6px 4px;bottom:4px} body.touch.phone #rpUI button{padding:5px 7px;font-size:12px}
+  body.touch.phone #rpTitle{font-size:16px} body.touch.phone #rpHead{top:6px;left:10px}
+  body.touch.phone .rpBar{height:5vh}
   /* ---- 左右雙人對戰（2026-10-21）---- */
   .c-duo{--c:255,190,90}
   #mfDuoOpt{display:none;flex-direction:column;gap:8px;align-items:center;margin:-4px 0 14px;font-size:14px;color:#b9c6e4}
@@ -178,7 +233,14 @@
   #raceDuoOpt .sceneBtn{padding:5px 12px;font-size:13px}
   .duoP .racei{display:none} body.duoRace .duoP .racei{display:inline;font-weight:800;color:#ffd75a} body.duoRace .duoP .arm{display:none}
   body.duoRace #raceHUD .row{display:none}
-  #mfDuoOpt .rTeam,#mfDuoOpt .rPlayers,#mfDuoOpt .rPad{display:none}
+  #mfDuoOpt .rTeam,#mfDuoOpt .rPlayers,#mfDuoOpt .rPad,#mfDuoOpt .rAi,#mfDuoOpt .rAiDemo{display:none}
+  #menuFlow.aiLv #mfDuoOpt,#menuFlow.aiLv .rAi{display:flex}
+  #menuFlow.aiLvDemo #mfDuoOpt,#menuFlow.aiLvDemo .rAiDemo{display:flex}
+  #mfDuoOpt .rAiDemo .tm{display:inline-block;min-width:4.6em;font-weight:800}
+  #mfDuoOpt .rAiDemo.blue .tm{color:#60a5fa} #mfDuoOpt .rAiDemo.red .tm{color:#f87171}
+  #mfDuoOpt .rAiDemo.blue button.sel{background:rgba(96,165,250,.25);border-color:#60a5fa}
+  #mfDuoOpt .rAiDemo.red button.sel{background:rgba(248,113,113,.25);border-color:#f87171}
+  #mfDuoOpt button[data-lv].sel{background:rgba(125,255,169,.2);border-color:#7dffa9}
   #menuFlow.duo .rTeam,#menuFlow.prac .rPlayers,#menuFlow.duo .rPad,#menuFlow.pracDuo .rPad{display:flex}
   .duoP .prac{display:none} body.duoPrac .duoP .prac{display:inline} body.duoPrac .duoP .arm{display:none}
   #mfDuoOpt button{padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#dfe7f7;font-size:14px;cursor:pointer;font-family:inherit}
@@ -392,6 +454,21 @@
 </style>
 </head>
 <body>
+<div id="bootCover"><div class="bc"><div class="bcT">無人機足球模擬培訓系統</div><div class="bcS">DRONE SOCCER TRAINING SIMULATOR</div>
+  <div class="bcBar"><i></i></div><div class="bcM">場地載入中…</div></div></div>
+<style>
+  #bootCover{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 40%,#1a2a5a 0%,#07071a 70%);transition:opacity .5s ease;font-family:system-ui,-apple-system,'PingFang TC','Microsoft JhengHei',sans-serif}
+  #bootCover.out{opacity:0;pointer-events:none}
+  #bootCover .bc{text-align:center;color:#e8eefc;width:min(520px,86vw)}
+  #bootCover .bcT{font-size:clamp(24px,5vw,40px);font-weight:900;letter-spacing:4px;
+    background:linear-gradient(90deg,#60a5fa,#c4b5fd,#f87171);-webkit-background-clip:text;background-clip:text;color:transparent}
+  #bootCover .bcS{font-size:11px;letter-spacing:5px;color:#7c88a8;margin-top:6px}
+  #bootCover .bcBar{height:6px;border-radius:6px;background:rgba(255,255,255,.08);margin:28px auto 10px;overflow:hidden}
+  #bootCover .bcBar i{display:block;height:100%;width:8%;border-radius:6px;background:linear-gradient(90deg,#7dffa9,#5ad1ff);transition:width .4s ease}
+  #bootCover .bcM{font-size:13px;color:#9fb0d6;animation:bcPulse 1.4s ease-in-out infinite}
+  @keyframes bcPulse{50%{opacity:.45}}
+</style>
 <canvas id="c"></canvas>
 <div id="vignette"></div>
 
@@ -419,6 +496,24 @@
   </div>
 </div>
 <div class="hud" id="msg"></div>
+<button class="hud" id="rpBtn" style="display:none">🎬 回放</button>
+<div id="rpUI">
+  <div class="rpBar rpTop"></div><div class="rpBar rpBot"></div>
+  <div id="rpFlash"></div>
+  <div id="rpHead"><span class="rpRec"><i></i>REPLAY</span><b id="rpTitle"></b><small id="rpSub"></small></div>
+  <div id="rpGoal">GOAL!</div>
+  <div id="rpCtl">
+    <div class="rpSeekRow"><div class="rpSeekWrap"><input type="range" id="rpSeek" min="0" max="1000" step="1" value="0"><i id="rpMark" title="進球瞬間"></i></div><span id="rpTime"></span></div>
+    <div class="rpRow">
+      <span class="rpGrp"><button data-a="prevClip" title="上一球">◀</button><span id="rpClipN"></span><button data-a="nextClip" title="下一球">▶</button></span>
+      <span class="rpGrp"><button data-a="start" title="從頭（Home）">⏮</button><button data-a="back" title="退一格（←）">◀▌</button><button data-a="play" id="rpPlay" class="big" title="播放／暫停（空白鍵）">⏸</button><button data-a="fwd" title="進一格（→）">▐▶</button><button data-a="goal" title="跳到進球瞬間（G）">⚽</button><button data-a="loop" id="rpLoop" title="重複播放">🔁</button></span>
+      <span class="rpGrp"><button data-sp="auto" title="進球瞬間自動慢動作">🎬 特寫</button><button data-sp="0.25">0.25×</button><button data-sp="0.5">0.5×</button><button data-sp="1">1×</button></span>
+      <span class="rpGrp"><button data-cam="dir" title="1">🎬 導播</button><button data-cam="chase" title="2">🎥 追射手</button><button data-cam="goal" title="3">🥅 球門</button><button data-cam="wide" title="4">🛰 全場</button><button data-cam="fpv" title="5">👁 FPV</button><button data-cam="orbit" title="6：拖曳畫面環繞、滾輪縮放">🔄 環繞</button></span>
+      <button data-a="close" class="rpClose">✕ 回到比賽</button>
+    </div>
+    <div id="rpHint">拖曳畫面＝環繞觀看・滾輪縮放・空白鍵 播放/暫停・← → 逐格・↑ ↓ 速度・1~6 換鏡頭・G 進球瞬間・V/Esc 離開</div>
+  </div>
+</div>
 <div class="hud" id="practiceHUD" style="display:none;top:12px;left:50%;transform:translateX(-50%);
   background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:14px;padding:10px 26px;
   text-align:center;font-size:14px;color:#cdd8ee;letter-spacing:1px">
@@ -544,6 +639,11 @@
       <div id="mfDuoOpt">
         <div class="row rPlayers">人數：<button data-pd="0">👤 單人</button><button data-pd="1">👥 雙人（左右分割畫面）</button></div>
         <div class="row rTeam">隊伍：<button data-v="0">⬜ 只有兩人（1v1）</button><button data-v="1">🤖 加 AI 隊友（3v3）</button></div>
+        <div class="row rAi">AI 難度：<button data-lv="1">🐣 新手</button><button data-lv="2">🙂 入門</button><button data-lv="3">💪 進階</button><button data-lv="4">🔥 高手</button><button data-lv="5">👑 大師</button></div>
+        <div class="row rAi"><small id="aiLvDesc" style="color:#bcd3f5"></small></div>
+        <div class="row rAiDemo blue"><span class="tm">🔵 藍隊 AI</span><button data-dlv="blue:1">🐣 新手</button><button data-dlv="blue:2">🙂 入門</button><button data-dlv="blue:3">💪 進階</button><button data-dlv="blue:4">🔥 高手</button><button data-dlv="blue:5">👑 大師</button></div>
+        <div class="row rAiDemo red"><span class="tm">🔴 紅隊 AI</span><button data-dlv="red:1">🐣 新手</button><button data-dlv="red:2">🙂 入門</button><button data-dlv="red:3">💪 進階</button><button data-dlv="red:4">🔥 高手</button><button data-dlv="red:5">👑 大師</button></div>
+        <div class="row rAiDemo"><small id="aiDemoDesc" style="color:#bcd3f5"></small></div>
         <div class="row rPad">只有一支搖桿時，搖桿給：<button data-pad="0">◀ 左邊 P1 藍</button><button data-pad="1">右邊 P2 紅 ▶</button><small>另一人用鍵盤</small></div>
       </div>
       <div class="mfScenes" id="mfScenes"></div>
@@ -685,7 +785,16 @@
 //      雙向送達都正常。因此改用 Nostr，且不再需要任何 Firebase 專案/帳號設定。
 // 2026-10-09：鎖定版本。原本寫 trystero/nostr（不帶版本），esm.sh 會自動換成最新版，
 //   上游一改版就可能整個壞掉；0.26.0 已實測（兩分頁 2 秒內互連）。要升級請先實測再改版本號。
-import {joinRoom, selfId} from 'https://esm.sh/trystero@0.26.0/nostr';
+// 2026-10-30：改成「用到才載入」（業主反映打開網頁會頓一下）。原本寫在最上面的 import 會讓整個程式
+//   等 esm.sh 下載完才開始跑；學校網路慢或擋掉 esm.sh 時，連單機都打不開。現在只有連線對戰需要它：
+//   開網頁後閒置時先在背景預載，按「建立／加入房間」時若還沒好就等它；載入失敗只影響連線對戰。
+let joinRoom = null, selfId = null, trysteroP = null;
+function loadTrystero(){
+  if(!trysteroP) trysteroP = import('https://esm.sh/trystero@0.26.0/nostr')
+    .then(m=>{ joinRoom = m.joinRoom; selfId = m.selfId; })
+    .catch(err=>{ trysteroP = null; throw err; });
+  return trysteroP;
+}
 const NET_APP_ID = 'hsinchu-drone-soccer-net-v1';   // 純字串即可，不需要任何外部帳號/網址
 // 2026-10-09：TURN 中繼（解決「兩台不同裝置，大廳一直只有自己」）。
 //   只有 STUN 時，手機 4G（電信級 NAT）、學校 Wi-Fi（用戶端隔離）常常「找得到對方、卻連不起來」。
@@ -1050,14 +1159,32 @@ const ENV_ASSETS_OK = location.protocol !== 'file:';
 const ENV_LOW = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; // 手機：素材減量
 const envTexLoader = new THREE.TextureLoader();
 const envAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+// BOOT：開場載入畫面用的計數（2026-10-30）。開網頁時預設場景的照片（天空、岩壁、草地）是陸續到的，
+//   每到一張就要重新編譯材質＋上傳貼圖，畫面會一頓一頓。現在全部到齊、在載入畫面後面先畫幾幀之後才淡出。
+const BOOT = {pending:0, done:false, frames:0, t0:performance.now(), loaded:0, total:0};
 function envLoadTex(path, opt, ok){
   if(!ENV_ASSETS_OK) return;
+  const boot = !BOOT.done; if(boot){ BOOT.pending++; BOOT.total++; }
+  const fin = ()=>{ if(boot){ BOOT.pending--; BOOT.loaded++; } };
   envTexLoader.load(ENV_ASSET_BASE + path, t=>{
     if(opt.srgb) t.encoding = THREE.sRGBEncoding;
     if(opt.repeat){ t.wrapS = t.wrapT = THREE.RepeatWrapping; }
     t.anisotropy = envAniso;
-    ok(t);
-  }, undefined, ()=>console.info('[場景素材] 載入失敗，保留程序化外觀：' + path));
+    try{ ok(t); } finally { fin(); }   // 先執行 ok（裡面可能再排下一張，例如 4K 天空），再扣計數
+  }, undefined, ()=>{ fin(); console.info('[場景素材] 載入失敗，保留程序化外觀：' + path); });
+}
+function bootTick(){   // 每幀呼叫：素材到齊（或等太久）後再畫 3 幀，讓編譯／上傳都發生在載入畫面後面
+  if(BOOT.done) return;
+  const el = document.getElementById('bootCover');
+  const p = BOOT.total ? BOOT.loaded/BOOT.total : 1;
+  if(el){ const bar = el.querySelector('i'); if(bar) bar.style.width = Math.round(15 + p*80) + '%'; }
+  const waited = performance.now() - BOOT.t0;
+  if(BOOT.pending > 0 && waited < 8000){ BOOT.frames = 0; return; }
+  if(++BOOT.frames < 3) return;
+  BOOT.done = true;
+  if(el){ el.classList.add('out'); setTimeout(()=>el.remove(), 600); }
+  // 閒置時在背景預載連線模組（失敗沒關係，按連線對戰時會再試）
+  setTimeout(()=>{ loadTrystero().catch(()=>{}); }, 2500);
 }
 // 給 PBR 材質掛上照片貼圖（顏色貼圖＋法線貼圖），載入後才切換，之前維持純色
 function envPbr(mat, name, normalScale, tint){
@@ -2162,6 +2289,7 @@ function playFx(data){
       data.team==='red' ? '#ff5a5a' : '#5aa0ff', 2.2);
     ringPulse = {ring: data.ring==='E'?ringEast:ringWest, t:0};
     sfx.goal(); sfx.cheer();
+    rpOnGoal(data);                              // 關鍵回放：切片段（示範賽自動播、有人玩的比賽出按鈕）
   }else if(data.type==='foulAtk'){
     flashMsg((data.team==='red'?'紅隊':'藍隊')+'進攻違規 −1（非 Striker 穿框）', '#fb923c', 1.8);
     sfx.foul();
@@ -2173,7 +2301,7 @@ function playFx(data){
   }else if(data.type==='zoneWarn'){
     flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
   }else if(data.type==='start'){
-    flashMsg('比賽開始！', '#ffe680', 1.5);
+    flashMsg(data.ai ? '比賽開始！ AI：' + data.ai : '比賽開始！', '#ffe680', 1.5);
     sfx.whistle();
   }else if(data.type==='warn30'){
     sfx.warn();
@@ -2332,7 +2460,8 @@ function flyToward(d, target, maxV, dt){
   d.aiErrT -= dt;
   if(d.aiErrT<=0){
     d.aiErrT = 0.45;
-    d.aiErr.set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.2,(Math.random()-0.5)*0.3);
+    const ek = AI_P[d.lv||1].err;   // 難度：反應誤差倍率（Lv1＝1，跟原本一樣）
+    d.aiErr.set((Math.random()-0.5)*0.3*ek,(Math.random()-0.5)*0.2*ek,(Math.random()-0.5)*0.3*ek);
   }
   const errS = d.dash ? 0.2 : 1;   // 衝刺時全神貫注，誤差大減
   const tx = target.x+d.aiErr.x*errS, ty = target.y+d.aiErr.y*errS, tz = target.z+d.aiErr.z*errS;
@@ -2351,7 +2480,299 @@ function flyToward(d, target, maxV, dt){
   const desYaw = Math.atan2(tx-d.pos.x, tz-d.pos.z);
   d.input.yawRate = clamp(angDiff(desYaw,d.yaw)*3, -YAW_RATE, YAW_RATE);
 }
+// ============================================================
+// AI 難度五級（2026-10-29，業主：「現在的 AI 太簡單，現在這個當最簡單，分五個等級；最厲害的會一直攻擊、
+//   插縫隙，防守也不是寫死的，但會讓人很不容易攻進去」）
+//   Lv1 新手＝原本的 AI，行為完全沒變（aiThinkClassic 不帶參數，數字與 2026-06-12 調校相同）。
+//   Lv2 以上換成「會看場面」的大腦 aiThinkSmart，等級越高：反應越快、到進攻點猶豫越短（hes）、看到縫隙就衝、會堵門與補位：
+//     ・Striker 每隔一段時間掃描 14 條進攻路線（兩種距離 × 正中＋六個斜角），挑離敵機最遠、自己最快到的那條；
+//       Lv4+ 只要「現在位置到框心」這條線夠空就直接衝（插縫隙）；被堵就換路線；所有路線都被堵時在門前左右晃
+//       （假動作），等對方堵門的人時間到退出；被衝撞會閃；得分後走最短路線回半場解鎖、馬上再攻。
+//     ・Defender 站在「對方 Striker → 我方球門」的連線上卡位並預判。Lv4+ 對方逼近時會短暫進禁區堵門口，
+//       但會自己算違規時間（plug 秒）就退出，退出後要冷卻（cool 秒）才能再進 → 這段就是留給進攻方的「縫隙」。
+//     ・Harasser：Lv5 只在對方進到我方危險區才全力衝撞，平時站在第二道防線；隊友 Defender 冷卻或被撞歪時（Lv4+）補位。
+//     ・防守方對「對方在幹嘛」的判斷每隔 react 秒才更新一次（像人的反應時間），所以假動作騙得到，不是銅牆鐵壁。
+//   難度只改 AI 的判斷，物理（推力、阻力、最高速度）大家都一樣。
+// ============================================================
+const AI_LV_KEY = 'hsinchuDroneAiLvV1';
+const AI_LEVELS = [null,
+  {ic:'🐣', name:'新手', desc:'原本的 AI：進攻直來直往、防守慢半拍'},
+  {ic:'🙂', name:'入門', desc:'反應快一點，防守會稍微預判'},
+  {ic:'💪', name:'進階', desc:'會挑空檔進攻，防守站在射門線上'},
+  {ic:'🔥', name:'高手', desc:'看到縫隙就衝，防守會短暫堵門、隊友補位'},
+  {ic:'👑', name:'大師', desc:'一直進攻鑽縫隙，防守輪流堵門，很難攻進去'},
+];
+// err 反應誤差倍率；sDash/sApp/sRet 衝刺／進場／回防速度；dfV 防守速度；lead 預判秒數；
+// hTrig/hV/hRest/hLead 衝撞觸發距離／速度／喘息[最短,隨機]／預判；strat Striker 換路線間隔[最短,隨機]；
+// react 防守判斷更新間隔；plug 堵門最長秒數（0＝不堵）；cool 堵門後冷卻；cover 隊友補位（0 不補、1 線上補、2 可進禁區補）；
+// scan 進攻路線重掃間隔；snipe 縫隙多寬就直接衝（0＝不會）；dodge 閃避衝撞強度；retX 回防解鎖要飛到的 |x|；
+// threat 對方 Striker 離我方球門多近算危險
+const AI_P = [null,
+  {err:1.0},
+  {err:0.8, sDash:5.6, sApp:4.0, sRet:4.7, dfV:3.0, lead:0.25, hTrig:1.45, hV:4.4, hRest:[1.1,1.4], hLead:0.3,
+   react:0.36, plug:0, cool:0, cover:0, scan:1.5, snipe:0, dodge:0, retX:1.4, threat:1.3, hes:1.3},
+  {err:0.6, sDash:5.7, sApp:4.3, sRet:5.0, dfV:3.4, lead:0.35, hTrig:1.6, hV:4.6, hRest:[0.9,1.0], hLead:0.4,
+   react:0.26, plug:0, cool:0, cover:0, scan:0.9, snipe:0, dodge:0.5, retX:1.1, threat:1.5, hes:0.6},
+  {err:0.4, sDash:5.8, sApp:4.6, sRet:5.3, dfV:3.8, lead:0.5, hTrig:1.8, hV:4.8, hRest:[0.7,0.7], hLead:0.5,
+   react:0.18, plug:1.2, cool:1.4, cover:1, scan:0.4, snipe:0.42, dodge:0.8, retX:0.8, threat:1.8, hes:0.2},
+  {err:0.25, sDash:6.0, sApp:4.9, sRet:5.6, dfV:4.2, lead:0.65, hTrig:2.0, hV:5.0, hRest:[0.5,0.5], hLead:0.55,
+   react:0.12, plug:1.6, cool:1.0, cover:2, scan:0.2, snipe:0.34, dodge:1.0, retX:0.6, threat:2.2, hes:0},
+];
+let AI_LV = 1;
+try{ const v = +localStorage.getItem(AI_LV_KEY); if(v>=1 && v<=5) AI_LV = v; }catch(e){}
+function aiSetLevel(lv){ AI_LV = lv; try{ localStorage.setItem(AI_LV_KEY, String(lv)); }catch(e){} }
+function aiLabel(lv){ const L = AI_LEVELS[lv||AI_LV]; return L.ic + ' ' + L.name; }
+// 觀看示範：兩隊可以選不同等級（2026-10-30，業主：「示範能否也能選不同等級的 AI，這樣才能觀摩」）
+const AI_DEMO_KEY = 'hsinchuDroneAiLvDemoV1';
+const AI_DEMO = {blue: AI_LV, red: AI_LV};
+try{ const o = JSON.parse(localStorage.getItem(AI_DEMO_KEY) || 'null');
+  if(o){ if(o.blue>=1 && o.blue<=5) AI_DEMO.blue = o.blue; if(o.red>=1 && o.red<=5) AI_DEMO.red = o.red; } }catch(e){}
+function aiSetDemo(team, lv){ AI_DEMO[team] = lv; try{ localStorage.setItem(AI_DEMO_KEY, JSON.stringify(AI_DEMO)); }catch(e){} }
+function aiMatchLabel(){   // 開賽訊息用
+  if(mode === 'demo') return AI_DEMO.blue === AI_DEMO.red ? aiLabel(AI_DEMO.blue)
+    : '藍 ' + aiLabel(AI_DEMO.blue) + ' vs 紅 ' + aiLabel(AI_DEMO.red);
+  return aiLabel();
+}
+function aiApplyLevels(){   // 每次開賽套用；連線對戰的 AI 代打維持 Lv1（大廳沒有難度選項）
+  drones.forEach(d=>{ d.lv = mode==='net' ? 1 : mode==='demo' ? AI_DEMO[d.team] : AI_LV; d.zoneCool = 0; d.plugging = false;
+    d.read = null; d.readT = 0; d.lane = null; d.laneT = 0; d.feint = 0; });
+}
 function aiThink(d, dt){
+  const lv = d.lv || 1;
+  if(lv >= 2) aiThinkSmart(d, dt, AI_P[lv]);
+  else aiThinkClassic(d, dt, null);
+}
+function segDist(p, a, b){   // 點 p 到線段 ab 的距離
+  const abx=b.x-a.x, aby=b.y-a.y, abz=b.z-a.z;
+  const L2 = abx*abx+aby*aby+abz*abz || 1e-6;
+  const t = clamp(((p.x-a.x)*abx+(p.y-a.y)*aby+(p.z-a.z)*abz)/L2, 0, 1);
+  return Math.hypot(a.x+abx*t-p.x, a.y+aby*t-p.y, a.z+abz*t-p.z);
+}
+// 從 p 直衝框心這條線有多「空」：敵機現在位置與 0.3 秒後預判位置，離這條線最近的距離
+function laneClear(p, ring, foes){
+  const c = V3(ring.x, ring.y, ring.z);
+  let m = 9;
+  for(const o of foes){
+    m = Math.min(m, segDist(o.pos, p, c));
+    m = Math.min(m, segDist(V3(o.pos.x+o.vel.x*0.3, o.pos.y+o.vel.y*0.3, o.pos.z+o.vel.z*0.3), p, c));
+  }
+  return m;
+}
+const LANE_DIRS = [[0,0]].concat([0,1,2,3,4,5].map(k=>[Math.cos(k*Math.PI/3), Math.sin(k*Math.PI/3)]));
+const LANE_SLOPE = 0.33;   // 斜角進攻的最大偏斜（約 18°）：再斜，框的厚度會把有效開口吃掉
+function aiDodge(d, target, foes, P){   // 有敵機高速朝我衝來 → 往垂直方向閃（優先上下）
+  if(!P.dodge) return;
+  for(const o of foes){
+    const rx=d.pos.x-o.pos.x, ry=d.pos.y-o.pos.y, rz=d.pos.z-o.pos.z;
+    const dist = Math.hypot(rx,ry,rz);
+    if(dist>1.0 || dist<1e-3) continue;
+    const closing = ((o.vel.x-d.vel.x)*rx + (o.vel.y-d.vel.y)*ry + (o.vel.z-d.vel.z)*rz)/dist;
+    if(closing < 1.3) continue;
+    const s = P.dodge*(1.05-dist)*1.1;
+    target.y = clamp(target.y + (ry>=0?1:-1)*s, 0.45, FIELD.h-0.45);
+    target.z = clamp(target.z + (rz>=0?1:-1)*s*0.6, -FIELD.hz+0.35, FIELD.hz-0.35);
+  }
+}
+function aiStrikerSmart(d, dt, P, foes, atkRing){
+  const dir = d.attackDir;
+  d.feint = (d.feint||0) + dt;
+  if(!d.canScore){
+    // 得分後：保持目前高度與側向，直線飛回己方半場解鎖（最短路線），解鎖後馬上再攻
+    d.dash = false;
+    const t = V3(-dir*P.retX, clamp(d.pos.y,0.7,FIELD.h-0.6), clamp(d.pos.z,-FIELD.hz+0.5,FIELD.hz-0.5));
+    aiDodge(d, t, foes, P);
+    return [t, P.sRet*d.skill];
+  }
+  const rc = V3(atkRing.x, atkRing.y, atkRing.z);
+  const before = (atkRing.x - d.pos.x)*dir;              // 離框平面還有多遠（>0＝還沒穿過）
+  const lat = Math.hypot(d.pos.y-atkRing.y, d.pos.z-atkRing.z);
+  const inCone = before>0.3 && lat < LANE_SLOPE*before + 0.05;
+  const dashTo = ()=>{ const u = rc.clone().sub(d.pos).normalize(); return rc.clone().addScaledVector(u, 0.8); };
+  if(d.dash){
+    d.dashT -= dt;
+    if(d.dashT<=0 || before<=0 || d.disturb>0.75) d.dash = false;
+    else for(const o of foes){   // 正前方被堵死 → 放棄、馬上重掃路線
+      const ahead = (o.pos.x-d.pos.x)*dir;
+      if(ahead>0.05 && ahead<0.5 && segDist(o.pos, d.pos, rc) < 0.22){ d.dash = false; d.laneT = 0; }
+    }
+    if(d.dash) return [dashTo(), P.sDash*d.skill];
+  }
+  // 掃描進攻路線：兩種距離 × 正中＋六個斜角，挑「夠空、又近」的那條
+  d.laneT -= dt;
+  if(d.laneT<=0 || !d.lane){
+    d.laneT = P.scan*(0.8+Math.random()*0.4);
+    let best = null, bestS = -1e9;
+    for(const D of [0.95, 1.4]) for(const [cy,cz] of LANE_DIRS){
+      const p = V3(atkRing.x - dir*D,
+        clamp(atkRing.y + cy*LANE_SLOPE*D*0.85, 0.45, FIELD.h-0.45),
+        clamp(atkRing.z + cz*LANE_SLOPE*D*0.85, -FIELD.hz+0.35, FIELD.hz-0.35));
+      const clr = laneClear(p, atkRing, foes);
+      let s = Math.min(clr, 0.9)*3 - d.pos.distanceTo(p)*0.55;
+      for(const o of foes) if(segDist(o.pos, d.pos, p) < 0.3) s -= 0.6;   // 去的路上有人擋
+      if(d.lane && p.distanceTo(d.lane.p) < 0.05) s += 0.25;               // 遲滯：不要一直換
+      if(s > bestS){ bestS = s; best = {p, clr}; }
+    }
+    d.lane = best;
+  }
+  // 插縫隙：現在位置直衝框心的線夠空 → 直接衝；或到了選好的進攻點、線上沒人 → 衝
+  if(inCone && before<1.9){
+    const clr = laneClear(d.pos, atkRing, foes);
+    const atLane = d.pos.distanceTo(d.lane.p) < 0.3;
+    d.hesT = atLane ? (d.hesT||0) + dt : 0;          // 到了進攻點要猶豫多久才敢衝（低等級比較久，防守來得及補）
+    if((P.snipe>0 && clr>P.snipe) || (atLane && clr>0.3 && d.hesT >= P.hes)){
+      d.dash = true; d.dashT = 1.3;
+      return [dashTo(), P.sDash*d.skill];
+    }
+  }
+  const t = d.lane.p.clone();
+  if(d.lane.clr < 0.3){   // 每條路都被堵：在門前左右上下晃（假動作），等對方堵門的人時間到退出
+    t.z = clamp(t.z + Math.sin(d.feint*3.1)*0.35, -FIELD.hz+0.35, FIELD.hz-0.35);
+    t.y = clamp(t.y + Math.sin(d.feint*2.3)*0.2, 0.45, FIELD.h-0.45);
+  }
+  aiDodge(d, t, foes, P);
+  return [t, P.sApp*d.skill];
+}
+// 防守站位：堵門口（plug）或站在「對方 → 我方球門」連線上
+function aiGuardPoint(d, P, ownRing, R, canPlug){
+  const front = d.attackDir;   // 我方球門的「進攻方那一側」在 +attackDir 方向（對方從這邊衝進來）
+  let ax = (R.p.x - ownRing.x)*front, ay = R.p.y - ownRing.y, az = R.p.z - ownRing.z;
+  const exDist = Math.hypot(R.x.x-ownRing.x, R.x.y-ownRing.y, R.x.z-ownRing.z);
+  if(canPlug){
+    // 堵門：站在框前 0.42m、對著對方來的方向（限制在可射門的錐形內，對方從側邊也得繞回這裡）
+    ax = Math.max(ax, 0.3);
+    const lim = LANE_SLOPE*ax;
+    const L = Math.hypot(ay, az);
+    if(L > lim){ ay *= lim/L; az *= lim/L; }
+    const n = Math.hypot(ax, ay, az) || 1;
+    return {pt: V3(ownRing.x + front*ax/n*0.42, ownRing.y + ay/n*0.42, ownRing.z + az/n*0.42), plug:true};
+  }
+  ax = Math.max(ax, 0.25);
+  const L = Math.hypot(ay, az), lim = 1.2*ax;
+  if(L > lim){ ay *= lim/L; az *= lim/L; }
+  const n = Math.hypot(ax, ay, az) || 1;
+  const g = R.can ? clamp(exDist*0.5, FOUL_ZONE+0.15, 1.6) : 1.5;
+  const pt = V3(ownRing.x + front*ax/n*g, ownRing.y + ay/n*g, ownRing.z + az/n*g);
+  aiKeepOut(pt, ownRing, front, FOUL_ZONE+0.15);   // 被場地邊界夾回來時，往中場那側推出禁區
+  return {pt, plug:false};
+}
+function aiThinkSmart(d, dt, P){
+  const foes = drones.filter(o=>o.team!==d.team && !o.benched);
+  const enemyStriker = d.team==='red' ? blueStriker : player;
+  const ownRing = d.attackDir>0 ? ringWest : ringEast;
+  const atkRing = d.attackDir>0 ? ringEast : ringWest;
+  d.zoneCool = Math.max(0, (d.zoneCool||0) - dt);
+  let target, maxV;
+  if(d.role==='striker'){
+    [target, maxV] = aiStrikerSmart(d, dt, P, foes, atkRing);
+  }else{
+    // 對對方 Striker 的判斷每隔 react 秒更新一次（反應時間）→ 假動作騙得到
+    d.readT = (d.readT||0) - dt;
+    if(d.readT<=0 || !d.read){
+      d.readT = P.react*(0.8+Math.random()*0.4);
+      const es = enemyStriker;
+      d.read = {x: es.pos.clone(), p: es.pos.clone().addScaledVector(es.vel, P.lead), v: es.vel.clone(),
+                can: es.canScore && !es.benched};
+    }
+    const R = d.read;
+    const rx = R.x.x-ownRing.x, ry = R.x.y-ownRing.y, rz = R.x.z-ownRing.z;
+    const exDist = Math.hypot(rx, ry, rz);
+    const approach = -(R.v.x*rx + R.v.y*ry + R.v.z*rz)/(exDist||1);   // 朝我方球門接近的速度
+    const inFront = rx*d.attackDir > 0.15;
+    const threat = R.can && inFront && (exDist < P.threat || (exDist < P.threat+1.0 && approach > 1.6));
+    const mate = drones.find(o=>o!==d && o.team===d.team && o.role==='defender' && !o.benched);
+    // 堵門時間管理：自己算違規秒數，到點就退出並冷卻
+    if(d.plugging && (d.zoneT >= (d.role==='defender' ? P.plug : P.plug*0.7) || !threat)){
+      d.plugging = false;
+      if(d.zoneT > 0.3) d.zoneCool = P.cool;
+    }
+    const canPlug = P.plug>0 && threat && d.zoneCool<=0 && d.backoffT<=0 && d.disturb<0.4;
+    if(d.role==='defender'){
+      const g = aiGuardPoint(d, P, ownRing, R, canPlug);
+      d.plugging = g.plug; target = g.pt; maxV = P.dfV*d.skill;
+    }else{
+      // Harasser：隊友 Defender 堵不了（冷卻、被撞歪、離位）時補位
+      const mateOut = !mate || mate.zoneCool>0 || mate.backoffT>0 || mate.disturb>0.5;
+      if(P.cover && threat && mateOut){
+        const g = aiGuardPoint(d, P, ownRing, R, P.cover>=2 && canPlug);
+        d.plugging = g.plug; target = g.pt; maxV = P.dfV*d.skill; d.strat = 0;
+      }else{
+        d.plugging = false;
+        const es = enemyStriker;
+        const distE = d.pos.distanceTo(es.pos);
+        // Lv5：對方進到我方危險區才全力衝撞；Lv3–4：靠近就撞
+        const worth = P.cover<2 || (R.can && inFront && exDist < P.threat+1.4);
+        d.stratT -= dt;
+        if(d.strat===0){
+          if(d.stratT<=0){
+            if(distE<P.hTrig && worth){ d.strat=1; d.stratT=0.8; } else d.stratT = 0.3;
+          }
+          if(P.cover>=2 && R.can){   // 第二道防線：站在對方與我方球門之間偏側，隨時可撞
+            const g = aiGuardPoint(d, P, ownRing, R, false);
+            target = g.pt.clone().lerp(R.p, 0.45);
+            target.z += (d.aggro-1)*0.6;
+          }else{
+            target = V3(es.pos.x - d.attackDir*0.9, clamp(es.pos.y+0.3, 0.5, FIELD.h-0.5), es.pos.z + (d.aggro-1)*0.8);
+          }
+          maxV = 3.8*d.skill;
+        }else if(d.strat===1){   // 衝撞：解攔截點（依距離估算到達時間來預判）
+          if(d.stratT<=0 || d.disturb>0.4){ d.strat=2; d.stratT = P.hRest[0]+Math.random()*P.hRest[1]; }
+          const tl = clamp(distE/(P.hV*0.8), 0.12, P.hLead);
+          target = V3(es.pos.x+es.vel.x*tl, es.pos.y+es.vel.y*tl, es.pos.z+es.vel.z*tl);
+          maxV = P.hV*d.aggro;
+        }else{   // 撤回喘息
+          if(d.stratT<=0){ d.strat=0; d.stratT = 0.3; }
+          target = V3(-d.attackDir*0.5, 1.3, -es.pos.z*0.5);
+          maxV = 3.2;
+        }
+      }
+    }
+    // 禁區時間管理（所有防守機）：堵門有預算，其他狀況（追撞、補位）最多待 1.4 秒；超過就退出並冷卻，
+    // 冷卻中目標點一律推到禁區外（往球場中央那側推，避免被場地邊界夾回禁區）
+    if(d.zoneT > (d.plugging ? 9 : 1.4)){ d.plugging = false; d.zoneCool = Math.max(d.zoneCool, P.cool || 1.0); }
+    if(d.zoneCool > 0 || d.backoffT > 0){
+      const ox = d.pos.x-ownRing.x, oy = d.pos.y-ownRing.y, oz = d.pos.z-ownRing.z;
+      const od = Math.hypot(ox, oy, oz) || 1;
+      if(od < FOUL_ZONE+0.1){
+        // 還在禁區裡：往「遠離球門、也遠離對方 Striker」的方向退（不從對方身上穿過去，免得被卡住）
+        const es = enemyStriker.pos;
+        let qx = d.pos.x-es.x, qy = d.pos.y-es.y, qz = d.pos.z-es.z;
+        const qd = Math.hypot(qx, qy, qz) || 1;
+        let ex = ox/od + qx/qd*0.9, ey = oy/od + qy/qd*0.9, ez = oz/od + qz/qd*0.9;
+        ey *= 0.35;                                          // 優先水平退（升降比水平慢）
+        if(ex*d.attackDir < 0.6) ex = 0.6*d.attackDir;
+        const en = Math.hypot(ex, ey, ez) || 1;
+        const er = FOUL_ZONE+0.7;   // 目標放遠一點，才會用夠快的速度退出（控制器離目標越近飛越慢）
+        target = V3(ownRing.x + ex/en*er, ownRing.y + ey/en*er, ownRing.z + ez/en*er);
+        maxV = Math.max(maxV, 3.6);
+      }
+      aiKeepOut(target, ownRing, d.attackDir, FOUL_ZONE+0.18);
+    }
+    // 非 Striker 絕不穿對方球門（進攻違規）：目標點離對方框平面至少 0.6m
+    if(Math.abs(target.x-atkRing.x) < 0.6 && Math.hypot(target.y-atkRing.y, target.z-atkRing.z) < 0.6)
+      target.x = atkRing.x - d.attackDir*0.6;
+  }
+  aiFinish(d, target, maxV, dt);
+}
+function aiKeepOut(t, ring, front, need){   // 把目標點推到「離 ring 至少 need」的球場內側
+  t.y = clamp(t.y, 0.35, FIELD.h-0.4); t.z = clamp(t.z, -FIELD.hz+0.4, FIELD.hz-0.4);
+  const vy = t.y-ring.y, vz = t.z-ring.z, vx = (t.x-ring.x)*front;
+  if(Math.hypot(vx, vy, vz) >= need && vx > 0) return;
+  const lat2 = vy*vy + vz*vz;
+  t.x = ring.x + front*Math.sqrt(Math.max(need*need - lat2, 0.04));
+}
+function aiFinish(d, target, maxV, dt){
+  for(const o of drones){   // 與隊友保持間距
+    if(o===d || o.team!==d.team || o.benched) continue;
+    const sep = d.pos.clone().sub(o.pos);
+    const L = sep.length();
+    if(L<0.45 && L>1e-4) target.addScaledVector(sep.normalize(), (0.45-L)*1.5);
+  }
+  target.x = clamp(target.x, -FIELD.hx+0.4, FIELD.hx-0.4);
+  target.y = clamp(target.y, 0.35, FIELD.h-0.4);
+  target.z = clamp(target.z, -FIELD.hz+0.4, FIELD.hz-0.4);
+  flyToward(d, target, maxV, dt);
+}
+function aiThinkClassic(d, dt, P){   // Lv1（P=null）＝原本的 AI 一字不差；Lv2 只換幾個數字
   const enemyStriker = d.team==='red' ? blueStriker : player;
   const ownRing  = d.attackDir>0 ? ringWest : ringEast;
   const atkRing  = d.attackDir>0 ? ringEast : ringWest;
@@ -2360,7 +2781,7 @@ function aiThink(d, dt){
   if(d.role==='striker'){
     // 每隔幾秒換一條進攻路線（高度與側向偏移），動作不重複
     if(d.stratT<=0){
-      d.stratT = 2.5 + Math.random()*2;
+      d.stratT = P ? P.strat[0] + Math.random()*P.strat[1] : 2.5 + Math.random()*2;
       d.atkOffY = (Math.random()-0.5)*0.8;
       d.atkOffZ = (Math.random()-0.5)*1.4;
     }
@@ -2387,14 +2808,14 @@ function aiThink(d, dt){
       }
       if(d.dash){
         target = V3(atkRing.x + d.attackDir*0.8, atkRing.y, atkRing.z);  // 全速穿框
-        maxV = 5.6*d.skill;
+        maxV = (P?P.sDash:5.6)*d.skill;
       }else{
         // 變化路線進場：遠處先繞偏移點，接近後才收斂對準框心
         const far = Math.abs(d.pos.x-appX) > 1.2;
         target = V3(appX,
           clamp(atkRing.y + (far? d.atkOffY:0), 0.5, FIELD.h-0.5),
           clamp(atkRing.z + (far? d.atkOffZ:0), -FIELD.hz+0.4, FIELD.hz-0.4));
-        maxV = 3.9*d.skill;
+        maxV = (P?P.sApp:3.9)*d.skill;
         // 前方有敵機擋路 → 側向與垂直閃避
         for(const o of drones){
           if(o.team===d.team || o.benched) continue;
@@ -2408,12 +2829,12 @@ function aiThink(d, dt){
       }
     }else{
       target = V3(-d.attackDir*1.5, 1.0+Math.abs(d.atkOffY), clamp(d.atkOffZ,-1,1)); // 回防解鎖
-      maxV = 4.6*d.skill;   // 快速解鎖、立刻再進攻
+      maxV = (P?P.sRet:4.6)*d.skill;   // 快速解鎖、立刻再進攻
     }
   }else if(d.role==='defender'){
     // 預判攔截：依敵方 Striker 速度推算進攻點，鏡射到自家框前卡位
     const ex = enemyStriker.pos, ev = enemyStriker.vel;
-    const lead = 0.15*d.aggro;   // 預判較短：防守弱於進攻（業主指定，比賽才有看頭）
+    const lead = (P?P.lead:0.15)*d.aggro;   // 預判較短：防守弱於進攻（業主指定，比賽才有看頭）
     const py = clamp(ex.y+ev.y*lead, 0.5, FIELD.h-0.5);
     const pz = clamp(ex.z+ev.z*lead, -FIELD.hz+0.4, FIELD.hz-0.4);
     const exDist = Math.sqrt((ex.x-ownRing.x)**2+(ex.y-ownRing.y)**2+(ex.z-ownRing.z)**2);
@@ -2423,13 +2844,13 @@ function aiThink(d, dt){
     const dl = Math.max(dir.length(),0.01); dir.multiplyScalar(1/dl);
     target = V3(ownRing.x+dir.x*guard,
       clamp(ownRing.y+dir.y*guard,0.5,FIELD.h-0.5), ownRing.z+dir.z*guard);
-    maxV = 2.8*d.skill;   // 明顯比 Striker 慢：攔得到位置但常追不上衝刺
+    maxV = (P?P.dfV:2.8)*d.skill;   // 明顯比 Striker 慢：攔得到位置但常追不上衝刺
   }else{
     // harasser 狀態機：纏鬥 → 全速衝撞 → 撤回喘息（合法戰術）
     const distE = d.pos.distanceTo(enemyStriker.pos);
     if(d.strat===0){ // 纏鬥：在敵 Striker 側後方盤旋伺機
       if(d.stratT<=0){
-        if(distE<1.3){ d.strat=1; d.stratT=0.8; }   // 較少出手衝撞
+        if(distE<(P?P.hTrig:1.3)){ d.strat=1; d.stratT=0.8; }   // 較少出手衝撞
         else d.stratT = 0.55;
       }
       target = V3(enemyStriker.pos.x - d.attackDir*0.9,
@@ -2438,12 +2859,13 @@ function aiThink(d, dt){
       maxV = 3.6*d.skill;
     }else if(d.strat===1){ // 衝撞！
       if(d.stratT<=0 || d.disturb>0.4){ d.strat=2; d.stratT=1.0+Math.random()*0.8; }
-      target = V3(enemyStriker.pos.x + enemyStriker.vel.x*0.3,
-                  enemyStriker.pos.y + enemyStriker.vel.y*0.3,
-                  enemyStriker.pos.z + enemyStriker.vel.z*0.3);
-      maxV = 4.2*d.aggro;   // 撞擊較軟，Striker 較不易被撞停
+      const hl = P ? P.hLead : 0.3;
+      target = V3(enemyStriker.pos.x + enemyStriker.vel.x*hl,
+                  enemyStriker.pos.y + enemyStriker.vel.y*hl,
+                  enemyStriker.pos.z + enemyStriker.vel.z*hl);
+      maxV = (P?P.hV:4.2)*d.aggro;   // 撞擊較軟，Striker 較不易被撞停
     }else{ // 撤回喘息（較久，給進攻方表演空間）
-      if(d.stratT<=0){ d.strat=0; d.stratT=1.4+Math.random()*1.8; }
+      if(d.stratT<=0){ d.strat=0; d.stratT = P ? P.hRest[0]+Math.random()*P.hRest[1] : 1.4+Math.random()*1.8; }
       target = V3(-d.attackDir*0.5, 1.3, -enemyStriker.pos.z*0.5);
       maxV = 3.0;
     }
@@ -2587,6 +3009,8 @@ fsUpdateUI();
 // ---------- 玩家輸入 ----------
 const keys = {};
 addEventListener('keydown', e=>{
+  if(REPLAY.on){ rpKey(e); return; }            // 回放中：鍵盤只控制回放
+  if(e.code==='KeyV' && document.getElementById('rpBtn').style.display !== 'none'){ rpOpen(); return; }
   keys[e.code]=true;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
   if(e.code==='KeyC') camMode=(camMode+1)%3;
@@ -2664,6 +3088,7 @@ function getPad(){
   return null;
 }
 function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
+  if(REPLAY.on) return;                         // 回放中搖桿不操作比賽（避免誤按重賽）
   if(DUO.on){ duoPollButtons(); return; }       // 雙人對戰：兩支搖桿都能暫停／重賽／切視角
   const gp = getPad(); if(!gp) return;
   const btn = n=>{
@@ -2957,10 +3382,10 @@ function updateCamera(dt){
 
 // ---------- 場地遮擋自動半透明（攝影機→玩家機射線，被擋住的充氣管淡出） ----------
 const occRay = new THREE.Raycaster();
-function updateOccluders(dt){
+function updateOccluders(dt, focus){   // focus：回放時改成對射手做遮擋淡出
   let hitSet = null;
-  const cd = camDrone();
-  if(camMode !== 1 && cd){                       // FPV 視角不需要
+  const cd = focus ? {pos:focus} : camDrone();
+  if((focus || camMode !== 1) && cd){                       // FPV 視角不需要
     const dir = cd.pos.clone().sub(camera.position);
     const dist = dir.length();
     if(dist > 0.3){
@@ -3014,8 +3439,10 @@ function restart(){
   score.red = {g:0,o:0,d:0}; score.blue = {g:0,o:0,d:0}; updateScore();
   timeLeft = MATCH_TIME; warned30 = false;
   drones.forEach(d=>d.reset());
+  rpReset();                                    // 清掉上一場的回放片段
+  aiApplyLevels();                              // AI 難度（Lv1~5）
   setState('play');
-  fireFx({type:'start'});
+  fireFx({type:'start', ai: (mode==='player' || mode==='demo' || (mode==='duo' && DUO.ai)) ? aiMatchLabel() : null});
 }
 function endMatch(){
   setState('over');
@@ -3037,7 +3464,7 @@ function startGame(m){
   sfx.init();
   camMode = m==='demo' ? 2 : 0;
   document.querySelector('#telemetry b').textContent =
-    m==='demo' ? '紅隊 Striker（AI）' : '你的 Striker（紅）';
+    m==='demo' ? '紅隊 Striker（AI ' + aiLabel(AI_DEMO.red) + '）' : '你的 Striker（紅）・AI ' + aiLabel();
   restart();
 }
 document.getElementById('btnPlayer').addEventListener('click', ()=>startGame('player'));
@@ -3100,12 +3527,29 @@ function duoSyncOpt(){
   document.querySelectorAll('#mfDuoOpt button[data-pd]').forEach(b=>b.classList.toggle('sel', (b.dataset.pd==='1') === DUO.pracDuo));
   const mf = document.getElementById('menuFlow');
   mf.classList.toggle('pracDuo', mf.classList.contains('prac') && DUO.pracDuo);
+  // AI 難度列：對戰 AI、觀看示範、雙人對戰加 AI 隊友時才出現
+  let st = null; try{ st = MF; }catch(e){}   // MF 宣告在後面，模組初始化途中呼叫時還不能讀
+  mf.classList.toggle('aiLv', !!st && st.stage === '3' && (st.mode === 'player' || (st.mode === 'duo' && DUO.ai)));
+  mf.classList.toggle('aiLvDemo', !!st && st.stage === '3' && st.mode === 'demo');   // 觀看示範：兩隊各選一個等級
+  document.querySelectorAll('#mfDuoOpt button[data-lv]').forEach(b=>b.classList.toggle('sel', +b.dataset.lv === AI_LV));
+  const ad = document.getElementById('aiLvDesc'); if(ad) ad.textContent = AI_LEVELS[AI_LV].desc;
+  document.querySelectorAll('#mfDuoOpt button[data-dlv]').forEach(b=>{
+    const [tm, lv] = b.dataset.dlv.split(':'); b.classList.toggle('sel', AI_DEMO[tm] === +lv); });
+  const dd = document.getElementById('aiDemoDesc');
+  if(dd){
+    const B = AI_DEMO.blue, R = AI_DEMO.red;
+    dd.textContent = B === R ? '兩隊同級（' + aiLabel(B) + '）：' + AI_LEVELS[B].desc
+      : '藍 ' + aiLabel(B) + ' 對 紅 ' + aiLabel(R) + '：看看' + (B > R ? '藍隊' : '紅隊') + '怎麼鑽縫隙、'
+        + (B > R ? '紅隊' : '藍隊') + '的防守哪裡被突破';
+  }
 }
 document.querySelectorAll('#mfDuoOpt button').forEach(b=>b.addEventListener('click', e=>{
   e.stopPropagation();
   if(b.dataset.v !== undefined) DUO.ai = b.dataset.v === '1';
   if(b.dataset.pad !== undefined) DUO.padSide = +b.dataset.pad;
   if(b.dataset.pd !== undefined) DUO.pracDuo = b.dataset.pd === '1';
+  if(b.dataset.lv !== undefined) aiSetLevel(+b.dataset.lv);
+  if(b.dataset.dlv !== undefined){ const [tm, lv] = b.dataset.dlv.split(':'); aiSetDemo(tm, +lv); }
   duoSaveOpt(); duoSyncOpt();
 }));
 function duoPads(){   // 已連接的搖桿，依瀏覽器編號排序（第 1 支→P1、第 2 支→P2）
@@ -3303,7 +3747,14 @@ function randomRoomCode(){
 async function netJoin(code, asHost){
   if(NET.joining) return;          // 避免等待 TURN 憑證時連點兩次開出兩個房間
   NET.joining = true;
-  try{ await NET_TURN_READY; } finally { NET.joining = false; }
+  try{
+    await NET_TURN_READY;
+    await loadTrystero();
+  }catch(err){
+    console.warn('連線對戰：連線模組載入失敗', err);
+    document.getElementById('netMsg').textContent = '連線模組載入失敗，請確認網路可以連到 esm.sh 後再試一次';
+    return;
+  }finally{ NET.joining = false; }
   netTeardown();
   NET.roomId = code;
   NET.isHost = asHost;
@@ -5212,8 +5663,344 @@ document.getElementById('btnRaceBack').addEventListener('click', raceClosePanel)
 document.getElementById('btnRaceRetry').addEventListener('click', raceRestart);
 document.getElementById('btnRaceList').addEventListener('click', raceBackToPanel);
 
+// ============================================================
+// 進球關鍵回放（2026-10-30，業主：「進球的時候可以有關鍵回放的按鈕，按下去可以反覆研究觀看，像電玩的大招回放」；
+//   「AI 對打可以進球自動回放，但人的比賽是不能中斷的，就用有按鈕的回放」）
+//   - 錄影：比賽中每 1/30 秒記一格「全部機體的物理狀態＋兩個球門的擺盪姿態」，保留最近 12 秒（環形緩衝）。
+//   - 進球：切出「進球前 6 秒～進球後 1.6 秒」成為一段片段，這場比賽的每一球都留著（重賽/回選單才清掉）。
+//   - 有人在玩（對戰 AI／雙人／連線）：只出現「🎬 關鍵回放」按鈕（或按 V），按了才看；
+//     單機／雙人按下去會暫停比賽、看完回到原狀態；連線對戰不能暫停別人，所以回放時比賽照常進行（畫面有提示）。
+//   - AI vs AI 示範賽：進球 1.6 秒後自動播一次（導播鏡頭＋進球瞬間慢動作），播完自動回到比賽；
+//     中途碰任何控制鍵就變成手動、不自動關。
+//   - 播放器：播放/暫停、逐格、拖時間軸、速度（慢動作特寫/0.25×/0.5×/1×）、六種鏡頭（導播/追射手/球門/全場/第一人稱/環繞，
+//     拖曳畫面＝環繞、滾輪縮放）、重複播放、上一球/下一球。
+//   - 回放只「蓋掉畫面上的模型位置與鏡頭」，不碰物理狀態：用 Drone.prototype.syncMesh.call(代理物件) 擺模型，
+//     關掉回放後下一幀 syncMesh 會自動用真實狀態蓋回來；球門則在關閉時 ringSwingApply 還原。
+// ============================================================
+const RP_FPS = 30, RP_KEEP = 12, RP_PRE = 6, RP_POST = 1.6;
+const REC = {t:0, acc:0, buf:[]};
+const REPLAY = {on:false, clips:[], pending:[], idx:-1, ph:0, playing:true, speed:'auto', cam:'dir', loop:true,
+  auto:false, autoAt:0, prevState:null, endHold:0, lastPh:0, shake:0, orbitA:0.6, orbitE:0.35, orbitR:1.7, dragging:false,
+  camPos:V3(0,3,6), camLook:V3(0,1,0), snap:true, btnShowT:0, fov:null};
+const _rpProxy = {mesh:null, role:'', wobblePhase:0, pos:V3(0,0,0), vel:V3(0,0,0), yaw:0, tiltP:0, tiltR:0, disturb:0, propSpin:0, canScore:true};
+const _rpQ1 = new THREE.Quaternion(), _rpQ2 = new THREE.Quaternion();
+function rpMatchMode(){ return mode==='player' || mode==='demo' || mode==='net' || (mode==='duo' && DUO.kind==='match'); }
+function rpRecord(dt){
+  if(!rpMatchMode() || state!=='play') return;
+  REC.t += dt; REC.acc += dt;
+  if(REC.acc < 1/RP_FPS) return;
+  REC.acc = 0;
+  const f = {t:REC.t, d:drones.map(d=>[d.pos.x, d.pos.y, d.pos.z, d.yaw, d.tiltP, d.tiltR, d.disturb, d.propSpin,
+      d.vel.x, d.vel.y, d.vel.z, d.canScore?1:0, (d.benched || d.mesh.grp.visible===false)?0:1]),
+    r:[ringEast, ringWest].map(R=>[R.grp.position.x, R.grp.position.y, R.grp.position.z,
+      R.grp.quaternion.x, R.grp.quaternion.y, R.grp.quaternion.z, R.grp.quaternion.w])};
+  REC.buf.push(f);
+  while(REC.buf.length && REC.buf[0].t < REC.t - RP_KEEP) REC.buf.shift();
+  // 進球後再錄 1.6 秒，片段才算完整
+  for(let i=REPLAY.pending.length-1; i>=0; i--) if(REC.t >= REPLAY.pending[i].goalT + RP_POST) rpFinalize(REPLAY.pending[i]);
+}
+function rpOnGoal(data){
+  if(!rpMatchMode()) return;
+  const clip = {goalT:REC.t, team:data.team, ring:data.ring, scorer: data.team==='red' ? 0 : 3, frames:null,
+    n: REPLAY.clips.length + REPLAY.pending.length + 1,
+    sb: score.blue.g, sr: score.red.g, tl: timeLeft};
+  REPLAY.pending.push(clip);
+  if(mode==='demo') REPLAY.autoAt = REC.t + RP_POST;          // 示範賽：進球後自動回放
+  REPLAY.btnShowT = 8;                                         // 有人在玩：按鈕醒目閃 8 秒
+}
+function rpFinalize(clip){
+  const i = REPLAY.pending.indexOf(clip); if(i>=0) REPLAY.pending.splice(i,1);
+  if(clip.frames) return;
+  clip.frames = REC.buf.filter(f=>f.t >= clip.goalT - RP_PRE && f.t <= clip.goalT + RP_POST);
+  if(clip.frames.length < 4) return;
+  clip.t0 = clip.frames[0].t; clip.dur = clip.frames[clip.frames.length-1].t - clip.t0; clip.goalAt = clip.goalT - clip.t0;
+  REPLAY.clips.push(clip);
+  REPLAY.clips.sort((a,b)=>a.goalT-b.goalT);
+  rpUpdateBtn(true);
+}
+function rpReset(){   // 重賽／回選單：清掉這場的片段
+  if(REPLAY.on) rpClose();
+  REC.t = 0; REC.acc = 0; REC.buf = []; REPLAY.clips = []; REPLAY.pending = []; REPLAY.autoAt = 0; REPLAY.btnShowT = 0;
+  rpUpdateBtn(true);
+}
+// ---------- 開啟／關閉 ----------
+function rpOpen(idx, auto){
+  REPLAY.pending.slice().forEach(rpFinalize);                  // 還沒錄完的也先切出來（錄到哪播到哪）
+  if(!REPLAY.clips.length) return;
+  REPLAY.idx = idx==null ? REPLAY.clips.length-1 : clamp(idx, 0, REPLAY.clips.length-1);
+  REPLAY.auto = !!auto; REPLAY.autoAt = 0;
+  REPLAY.on = true; REPLAY.playing = true; REPLAY.endHold = 0; REPLAY.snap = true;
+  REPLAY.speed = 'auto'; REPLAY.cam = 'dir'; REPLAY.loop = !auto;
+  REPLAY.ph = 0; REPLAY.lastPh = 0;
+  REPLAY.prevState = state;
+  if(mode !== 'net') state = 'replay';                         // 單機／雙人／示範：比賽暫停（計時、物理都停）
+  for(const k in keys) keys[k] = false;
+  document.body.classList.add('replaying');
+  document.getElementById('rpUI').classList.add('on');
+  REPLAY.fov = camera.fov;
+  rpSyncUI(); rpUpdateBtn(true);
+}
+function rpClose(){
+  if(!REPLAY.on) return;
+  REPLAY.on = false; REPLAY.auto = false;
+  if(state === 'replay') state = REPLAY.prevState === 'replay' ? 'play' : REPLAY.prevState;
+  [ringEast, ringWest].forEach(r=>ringSwingApply(r));          // 球門擺回真實狀態
+  if(REPLAY.fov){ camera.fov = REPLAY.fov; camera.updateProjectionMatrix(); }
+  document.body.classList.remove('replaying');
+  document.getElementById('rpUI').classList.remove('on');
+  rpUpdateBtn(true);
+}
+// ---------- 每幀 ----------
+function rpClip(){ return REPLAY.clips[REPLAY.idx]; }
+function rpSpeedAt(c, ph){
+  if(REPLAY.speed !== 'auto') return +REPLAY.speed;
+  const g = c.goalAt, a = g - 0.9, b = g + 0.45;               // 進球前 0.9 秒～後 0.45 秒：大招式慢動作
+  if(ph < a - 0.4 || ph > b + 0.4) return 1;
+  if(ph >= a && ph <= b) return 0.2;
+  return ph < a ? 1 - 0.8*(ph-(a-0.4))/0.4 : 0.2 + 0.8*(ph-b)/0.4;
+}
+function rpFrameAt(c, ph){   // 回傳 [f0, f1, k]：兩格之間內插
+  const T = c.t0 + ph, F = c.frames;
+  let lo = 0, hi = F.length-1;
+  if(T <= F[0].t) return [F[0], F[0], 0];
+  if(T >= F[hi].t) return [F[hi], F[hi], 0];
+  while(hi - lo > 1){ const m = (lo+hi)>>1; if(F[m].t <= T) lo = m; else hi = m; }
+  return [F[lo], F[hi], (T - F[lo].t)/Math.max(1e-6, F[hi].t - F[lo].t)];
+}
+function rpTick(dt, t){
+  rpRecord(dt);
+  if(REPLAY.btnShowT > 0){ REPLAY.btnShowT -= dt; if(REPLAY.btnShowT <= 0) rpUpdateBtn(true); }
+  if(!REPLAY.on){
+    if(REPLAY.autoAt && mode==='demo' && state==='play' && REC.t >= REPLAY.autoAt) rpOpen(null, true);
+    rpUpdateBtn(false);
+    return;
+  }
+  const c = rpClip(); if(!c){ rpClose(); return; }
+  // 推進播放頭
+  if(REPLAY.playing){
+    REPLAY.ph += dt * rpSpeedAt(c, REPLAY.ph);
+    if(REPLAY.ph >= c.dur){
+      REPLAY.ph = c.dur; REPLAY.endHold += dt;
+      if(REPLAY.endHold > 0.8){
+        if(REPLAY.auto){ rpClose(); return; }
+        if(REPLAY.loop){ REPLAY.ph = 0; REPLAY.lastPh = 0; REPLAY.endHold = 0; REPLAY.snap = true; }
+        else REPLAY.playing = false;
+      }
+    }
+  }
+  // 播到進球瞬間：球門爆閃＋音效＋GOAL 大字＋白閃＋鏡頭震動
+  if(REPLAY.lastPh < c.goalAt && REPLAY.ph >= c.goalAt && REPLAY.ph - REPLAY.lastPh < 0.5){
+    ringPulse = {ring: c.ring==='E' ? ringEast : ringWest, t:0};
+    try{ sfx.goal(); }catch(e){}
+    const g = document.getElementById('rpGoal'), fl = document.getElementById('rpFlash');
+    g.classList.remove('go'); fl.classList.remove('go'); void g.offsetWidth; g.classList.add('go'); fl.classList.add('go');
+    REPLAY.shake = 0.5;
+  }
+  REPLAY.lastPh = REPLAY.ph;
+  // 擺模型
+  const [f0, f1, k] = rpFrameAt(c, REPLAY.ph);
+  const tw = f0.t + (f1.t - f0.t)*k;
+  drones.forEach((d, i)=>{
+    const a = f0.d[i], b = f1.d[i];
+    const vis = (k < 0.5 ? a : b)[12] === 1;
+    d.mesh.grp.visible = vis; if(d.mesh.ribbon) d.mesh.ribbon.visible = vis;
+    if(!vis) return;
+    const P = _rpProxy;
+    P.mesh = d.mesh; P.role = d.role; P.wobblePhase = d.wobblePhase;
+    P.pos.set(a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k, a[2]+(b[2]-a[2])*k);
+    P.yaw = a[3] + angDiff(b[3], a[3])*k;
+    P.tiltP = a[4]+(b[4]-a[4])*k; P.tiltR = a[5]+(b[5]-a[5])*k; P.disturb = a[6]+(b[6]-a[6])*k;
+    P.propSpin = a[7]+(b[7]-a[7])*k;
+    P.vel.set(a[8]+(b[8]-a[8])*k, a[9]+(b[9]-a[9])*k, a[10]+(b[10]-a[10])*k);
+    P.canScore = (k < 0.5 ? a : b)[11] === 1;
+    Drone.prototype.syncMesh.call(P, tw);
+  });
+  [ringEast, ringWest].forEach((R, i)=>{
+    const a = f0.r[i], b = f1.r[i];
+    R.grp.position.set(a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k, a[2]+(b[2]-a[2])*k);
+    _rpQ1.set(a[3],a[4],a[5],a[6]); _rpQ2.set(b[3],b[4],b[5],b[6]);
+    R.grp.quaternion.copy(_rpQ1).slerp(_rpQ2, k);
+  });
+  rpSyncTimeUI(c);
+}
+function rpFocus(){   // 射手（回放畫面上的位置）
+  const c = rpClip(); return c ? drones[c.scorer].mesh.grp.position : null;
+}
+function rpCamera(dt){
+  const c = rpClip(); if(!c) return;
+  const s = drones[c.scorer].mesh.grp.position;
+  const ring = c.ring==='E' ? ringEast : ringWest;
+  const rp = ring.grp.position, dir = c.scorer===0 ? -1 : 1;   // 射手的進攻方向（紅攻 −x、藍攻 +x）
+  const [f0, f1, k] = rpFrameAt(c, REPLAY.ph);
+  const a = f0.d[c.scorer], b = f1.d[c.scorer];
+  const yaw = a[3] + angDiff(b[3], a[3])*k;
+  const vx = a[8]+(b[8]-a[8])*k, vz = a[10]+(b[10]-a[10])*k;
+  const vh = Math.hypot(vx, vz);
+  // 追射手用的方向：有在飛就用速度方向，慢的時候用機頭方向
+  const hx = vh > 0.6 ? vx/vh : Math.sin(yaw), hz = vh > 0.6 ? vz/vh : Math.cos(yaw);
+  let cam = REPLAY.cam, fov = 62;
+  if(cam === 'dir'){   // 導播：先追射手 → 進球前切到球門鏡頭 → 進球後慢慢環繞球門
+    if(REPLAY.ph < c.goalAt - 1.1) cam = 'chase';
+    else if(REPLAY.ph < c.goalAt + 0.5) cam = 'goal';
+    else cam = 'orbitRing';
+  }
+  let dp, dl;
+  if(cam === 'chase'){
+    dp = V3(s.x - hx*1.5, s.y + 0.55, s.z - hz*1.5); dl = V3(s.x + hx*1.2, s.y, s.z + hz*1.2);
+  }else if(cam === 'goal'){   // 球門後方、往射手看（射手正面衝過來）
+    dp = V3(rp.x + dir*0.75, rp.y + 0.28, rp.z + (s.z >= rp.z ? -0.35 : 0.35));
+    dl = s.clone(); fov = 50;
+  }else if(cam === 'wide'){
+    dp = V3(s.x*0.35, 3.6, 5.6); dl = V3(s.x*0.8, s.y*0.5 + 0.5, s.z*0.5);
+  }else if(cam === 'fpv'){
+    const fx = Math.sin(yaw), fz = Math.cos(yaw);
+    dp = V3(s.x + fx*0.15, s.y + 0.1, s.z + fz*0.15); dl = V3(s.x + fx*4, s.y + 0.2, s.z + fz*4); fov = 75;
+  }else if(cam === 'orbitRing'){
+    const ang = (REPLAY.ph - c.goalAt)*0.6 + (dir>0 ? Math.PI*0.75 : -Math.PI*0.25);
+    dp = V3(rp.x + Math.cos(ang)*1.6, rp.y + 0.35, rp.z + Math.sin(ang)*1.6); dl = V3(rp.x, rp.y, rp.z);
+  }else{   // 環繞射手（可拖曳）
+    if(!REPLAY.dragging && REPLAY.playing) REPLAY.orbitA += dt*0.35;
+    const R = REPLAY.orbitR, e = REPLAY.orbitE;
+    dp = V3(s.x + Math.cos(REPLAY.orbitA)*Math.cos(e)*R, s.y + Math.sin(e)*R, s.z + Math.sin(REPLAY.orbitA)*Math.cos(e)*R);
+    dl = s.clone();
+  }
+  if(cam !== 'wide'){   // 鏡頭留在防護網內，不要被充氣管擋住
+    dp.x = clamp(dp.x, -FIELD.hx+0.12, FIELD.hx-0.12); dp.z = clamp(dp.z, -FIELD.hz+0.12, FIELD.hz-0.12);
+    dp.y = clamp(dp.y, 0.15, FIELD.h-0.12);
+  }
+  const kk = (REPLAY.snap || cam === 'fpv') ? 1 : Math.min(1, dt*6);
+  REPLAY.snap = false;
+  REPLAY.camPos.lerp(dp, kk); REPLAY.camLook.lerp(dl, kk);
+  camera.position.copy(REPLAY.camPos);
+  if(REPLAY.shake > 0){
+    REPLAY.shake = Math.max(0, REPLAY.shake - dt);
+    const m = REPLAY.shake*0.06;
+    camera.position.x += (Math.random()-0.5)*m; camera.position.y += (Math.random()-0.5)*m;
+  }
+  camera.lookAt(REPLAY.camLook);
+  if(Math.abs(camera.fov - fov) > 0.1){ camera.fov += (fov - camera.fov)*Math.min(1, dt*5); camera.updateProjectionMatrix(); }
+}
+// ---------- 介面 ----------
+function rpFmt(s){ return (s<0?'−':'') + Math.abs(s).toFixed(1) + 's'; }
+function rpSyncTimeUI(c){
+  const sk = document.getElementById('rpSeek');
+  if(!REPLAY.seeking) sk.value = Math.round(REPLAY.ph / Math.max(0.01, c.dur) * 1000);
+  document.getElementById('rpTime').textContent = rpFmt(REPLAY.ph - c.goalAt) + '　' + rpSpeedAt(c, REPLAY.ph).toFixed(2).replace(/0$/,'') + '×';
+}
+function rpSyncUI(){
+  const c = rpClip(); if(!c) return;
+  const who = c.team==='red' ? '紅隊' : '藍隊';
+  const mm = Math.floor(c.tl/60), ss = Math.floor(c.tl%60);
+  document.getElementById('rpTitle').textContent = '第 ' + c.n + ' 球｜' + who + ' Striker 進球！';
+  document.getElementById('rpTitle').style.color = c.team==='red' ? '#ff7a7a' : '#7ab4ff';
+  document.getElementById('rpSub').textContent = '比分 藍 ' + c.sb + ' : ' + c.sr + ' 紅　·　剩 ' + mm + ':' + String(ss).padStart(2,'0')
+    + (mode==='net' ? '　·　連線比賽仍在進行中' : '') + (REPLAY.auto ? '　·　自動回放中（點任何按鈕接手）' : '');
+  document.getElementById('rpMark').style.left = (c.goalAt / Math.max(0.01, c.dur) * 100) + '%';
+  document.getElementById('rpClipN').textContent = (REPLAY.idx+1) + ' / ' + REPLAY.clips.length;
+  document.getElementById('rpPlay').textContent = REPLAY.playing ? '⏸' : '▶';
+  document.getElementById('rpLoop').classList.toggle('sel', REPLAY.loop);
+  document.querySelectorAll('#rpUI [data-sp]').forEach(b=>b.classList.toggle('sel', b.dataset.sp === REPLAY.speed));
+  document.querySelectorAll('#rpUI [data-cam]').forEach(b=>b.classList.toggle('sel', b.dataset.cam === REPLAY.cam));
+  document.getElementById('rpUI').classList.toggle('auto', REPLAY.auto);
+}
+let rpBtnState = '';
+function rpUpdateBtn(force){
+  const show = !REPLAY.on && REPLAY.clips.length + REPLAY.pending.length > 0 && rpMatchMode()
+    && (state==='play' || state==='pause' || state==='over');
+  const hot = show && REPLAY.btnShowT > 0;
+  const n = REPLAY.clips.length + REPLAY.pending.length;
+  const key = show + '|' + hot + '|' + n;
+  if(!force && key === rpBtnState) return;
+  rpBtnState = key;
+  const b = document.getElementById('rpBtn');
+  b.style.display = show ? '' : 'none';
+  b.classList.toggle('hot', hot);
+  b.innerHTML = hot ? '🎬 關鍵回放 <small>V</small>' : '🎬 回放 <b>' + n + '</b>';
+}
+function rpUserTook(){ if(REPLAY.auto){ REPLAY.auto = false; REPLAY.loop = true; rpSyncUI(); } }
+function rpAct(a){
+  const c = rpClip(); if(!c) return;
+  rpUserTook();
+  const step = 1/RP_FPS;
+  if(a === 'play'){ if(REPLAY.ph >= c.dur){ REPLAY.ph = 0; REPLAY.lastPh = 0; REPLAY.snap = true; } REPLAY.playing = !REPLAY.playing; REPLAY.endHold = 0; }
+  else if(a === 'start'){ REPLAY.ph = 0; REPLAY.lastPh = 0; REPLAY.snap = true; REPLAY.playing = true; REPLAY.endHold = 0; }
+  else if(a === 'back'){ REPLAY.playing = false; REPLAY.ph = Math.max(0, REPLAY.ph - step); REPLAY.lastPh = REPLAY.ph; }
+  else if(a === 'fwd'){ REPLAY.playing = false; REPLAY.ph = Math.min(c.dur, REPLAY.ph + step); }
+  else if(a === 'goal'){ REPLAY.playing = false; REPLAY.ph = c.goalAt; REPLAY.lastPh = c.goalAt; REPLAY.snap = true; }
+  else if(a === 'loop') REPLAY.loop = !REPLAY.loop;
+  else if(a === 'prevClip' || a === 'nextClip'){
+    const n = REPLAY.clips.length;
+    REPLAY.idx = (REPLAY.idx + (a==='nextClip' ? 1 : -1) + n) % n;
+    REPLAY.ph = 0; REPLAY.lastPh = 0; REPLAY.playing = true; REPLAY.snap = true; REPLAY.endHold = 0;
+  }
+  else if(a === 'close'){ rpClose(); return; }
+  rpSyncUI();
+}
+document.getElementById('rpBtn').addEventListener('click', e=>{ e.stopPropagation(); rpOpen(); });
+document.querySelectorAll('#rpUI [data-a]').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); rpAct(b.dataset.a); }));
+document.querySelectorAll('#rpUI [data-sp]').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); rpUserTook(); REPLAY.speed = b.dataset.sp; rpSyncUI(); }));
+document.querySelectorAll('#rpUI [data-cam]').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); rpUserTook(); REPLAY.cam = b.dataset.cam; REPLAY.snap = true; rpSyncUI(); }));
+(function(){
+  const sk = document.getElementById('rpSeek');
+  sk.addEventListener('pointerdown', e=>e.stopPropagation());
+  sk.addEventListener('input', ()=>{
+    const c = rpClip(); if(!c) return;
+    rpUserTook(); REPLAY.seeking = true; REPLAY.playing = false;
+    REPLAY.ph = sk.value/1000*c.dur; REPLAY.lastPh = REPLAY.ph; REPLAY.snap = true; rpSyncUI();
+  });
+  sk.addEventListener('change', ()=>{ REPLAY.seeking = false; });
+  // 拖曳畫面＝環繞觀看，滾輪縮放
+  const cv = renderer.domElement;
+  let lx = 0, ly = 0;
+  cv.addEventListener('pointerdown', e=>{
+    if(!REPLAY.on) return;
+    rpUserTook();
+    if(REPLAY.cam !== 'orbit'){
+      const s = rpFocus();   // 從目前鏡頭位置接手，不跳
+      if(s){ const v = REPLAY.camPos.clone().sub(s); REPLAY.orbitR = clamp(v.length(), 0.6, 4);
+        REPLAY.orbitA = Math.atan2(v.z, v.x); REPLAY.orbitE = clamp(Math.asin(clamp(v.y/REPLAY.orbitR,-1,1)), -0.3, 1.3); }
+      REPLAY.cam = 'orbit'; rpSyncUI();
+    }
+    REPLAY.dragging = true; lx = e.clientX; ly = e.clientY;
+    try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  cv.addEventListener('pointermove', e=>{
+    if(!REPLAY.on || !REPLAY.dragging) return;
+    REPLAY.orbitA += (e.clientX - lx)*0.008;
+    REPLAY.orbitE = clamp(REPLAY.orbitE + (e.clientY - ly)*0.006, -0.3, 1.3);
+    lx = e.clientX; ly = e.clientY;
+  });
+  const up = ()=>{ REPLAY.dragging = false; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e=>{
+    if(!REPLAY.on) return;
+    e.preventDefault();
+    if(REPLAY.cam !== 'orbit') return;
+    REPLAY.orbitR = clamp(REPLAY.orbitR * (e.deltaY > 0 ? 1.1 : 0.9), 0.6, 4);
+  }, {passive:false});
+})();
+function rpKey(e){   // 回放中的鍵盤（比賽的按鍵這時都不作用）
+  const c = e.code;
+  if(c==='Space'){ e.preventDefault(); rpAct('play'); }
+  else if(c==='ArrowLeft'){ e.preventDefault(); rpAct('back'); }
+  else if(c==='ArrowRight'){ e.preventDefault(); rpAct('fwd'); }
+  else if(c==='ArrowUp' || c==='ArrowDown'){ e.preventDefault();
+    const L = ['0.25','0.5','1','auto'], i = L.indexOf(REPLAY.speed);
+    rpUserTook(); REPLAY.speed = L[clamp(i + (c==='ArrowUp'?1:-1), 0, L.length-1)]; rpSyncUI(); }
+  else if(c==='KeyG') rpAct('goal');
+  else if(c==='Home') rpAct('start');
+  else if(c==='PageUp' || c==='BracketLeft') rpAct('prevClip');
+  else if(c==='PageDown' || c==='BracketRight') rpAct('nextClip');
+  else if(/^Digit[1-6]$/.test(c)){
+    const cams = ['dir','chase','goal','wide','fpv','orbit'];
+    rpUserTook(); REPLAY.cam = cams[+c.slice(5)-1]; REPLAY.snap = true; rpSyncUI();
+  }
+  else if(c==='KeyV' || c==='Escape' || c==='KeyB') rpClose();
+}
+
 function loop(){
   requestAnimationFrame(loop);
+  bootTick();
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
   pollPadButtons();   // 搖桿按鍵（含暫停中可恢復）
@@ -5315,9 +6102,10 @@ function loop(){
   }
   if(mode==='net' && NET.isHost) netMaybeBroadcastSnapshot();   // 房主：無論何種 state 都持續廣播（暫停/賽後也同步）
 
-  if(!isNetClient && state!=='pause') updateRingSwing(dt);   // 球門擺盪（連線對戰的其他人用房主快照）
+  if(!isNetClient && state!=='pause' && state!=='replay') updateRingSwing(dt);   // 球門擺盪（連線對戰的其他人用房主快照）
   // 視覺
   drones.forEach(d=>d.syncMesh(t));
+  rpTick(dt, t);                                // 進球回放：錄影；回放中把模型擺到回放畫面
   envAnimate(dt);
   if(mode==='campaign'){ campAnimate(t); campUpdateHUD(); }
   if(mode==='race'){ raceAnimate(t); raceUpdateHUD(); }
@@ -5354,10 +6142,11 @@ function loop(){
     else if(f.m.opacity>0.01) f.m.opacity *= Math.pow(0.001, dt);
   }
   if(msgTimer>0){ msgTimer-=dt; if(msgTimer<=0) msgEl.style.opacity=0; }
-  const duoOn = DUO.on && state!=='menu';
-  if(!duoOn) updateOccluders(dt);
+  const duoOn = DUO.on && state!=='menu' && !REPLAY.on;   // 回放中一律全螢幕單一鏡頭
+  if(!duoOn) updateOccluders(dt, REPLAY.on ? rpFocus() : null);
   updateHUD();
   updateCamera(dt);
+  if(REPLAY.on) rpCamera(dt);
   if(duoOn) duoFrame(dt);                       // 左右兩個鏡頭＋各自的遮擋半透明／HUD
   sfx.updateEngines(drones, duoOn ? DUO.lisPos : camera.position, duoOn ? DUO.lisLook : camLook, state==='play',
                     state==='play' && sceneById(curScene).stands);   // 觀眾聲：只有比賽中＋有看台的場景   // 各機依與鏡頭的距離/方位即時調整音量與定位
