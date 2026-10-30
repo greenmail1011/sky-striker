@@ -850,7 +850,7 @@ const REST_WALL = 0.42;         // 撞牆/網恢復係數
 const FIELD = { hx: 3, hz: 1.5, h: 3 };  // 場地 6×3×3 m（半長3、半寬1.5、高3）
 // 飛行邊界（Drone.step 用）：平常＝場地；飛行賽道模式會暫時放大成開放空間（raceSetArena）
 const ARENA = { hx: FIELD.hx, hz: FIELD.hz, h: FIELD.h };
-const RING = { R: 0.20, Ro: 0.35, depth: 0.20, y: 1.6, x: 2.2 }; // 2026-10-21 業主比賽規格：內徑 40cm（R＝開口半徑，球的 2 倍）、外徑 70cm、厚 20cm 的圓環
+const RING = { R: 0.20, Ro: 0.35, depth: 0.10, y: 1.6, x: 2.2 }; // 2026-10-21 業主比賽規格：內徑 40cm（R＝開口半徑，球的 2 倍）、外徑 70cm；2026-10-31 業主指定厚度改 10cm（原 20cm）
 // 2026-07-22 業主要求「球門可以大一些」：R 由 0.2（40cm 開口，Class 20 官方規格）調到 0.26（52cm 開口）。
 // 機體半徑 DRONE_R=0.10，可容許的偏心量（checkGoals/checkPracticePass 的 radial 判定）從 0.1m 提高到
 // 0.16m，穿框明顯好瞄；視覺網環（torus）、吊掛織帶、剛體碰撞都直接讀這個常數，不用另外改。
@@ -2087,6 +2087,7 @@ class Drone{
     this.atkOffY = 0; this.atkOffZ = 0;
     this.dash = false; this.dashT = 0;   // 鎖定衝刺狀態
     this.isPlayer = false;
+    this.crash = null; this.snag = 0; this.lost = 0;   // 墜機狀態／卡網秒數／迷失方向秒數（2026-10-31）
     this.thrustN = MASS*G;
   }
   reset(){
@@ -2097,10 +2098,12 @@ class Drone{
     this.strat=0; this.stratT=Math.random()*1.5;
     this.dash=false; this.dashT=0;
     this.input={pitch:0,roll:0,yawRate:0,throttle:0};
+    this.crash = null; this.snag = 0; this.lost = 0;
   }
   // ---- 四軸飛行動力學 ----
   step(h){
-    const auth = 1 - 0.78*this.disturb;       // 被撞後控制權下降
+    if(this.crash){ this.stepCrash(h); return; }   // 墜機中：不吃操控，自由落下／躺在地上等重新起飛
+    const auth = (1 - 0.78*this.disturb) * (this.snag>0 ? 0.25 : 1);   // 被撞後控制權下降；卡在網上幾乎操控不了
     // 傾角朝指令值收斂（一階響應，模擬飛控角度模式）
     this.tiltP += clamp(this.input.pitch*auth - this.tiltP, -TILT_RATE*h, TILT_RATE*h);
     this.tiltR += clamp(this.input.roll*auth  - this.tiltR, -TILT_RATE*h, TILT_RATE*h);
@@ -2141,6 +2144,7 @@ class Drone{
       this.pos.y = DRONE_R;
       if(this.vel.y < 0){
         if(this.vel.y < -2.5) this.disturb = Math.min(1, this.disturb + (-this.vel.y)*0.07);
+        if(this.vel.y < -3.2 && chaosOn() && Math.random() < Math.min(0.7, (-this.vel.y-3.2)*0.4)){ this.startCrash(); return; }   // 重摔
         this.vel.y = -this.vel.y*0.35;
         if(Math.abs(this.vel.y)<0.4) this.vel.y=0;
       }
@@ -2149,7 +2153,7 @@ class Drone{
     // 天花網
     if(this.pos.y > ARENA.h-DRONE_R){
       this.pos.y = ARENA.h-DRONE_R;
-      if(this.vel.y>0) this.vel.y = -this.vel.y*REST_WALL;
+      if(this.vel.y>0){ const hit = this.vel.y; this.vel.y = -this.vel.y*REST_WALL; this.netHit(hit, V3(0,-1,0)); }
     }
     // 四面網牆
     const bx = ARENA.hx-DRONE_R, bz = ARENA.hz-DRONE_R;
@@ -2158,16 +2162,82 @@ class Drone{
       this.pos.x = Math.sign(this.pos.x)*bx;
       this.vel.x = -this.vel.x*REST_WALL; this.vel.y*=0.92; this.vel.z*=0.92;
       if(hit>2) this.disturb = Math.min(1,this.disturb+hit*0.05);
+      this.netHit(hit, V3(-Math.sign(this.pos.x),0,0));
     }
     if(Math.abs(this.pos.z)>bz){
       const hit = Math.abs(this.vel.z);
       this.pos.z = Math.sign(this.pos.z)*bz;
       this.vel.z = -this.vel.z*REST_WALL; this.vel.y*=0.92; this.vel.x*=0.92;
       if(hit>2) this.disturb = Math.min(1,this.disturb+hit*0.05);
+      this.netHit(hit, V3(0,0,-Math.sign(this.pos.z)));
+    }
+    if(this.crash) return;
+    // 卡在網上：螺旋槳勾到網、速度被吃掉、機頭亂轉（放開後 AI 會迷失方向一下）
+    if(this.snag > 0){
+      this.snag -= h;
+      this.vel.multiplyScalar(Math.pow(0.03, h));
+      this.yaw += this.snagSpin*h;
+      this.disturb = Math.max(this.disturb, 0.55);
+      if(this.snag <= 0){
+        this.snag = 0;
+        this.vel.addScaledVector(this.snagN, 0.7);
+        this.lost = 0.5 + Math.random()*0.9;
+        this.lostSpin = (Math.random()<0.5?-1:1)*(1.2 + Math.random()*2.2);
+      }
     }
     // 失控衰減（飛控重新穩定）
     this.disturb = Math.max(0, this.disturb - h*0.85);
     this.propSpin += (6 + this.thrustN*2.2)*h*Math.PI*2*0.3;
+  }
+  // ---- 意外狀況（2026-10-31，業主：「沒有不小心被撞到地上再起飛的情況，或是觸網迷失方向的情況」）----
+  //   只在比賽類模式（對戰 AI／示範／連線／雙人比賽）發生，練習、闖關、賽道不受影響；玩家和 AI 一視同仁。
+  netHit(hit, n){   // 撞到防護網：速度越快越容易被網勾住（卡網），很猛的話直接墜機
+    if(!chaosOn() || this.crash) return;
+    if(hit > 2.8 && Math.random() < Math.min(0.6, (hit-2.8)*0.35)){ this.startCrash(); return; }
+    if(hit > 0.5 && !(this.snag > 0) && Math.random() < Math.min(0.7, (hit-0.5)*0.6)){
+      this.snag = 0.35 + Math.random()*0.75; this.snagN = n;
+      this.snagSpin = (Math.random()<0.5?-1:1)*(2 + Math.random()*4);
+      onDroneSnag(this);
+    }
+  }
+  startCrash(){     // 失去平衡墜機：推力只剩一點點、機身翻滾掉到地上，躺 1～2.4 秒後飛控重新解鎖才能再起飛
+    if(this.crash) return;
+    this.crash = {phase:'fall', t:0, spin:V3((Math.random()-0.5)*8, (Math.random()-0.5)*6, (Math.random()-0.5)*8)};
+    this.snag = 0; this.lost = 0; this.disturb = 1; this.dash = false;
+    onDroneCrash(this);
+  }
+  stepCrash(h){
+    const C = this.crash; C.t += h;
+    this.prevX = this.pos.x;
+    if(C.phase === 'fall'){
+      this.thrustN = MASS*G*(0.1 + Math.random()*0.25);
+      const acc = V3((Math.random()-0.5)*2, this.thrustN/MASS - G, (Math.random()-0.5)*2);
+      const sp = this.vel.length();
+      if(sp > 1e-4) acc.addScaledVector(this.vel.clone().normalize(), -(DRAG_K1*sp + DRAG_K2*sp*sp)/MASS);
+      this.vel.addScaledVector(acc, h); this.pos.addScaledVector(this.vel, h);
+      this.tiltP = clamp(this.tiltP + C.spin.x*h*0.35, -1, 1);
+      this.tiltR = clamp(this.tiltR + C.spin.z*h*0.35, -1, 1);
+      this.yaw += C.spin.y*h;
+      this.disturb = 1;
+      const bx = ARENA.hx-DRONE_R, bz = ARENA.hz-DRONE_R;
+      if(Math.abs(this.pos.x) > bx){ this.pos.x = Math.sign(this.pos.x)*bx; this.vel.x *= -0.3; }
+      if(Math.abs(this.pos.z) > bz){ this.pos.z = Math.sign(this.pos.z)*bz; this.vel.z *= -0.3; }
+      if(this.pos.y > ARENA.h-DRONE_R){ this.pos.y = ARENA.h-DRONE_R; this.vel.y = -Math.abs(this.vel.y)*0.3; }
+      if(this.pos.y <= DRONE_R){           // 落地：側躺在地上
+        this.pos.y = DRONE_R; this.vel.set(0,0,0);
+        C.phase = 'ground'; C.t = 0; C.wait = 1.0 + Math.random()*1.4;
+        const a = Math.random()*Math.PI*2; this.tiltP = Math.cos(a)*0.95; this.tiltR = Math.sin(a)*0.95;
+        this.disturb = 0;
+        try{ sfx.hit(0.5); }catch(e){}
+      }
+      this.propSpin += 4*h;
+    }else{
+      this.vel.set(0,0,0); this.pos.y = DRONE_R; this.thrustN = 0; this.disturb = 0;
+      if(C.t >= C.wait){                   // 飛控重新解鎖：恢復操控（剛起飛會有點晃）
+        this.crash = null; this.tiltP = this.tiltR = 0; this.disturb = 0.35;
+        onDroneRecover(this);
+      }
+    }
   }
   // ---- 視覺同步 ----
   syncMesh(t){
@@ -2215,6 +2285,20 @@ class Drone{
   }
 }
 
+function chaosOn(){ return mode==='player' || mode==='demo' || mode==='net' || (mode==='duo' && DUO.kind==='match'); }
+function crashMsgTo(d, text, color, dur){   // 墜機／卡網訊息只給操控那台的真人看
+  if(mode==='player' && d.isPlayer) flashMsg(text, color, dur);
+  else if(mode==='duo' && duoSideOf(d) >= 0) duoMsg(duoSideOf(d), text, color, dur);
+}
+function crashResist(d){   // 越高級的飛手越救得回來：AI Lv1 ×1.15 … Lv5 ×0.75；真人一律 ×1
+  if(d.isPlayer && mode==='player') return 1;
+  if(mode==='duo' && duoSideOf(d) >= 0) return 1;
+  if(mode==='net' && NET.slotOwners && NET.slotOwners[drones.indexOf(d)]) return 1;
+  return 1.3 - 0.12*(d.lv||1);
+}
+function onDroneCrash(d){ crashMsgTo(d, '💥 墜機！等飛控重新解鎖再起飛', '#fb923c', 1.6); }
+function onDroneRecover(d){ crashMsgTo(d, '⬆ 可以重新起飛了', '#7dffa9', 1.2); }
+function onDroneSnag(d){ crashMsgTo(d, '🕸 勾到網了！', '#fbbf24', 1.0); }
 // ---------- 建立 3v3 ----------
 const drones = [];
 // 紅隊家＝紅場（+x），機頭朝 −x；藍隊家＝藍場（−x），機頭朝 +x
@@ -2249,6 +2333,17 @@ function collideDrones(){
       a.disturb = Math.min(1, a.disturb+k);
       b.disturb = Math.min(1, b.disturb+k);
       if(vn>1.2) sfx.hit(Math.min(1,vn/8));
+      // 撞得夠猛就可能墜機（被從上面壓下來的更容易），每台各自擲骰
+      if(chaosOn() && vn > 1.4){
+        const va = Math.max(0, a.vel.dot(n) + imp.dot(n)*2/(1+REST_DRONE)), vb = Math.max(0, -(b.vel.dot(n) - imp.dot(n)*2/(1+REST_DRONE)));   // 撞前各自往對方衝的速度
+        for(const [x, o, vo] of [[a,b,vb],[b,a,va]]){
+          const share = vo/Math.max(1e-3, va+vb);          // 被撞的一方（對方衝得比較快）比較容易掉
+          let pc = ((vn-1.4)*0.13 + x.disturb*0.06) * (0.25 + 0.9*share);
+          if(o.pos.y > x.pos.y + 0.08) pc += 0.1;
+          pc *= crashResist(x);
+          if(Math.random() < Math.min(0.7, pc)) x.startCrash();
+        }
+      }
     }
   }
 }
@@ -2281,6 +2376,7 @@ function collideRing(d, ring){
     d.vel.addScaledVector(n, Jn/MASS);
     d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
     if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
+    if(chaosOn() && -vn > 1.8 && Math.random() < Math.min(0.6, (-vn-1.8)*0.35)) d.startCrash();   // 狠狠撞到框
     if(S) ringSwingImpulse(ring, n.clone().multiplyScalar(-Jn), Pl.clone().applyQuaternion(q).add(ring.grp.position));
   }
 }
@@ -2371,7 +2467,7 @@ function updateFouls(dt){
     const ownRing = d.attackDir>0 ? ringWest : ringEast;  // 己方防守的框（自家半場）
     const dist = Math.sqrt(
       (d.pos.x-ownRing.x)**2 + (d.pos.y-ownRing.y)**2 + (d.pos.z-ownRing.z)**2);
-    if(dist < FOUL_ZONE){
+    if(dist < FOUL_ZONE && !d.crash){   // 墜機躺在禁區裡不算守門
       d.zoneT += dt;
       if(d.isPlayer && mode==='player' && d.zoneT>1.5 && !d.zoneWarned){
         d.zoneWarned = true;
@@ -2486,13 +2582,19 @@ function flyToward(d, target, maxV, dt, faceYaw){   // faceYaw：指定機頭方
   let dvy = clamp((ty-d.pos.y)*2.3, -3.2, 3.2);
   if(d.dashV){ dvx = d.dashV.x; dvy = d.dashV.y; dvz = d.dashV.z; }   // 高手以上衝刺：直接給速度（全速穿框，來得及煞車才減速）
   // 加速度增益：原本 1.35 等於「推桿只推到六成」，最高速只有 2 m/s 出頭；高手以上像真人一樣敢把桿推到底（accK）
-  const kA = AI_P[d.lv||1].accK || 1.35;
+  const PL = AI_P[d.lv||1];
+  const kA = (PL.accK || 1.35) * ((d.lv||1) >= 2 && d.style ? d.style.accMul : 1);
   const ax = (dvx-d.vel.x)*kA, az = (dvz-d.vel.z)*kA, ay = (dvy-d.vel.y)*1.6;
   const fwd  = {x:Math.sin(d.yaw), z:Math.cos(d.yaw)};
   const right= {x:-Math.cos(d.yaw), z:Math.sin(d.yaw)};
   const aF = ax*fwd.x+az*fwd.z, aR = ax*right.x+az*right.z;
   d.input.pitch = clamp(Math.atan2(aF,G)/MAX_TILT, -1, 1);
   d.input.roll  = clamp(Math.atan2(aR,G)/MAX_TILT, -1, 1);
+  if((d.lv||1) >= 2 && d.style){   // 手抖：低通濾波的小雜訊（等級越高越穩），讓每台的動作不會一模一樣
+    const amp = 0.05 + 0.25*PL.err*d.style.jitter;
+    d.stickN.p = d.stickN.p*0.92 + randn()*0.08*amp; d.stickN.r = d.stickN.r*0.92 + randn()*0.08*amp;
+    d.input.pitch = clamp(d.input.pitch + d.stickN.p, -1, 1); d.input.roll = clamp(d.input.roll + d.stickN.r, -1, 1);
+  }
   d.input.throttle = clamp(ay/(THR_RANGE*G), -1, 1);
   // 朝目標轉向；或固定機頭（真實飛手：機頭一直朝球門／對手，用前後左右平移，不原地轉向）
   const desYaw = faceYaw !== undefined ? faceYaw : Math.atan2(tx-d.pos.x, tz-d.pos.z);
@@ -2528,14 +2630,14 @@ const AI_LEVELS = [null,
 const AI_P = [null,
   {err:1.0},
   {err:0.8, sDash:5.6, sApp:4.0, sRet:4.7, dfV:3.0, lead:0.25, hTrig:1.45, hV:4.4, hRest:[1.1,1.4], hLead:0.3,
-   react:0.36, plug:0, cool:0, cover:0, scan:1.5, snipe:0, dodge:0, retX:1.4, threat:1.3, hes:1.3},
+   react:0.36, plug:0, cool:0, cover:0, scan:1.5, snipe:0, dodge:0, retX:1.4, threat:1.3, hes:1.3, temp:1.3, aimSd:0.09},
   {err:0.6, sDash:5.7, sApp:4.3, sRet:5.0, dfV:3.4, lead:0.35, hTrig:1.6, hV:4.6, hRest:[0.9,1.0], hLead:0.4,
-   react:0.26, plug:0, cool:0, cover:0, scan:0.9, snipe:0, dodge:0.5, retX:1.4, threat:1.5, hes:0.6, fixYaw:true},
+   react:0.26, plug:0, cool:0, cover:0, scan:0.9, snipe:0, dodge:0.5, retX:1.4, threat:1.5, hes:0.6, fixYaw:true, temp:1.0, aimSd:0.08},
   {err:0.4, sDash:5.8, sApp:4.6, sRet:5.3, dfV:3.8, lead:0.5, hTrig:1.8, hV:4.8, hRest:[0.7,0.7], hLead:0.5,
-   react:0.18, plug:1.2, cool:1.4, cover:1, scan:0.4, snipe:0.42, dodge:0.8, retX:1.3, threat:1.8, hes:0.2, fixYaw:true, burst:true, snipeR:2.4, accK:2.4, brake:4.8, stopX:0.55},
+   react:0.18, plug:1.2, cool:1.4, cover:1, scan:0.4, snipe:0.42, dodge:0.8, retX:1.3, threat:1.8, hes:0.2, fixYaw:true, burst:true, snipeR:2.4, accK:2.4, brake:4.8, stopX:0.55, temp:0.75, aimSd:0.07},
   {err:0.15, sDash:6.5, sApp:5.5, sRet:6.5, dfV:4.2, lead:0.65, hTrig:2.0, hV:5.0, hRest:[0.5,0.5], hLead:0.55,
    react:0.12, plug:1.6, cool:1.0, cover:2, scan:0.12, snipe:0.27, dodge:1.0, retX:1.0, threat:2.2, hes:0, fixYaw:true, burst:true,
-   snipeR:3.6, accK:5.0, brake:5.6, stopX:0.6, abortD:0.38, abortW:0.18, clear:true},
+   snipeR:3.6, accK:5.0, brake:5.6, stopX:0.6, abortD:0.38, abortW:0.18, clear:true, temp:0.55, aimSd:0.065},
 ];
 let AI_LV = 1;
 try{ const v = +localStorage.getItem(AI_LV_KEY); if(v>=1 && v<=5) AI_LV = v; }catch(e){}
@@ -2554,9 +2656,33 @@ function aiMatchLabel(){   // 開賽訊息用
 }
 function aiApplyLevels(){   // 每次開賽套用；連線對戰的 AI 代打維持 Lv1（大廳沒有難度選項）
   drones.forEach(d=>{ d.lv = mode==='net' ? 1 : mode==='demo' ? AI_DEMO[d.team] : AI_LV; d.zoneCool = 0; d.plugging = false;
-    d.read = null; d.readT = 0; d.lane = null; d.laneT = 0; d.feint = 0; d.dashV = null; d.detour = null; d.clearing = false; });
+    d.read = null; d.readT = 0; d.lane = null; d.laneT = 0; d.feint = 0; d.dashV = null; d.detour = null; d.clearing = false;
+    aiRollPersonality(d); });
+  // 每場隨機「手感」：其中一隊可能整場比較順（同等級也不會每場都一樣）
+  const swing = (Math.random()-0.5)*0.08;
+  drones.forEach(d=>{ d.form *= 1 + (d.team==='red' ? swing : -swing); });
+}
+function aiLost(d, dt){   // 剛從網上掙脫：搞不清楚方向，亂飄、機頭亂轉一下，只顧著別掉下去
+  d.lost -= dt; d.lostT = (d.lostT||0) - dt;
+  if(d.lostT <= 0){ d.lostT = 0.2 + Math.random()*0.2; d.lostIn = {p:(Math.random()-0.5)*0.7, r:(Math.random()-0.5)*0.7}; }
+  const i = d.input;
+  i.pitch = d.lostIn.p; i.roll = d.lostIn.r;
+  i.yawRate = clamp(d.lostSpin, -YAW_RATE, YAW_RATE);
+  i.throttle = clamp((1.2 - d.pos.y)*0.9 - d.vel.y*0.5, -1, 1);
+}
+// 個性與手感（2026-10-31，業主：「AI 進球太平均、太制式化，我都能猜到下一次哪方會得分，動起來的感覺都太像」）
+//   form：這一場的手感（0.88～1.12，整場有效）；style：每台機自己的飛法習慣（每場重抽）
+//   ・hBias/zBias 偏好從上／下、左／右進攻　・patience 等縫隙的耐心　・accMul 推桿猛不猛　・jitter 手抖程度
+function randn(){ return (Math.random()+Math.random()+Math.random()-1.5)*1.41; }   // 近似常態分布
+function aiRollPersonality(d){
+  d.form = clamp(1 + randn()*0.05, 0.88, 1.12);
+  d.style = {hBias:(Math.random()-0.5)*0.9, zBias:(Math.random()-0.5)*0.9, patience:0.6+Math.random()*0.9,
+             accMul:0.85+Math.random()*0.3, jitter:0.5+Math.random()};
+  d.stickN = {p:0, r:0};
 }
 function aiThink(d, dt){
+  if(d.crash) return;                         // 墜機中：等飛控重新解鎖
+  if(d.lost > 0){ aiLost(d, dt); return; }
   const lv = d.lv || 1;
   if(lv >= 2) aiThinkSmart(d, dt, AI_P[lv]);
   else aiThinkClassic(d, dt, null);
@@ -2642,7 +2768,7 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
     }
     return [t, P.sRet*d.skill];
   }
-  const rc = V3(atkRing.x, atkRing.y, atkRing.z);
+  const rc = V3(atkRing.x, atkRing.y + (d.dash && d.aimE ? d.aimE.y : 0), atkRing.z + (d.dash && d.aimE ? d.aimE.z : 0));
   const before = (atkRing.x - d.pos.x)*dir;              // 離框平面還有多遠（>0＝還沒穿過）
   const lat = Math.hypot(d.pos.y-atkRing.y, d.pos.z-atkRing.z);
   const inCone = before>0.3 && lat < LANE_SLOPE*before + 0.05;
@@ -2650,7 +2776,7 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
     const u = rc.clone().sub(d.pos).normalize();
     if(P.burst){   // 全速衝：速度＝能在框後 0.55m（防護網前）停下來的最大速度
       const rem = Math.max(0.05, (atkRing.x + dir*P.stopX - d.pos.x)*dir);
-      d.dashV = u.clone().multiplyScalar(Math.min(P.sDash*d.skill, Math.sqrt(2*P.brake*rem)));
+      d.dashV = u.clone().multiplyScalar(Math.min(P.sDash*d.skill, Math.sqrt(2*P.brake*(d.brakeJ||1)*rem)));
     }
     return rc.clone().addScaledVector(u, 0.8);
   };
@@ -2675,7 +2801,8 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
       const clr = laneClear(p, atkRing, foes);
       let s = Math.min(clr, 0.9)*3 - d.pos.distanceTo(p)*0.55;
       for(const o of foes) if(segDist(o.pos, d.pos, p) < 0.3) s -= 0.6;   // 去的路上有人擋
-      if(d.lane && p.distanceTo(d.lane.p) < 0.05) s += 0.25;               // 遲滯：不要一直換
+      if(d.lane && p.distanceTo(d.lane.p) < 0.05) s += 0.25 + (P.temp||0)*0.8;   // 遲滯：決定了就不要一直換（隨機越大、越要堅持）
+      if(d.style) s += (cy*d.style.hBias + cz*d.style.zBias)*0.6 + (Math.random()-0.5)*(P.temp||0);   // 個人偏好＋臨場判斷的不確定
       if(s > bestS){ bestS = s; best = {p, clr}; }
     }
     d.lane = best;
@@ -2685,8 +2812,15 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
     const clr = laneClear(d.pos, atkRing, foes);
     const atLane = d.pos.distanceTo(d.lane.p) < 0.3;
     d.hesT = atLane ? (d.hesT||0) + dt : 0;          // 到了進攻點要猶豫多久才敢衝（低等級比較久，防守來得及補）
-    if((P.snipe>0 && clr>P.snipe) || (atLane && clr>0.3 && d.hesT >= P.hes)){
+    if(d.snipeJ === undefined || Math.random() < dt*2) d.snipeJ = 0.8 + Math.random()*0.45;   // 敢不敢衝：每隔一陣子變一下
+    const hesNeed = P.hes * (d.style ? d.style.patience : 1);
+    if((P.snipe>0 && clr>P.snipe*d.snipeJ) || (atLane && clr>0.3 && d.hesT >= hesNeed)){
       d.dash = true; d.dashT = 1.3;
+      // 這一球瞄得準不準：旁邊有敵機逼近時手比較不穩（偶爾擦框、被框彈開）
+      let press = 1; for(const o of foes) if(o.pos.distanceTo(d.pos) < 0.7) press = 1.4;
+      const sd = (P.aimSd||0)*press/(d.form||1);
+      d.aimE = {y: randn()*sd, z: randn()*sd};
+      d.brakeJ = 0.9 + Math.random()*0.8;   // 煞車抓得準不準：抓太晚就會衝進框後的網子（觸網、迷失方向）
       return [dashTo(), P.sDash*d.skill];
     }
   }
@@ -2723,6 +2857,7 @@ function aiGuardPoint(d, P, ownRing, R, canPlug){
   return {pt, plug:false};
 }
 function aiThinkSmart(d, dt, P){
+  d.dashV = null;
   const foes = drones.filter(o=>o.team!==d.team && !o.benched);
   const enemyStriker = d.team==='red' ? blueStriker : player;
   const ownRing = d.attackDir>0 ? ringWest : ringEast;
@@ -2783,6 +2918,7 @@ function aiThinkSmart(d, dt, P){
         const sz = Math.sign(b.pos.z - my.pos.z) || 1;
         target = V3(b.pos.x + b.vel.x*0.2, b.pos.y + b.vel.y*0.2, b.pos.z + b.vel.z*0.2 + sz*0.05);
         d.clearing = true; d.plugging = false; maxV = P.hV*d.aggro;
+        if((atkRing.x - d.pos.x)*d.attackDir > 0.45){ const u = target.clone().sub(d.pos); const L = u.length(); if(L > 1e-3) d.dashV = u.multiplyScalar(Math.min(maxV, 3.6)/L); }
       }else{
         d.plugging = false;
         const es = enemyStriker;
@@ -2807,6 +2943,12 @@ function aiThinkSmart(d, dt, P){
           const tl = clamp(distE/(P.hV*0.8), 0.12, P.hLead);
           target = V3(es.pos.x+es.vel.x*tl, es.pos.y+es.vel.y*tl, es.pos.z+es.vel.z*tl);
           maxV = P.hV*d.aggro;
+          // 真的「撞」：全速衝向攔截點、到了也不減速（以前會越靠近越慢，變成輕輕推一下）。
+          // 離對方框太近時不這樣做，免得自己衝過框變成進攻違規
+          if(!(Math.abs(d.pos.x-atkRing.x) < 0.9 && Math.hypot(d.pos.y-atkRing.y, d.pos.z-atkRing.z) < 0.7)){
+            const u = target.clone().sub(d.pos); const L = u.length();
+            if(L > 1e-3) d.dashV = u.multiplyScalar(Math.min(maxV, 2.4 + 0.35*(d.lv||1)) / L);
+          }
         }else{   // 撤回喘息
           if(d.stratT<=0){ d.strat=0; d.stratT = 0.3; }
           target = V3(-d.attackDir*0.5, 1.3, -es.pos.z*0.5);
@@ -2868,6 +3010,7 @@ function aiKeepOut(t, ring, front, need){   // 把目標點推到「離 ring 至
   t.x = ring.x + front*Math.sqrt(Math.max(need*need - lat2, 0.04));
 }
 function aiFinish(d, target, maxV, dt, face){
+  if(d.form){ maxV *= d.form; if(d.dashV) d.dashV.multiplyScalar(Math.min(1.05, d.form)); }
   for(const o of drones){   // 與隊友保持間距
     if(o===d || o.team!==d.team || o.benched) continue;
     const sep = d.pos.clone().sub(o.pos);
