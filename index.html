@@ -2455,7 +2455,7 @@ document.getElementById('btnPractice').addEventListener('click', startPractice);
 
 // ---------- AI 飛手 ----------
 function angDiff(a,b){ let d=a-b; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; return d; }
-function flyToward(d, target, maxV, dt){
+function flyToward(d, target, maxV, dt, faceYaw){   // faceYaw：指定機頭方向（不給＝機頭朝目標，原本的做法）
   // 人為反應誤差（每 0.45 秒更新，模擬真實飛手）
   d.aiErrT -= dt;
   if(d.aiErrT<=0){
@@ -2466,18 +2466,21 @@ function flyToward(d, target, maxV, dt){
   const errS = d.dash ? 0.2 : 1;   // 衝刺時全神貫注，誤差大減
   const tx = target.x+d.aiErr.x*errS, ty = target.y+d.aiErr.y*errS, tz = target.z+d.aiErr.z*errS;
   // 期望速度 → 期望加速度 → 反解傾角與推力
-  const dvx = clamp((tx-d.pos.x)*1.9, -maxV, maxV);
-  const dvz = clamp((tz-d.pos.z)*1.9, -maxV, maxV);
-  const dvy = clamp((ty-d.pos.y)*2.3, -3.2, 3.2);
-  const ax = (dvx-d.vel.x)*1.35, az = (dvz-d.vel.z)*1.35, ay = (dvy-d.vel.y)*1.6;
+  let dvx = clamp((tx-d.pos.x)*1.9, -maxV, maxV);
+  let dvz = clamp((tz-d.pos.z)*1.9, -maxV, maxV);
+  let dvy = clamp((ty-d.pos.y)*2.3, -3.2, 3.2);
+  if(d.dashV){ dvx = d.dashV.x; dvy = d.dashV.y; dvz = d.dashV.z; }   // 高手以上衝刺：直接給速度（全速穿框，來得及煞車才減速）
+  // 加速度增益：原本 1.35 等於「推桿只推到六成」，最高速只有 2 m/s 出頭；高手以上像真人一樣敢把桿推到底（accK）
+  const kA = AI_P[d.lv||1].accK || 1.35;
+  const ax = (dvx-d.vel.x)*kA, az = (dvz-d.vel.z)*kA, ay = (dvy-d.vel.y)*1.6;
   const fwd  = {x:Math.sin(d.yaw), z:Math.cos(d.yaw)};
   const right= {x:-Math.cos(d.yaw), z:Math.sin(d.yaw)};
   const aF = ax*fwd.x+az*fwd.z, aR = ax*right.x+az*right.z;
   d.input.pitch = clamp(Math.atan2(aF,G)/MAX_TILT, -1, 1);
   d.input.roll  = clamp(Math.atan2(aR,G)/MAX_TILT, -1, 1);
   d.input.throttle = clamp(ay/(THR_RANGE*G), -1, 1);
-  // 朝目標轉向
-  const desYaw = Math.atan2(tx-d.pos.x, tz-d.pos.z);
+  // 朝目標轉向；或固定機頭（真實飛手：機頭一直朝球門／對手，用前後左右平移，不原地轉向）
+  const desYaw = faceYaw !== undefined ? faceYaw : Math.atan2(tx-d.pos.x, tz-d.pos.z);
   d.input.yawRate = clamp(angDiff(desYaw,d.yaw)*3, -YAW_RATE, YAW_RATE);
 }
 // ============================================================
@@ -2512,11 +2515,11 @@ const AI_P = [null,
   {err:0.8, sDash:5.6, sApp:4.0, sRet:4.7, dfV:3.0, lead:0.25, hTrig:1.45, hV:4.4, hRest:[1.1,1.4], hLead:0.3,
    react:0.36, plug:0, cool:0, cover:0, scan:1.5, snipe:0, dodge:0, retX:1.4, threat:1.3, hes:1.3},
   {err:0.6, sDash:5.7, sApp:4.3, sRet:5.0, dfV:3.4, lead:0.35, hTrig:1.6, hV:4.6, hRest:[0.9,1.0], hLead:0.4,
-   react:0.26, plug:0, cool:0, cover:0, scan:0.9, snipe:0, dodge:0.5, retX:1.1, threat:1.5, hes:0.6},
+   react:0.26, plug:0, cool:0, cover:0, scan:0.9, snipe:0, dodge:0.5, retX:1.4, threat:1.5, hes:0.6, fixYaw:true},
   {err:0.4, sDash:5.8, sApp:4.6, sRet:5.3, dfV:3.8, lead:0.5, hTrig:1.8, hV:4.8, hRest:[0.7,0.7], hLead:0.5,
-   react:0.18, plug:1.2, cool:1.4, cover:1, scan:0.4, snipe:0.42, dodge:0.8, retX:0.8, threat:1.8, hes:0.2},
+   react:0.18, plug:1.2, cool:1.4, cover:1, scan:0.4, snipe:0.42, dodge:0.8, retX:1.3, threat:1.8, hes:0.2, fixYaw:true, burst:true, snipeR:2.4, accK:2.2},
   {err:0.25, sDash:6.0, sApp:4.9, sRet:5.6, dfV:4.2, lead:0.65, hTrig:2.0, hV:5.0, hRest:[0.5,0.5], hLead:0.55,
-   react:0.12, plug:1.6, cool:1.0, cover:2, scan:0.2, snipe:0.34, dodge:1.0, retX:0.6, threat:2.2, hes:0},
+   react:0.12, plug:1.6, cool:1.0, cover:2, scan:0.2, snipe:0.34, dodge:1.0, retX:1.2, threat:2.2, hes:0, fixYaw:true, burst:true, snipeR:3.0, accK:3.0},
 ];
 let AI_LV = 1;
 try{ const v = +localStorage.getItem(AI_LV_KEY); if(v>=1 && v<=5) AI_LV = v; }catch(e){}
@@ -2535,7 +2538,7 @@ function aiMatchLabel(){   // 開賽訊息用
 }
 function aiApplyLevels(){   // 每次開賽套用；連線對戰的 AI 代打維持 Lv1（大廳沒有難度選項）
   drones.forEach(d=>{ d.lv = mode==='net' ? 1 : mode==='demo' ? AI_DEMO[d.team] : AI_LV; d.zoneCool = 0; d.plugging = false;
-    d.read = null; d.readT = 0; d.lane = null; d.laneT = 0; d.feint = 0; });
+    d.read = null; d.readT = 0; d.lane = null; d.laneT = 0; d.feint = 0; d.dashV = null; });
 }
 function aiThink(d, dt){
   const lv = d.lv || 1;
@@ -2576,10 +2579,14 @@ function aiDodge(d, target, foes, P){   // 有敵機高速朝我衝來 → 往�
 function aiStrikerSmart(d, dt, P, foes, atkRing){
   const dir = d.attackDir;
   d.feint = (d.feint||0) + dt;
+  d.dashV = null;
   if(!d.canScore){
-    // 得分後：保持目前高度與側向，直線飛回己方半場解鎖（最短路線），解鎖後馬上再攻
+    // 得分後：機頭不轉，保持目前高度與側向「倒退」直線飛回己方半場解鎖（從框洞原路退出），
+    // 跨過中線 0.4m 一解鎖就馬上往前再攻——影片裡強手 1.3 秒就能再穿一次框，靠的就是這個（2026-10-30）
     d.dash = false;
-    const t = V3(-dir*P.retX, clamp(d.pos.y,0.7,FIELD.h-0.6), clamp(d.pos.z,-FIELD.hz+0.5,FIELD.hz-0.5));
+    const t = P.burst
+      ? V3(-dir*P.retX, clamp(atkRing.y,0.7,FIELD.h-0.6), clamp(atkRing.z,-FIELD.hz+0.5,FIELD.hz-0.5))   // 沿框心軸線倒退：解鎖後直接就對準了
+      : V3(-dir*P.retX, clamp(d.pos.y,0.7,FIELD.h-0.6), clamp(d.pos.z,-FIELD.hz+0.5,FIELD.hz-0.5));
     aiDodge(d, t, foes, P);
     return [t, P.sRet*d.skill];
   }
@@ -2587,7 +2594,14 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
   const before = (atkRing.x - d.pos.x)*dir;              // 離框平面還有多遠（>0＝還沒穿過）
   const lat = Math.hypot(d.pos.y-atkRing.y, d.pos.z-atkRing.z);
   const inCone = before>0.3 && lat < LANE_SLOPE*before + 0.05;
-  const dashTo = ()=>{ const u = rc.clone().sub(d.pos).normalize(); return rc.clone().addScaledVector(u, 0.8); };
+  const dashTo = ()=>{
+    const u = rc.clone().sub(d.pos).normalize();
+    if(P.burst){   // 全速衝：速度＝能在框後 0.55m（防護網前）停下來的最大速度
+      const rem = Math.max(0.05, (atkRing.x + dir*0.55 - d.pos.x)*dir);
+      d.dashV = u.clone().multiplyScalar(Math.min(P.sDash*d.skill, Math.sqrt(2*4.5*rem)));
+    }
+    return rc.clone().addScaledVector(u, 0.8);
+  };
   if(d.dash){
     d.dashT -= dt;
     if(d.dashT<=0 || before<=0 || d.disturb>0.75) d.dash = false;
@@ -2615,7 +2629,7 @@ function aiStrikerSmart(d, dt, P, foes, atkRing){
     d.lane = best;
   }
   // 插縫隙：現在位置直衝框心的線夠空 → 直接衝；或到了選好的進攻點、線上沒人 → 衝
-  if(inCone && before<1.9){
+  if(inCone && before<(P.snipeR||1.9)){
     const clr = laneClear(d.pos, atkRing, foes);
     const atLane = d.pos.distanceTo(d.lane.p) < 0.3;
     d.hesT = atLane ? (d.hesT||0) + dt : 0;          // 到了進攻點要猶豫多久才敢衝（低等級比較久，防守來得及補）
@@ -2751,7 +2765,21 @@ function aiThinkSmart(d, dt, P){
     if(Math.abs(target.x-atkRing.x) < 0.6 && Math.hypot(target.y-atkRing.y, target.z-atkRing.z) < 0.6)
       target.x = atkRing.x - d.attackDir*0.6;
   }
-  aiFinish(d, target, maxV, dt);
+  // 機頭方向（Lv3+，2026-10-30 依業主提供的比賽影片：「真實比賽是針對球門前後鑽縫隙，不是很多原地轉方向」）
+  //   Striker：機頭一直朝進攻方向（在框前時微微對準框心，最多偏 35°），前進、倒退、平移都不轉頭
+  //   防守機：機頭盯著對方 Striker
+  let face;
+  if(P.fixYaw){
+    const atkYaw = Math.atan2(d.attackDir, 0);
+    if(d.role==='striker'){
+      face = atkYaw;
+      if((atkRing.x - d.pos.x)*d.attackDir > 0.3)
+        face = atkYaw + clamp(angDiff(Math.atan2(atkRing.x-d.pos.x, atkRing.z-d.pos.z), atkYaw), -0.6, 0.6);
+    }else{
+      face = Math.atan2(enemyStriker.pos.x-d.pos.x, enemyStriker.pos.z-d.pos.z);
+    }
+  }
+  aiFinish(d, target, maxV, dt, face);
 }
 function aiKeepOut(t, ring, front, need){   // 把目標點推到「離 ring 至少 need」的球場內側
   t.y = clamp(t.y, 0.35, FIELD.h-0.4); t.z = clamp(t.z, -FIELD.hz+0.4, FIELD.hz-0.4);
@@ -2760,7 +2788,7 @@ function aiKeepOut(t, ring, front, need){   // 把目標點推到「離 ring 至
   const lat2 = vy*vy + vz*vz;
   t.x = ring.x + front*Math.sqrt(Math.max(need*need - lat2, 0.04));
 }
-function aiFinish(d, target, maxV, dt){
+function aiFinish(d, target, maxV, dt, face){
   for(const o of drones){   // 與隊友保持間距
     if(o===d || o.team!==d.team || o.benched) continue;
     const sep = d.pos.clone().sub(o.pos);
@@ -2770,7 +2798,7 @@ function aiFinish(d, target, maxV, dt){
   target.x = clamp(target.x, -FIELD.hx+0.4, FIELD.hx-0.4);
   target.y = clamp(target.y, 0.35, FIELD.h-0.4);
   target.z = clamp(target.z, -FIELD.hz+0.4, FIELD.hz-0.4);
-  flyToward(d, target, maxV, dt);
+  flyToward(d, target, maxV, dt, face);
 }
 function aiThinkClassic(d, dt, P){   // Lv1（P=null）＝原本的 AI 一字不差；Lv2 只換幾個數字
   const enemyStriker = d.team==='red' ? blueStriker : player;
