@@ -1201,7 +1201,7 @@ function bootTick(){   // 每幀呼叫：素材到齊（或等太久）後再畫
   if(el){ el.classList.add('out'); setTimeout(()=>el.remove(), 600); }
   // 閒置時在背景預載連線模組（失敗沒關係，按連線對戰時會再試）
   setTimeout(()=>{ loadTrystero().catch(()=>{}); }, 2500);
-  setTimeout(pilotsLoad, 900);                  // 場邊虛擬選手模型（1.4MB）也在背景載入，失敗就不顯示
+  setTimeout(pilotsLoad, 900);                  // 場邊虛擬選手模型（2.6MB）也在背景載入，失敗就不顯示
 }
 // 給 PBR 材質掛上照片貼圖（顏色貼圖＋法線貼圖），載入後才切換，之前維持純色
 function envPbr(mat, name, normalScale, tint){
@@ -2550,7 +2550,7 @@ function playFx(data){
     ringPulse = {ring: data.ring==='E'?ringEast:ringWest, t:0};
     sfx.goal(); sfx.cheer();
     rpOnGoal(data);                              // 關鍵回放：切片段（示範賽自動播、有人玩的比賽出按鈕）
-    pilotsOnGoal(data.team);                     // 場邊選手：得分隊舉手歡呼、失分隊搖頭
+    pilotsOnGoal(data.team);                     // 場邊選手：得分隊原地小跳、失分隊低頭搖頭（手不放開遙控器）
   }else if(data.type==='foulAtk'){
     flashMsg((data.team==='red'?'紅隊':'藍隊')+'進攻違規 −1（非 Striker 穿框）', '#fb923c', 1.8);
     sfx.foul();
@@ -6491,56 +6491,47 @@ function rpKey(e){   // 回放中的鍵盤（比賽的按鍵這時都不作用�
 }
 
 // ============================================================
-// 場邊虛擬選手（2026-10-31，業主：「能否有虛擬選手假裝在遙控，這選手要和真人一樣逼真，而且要著背心，
-//   讓人知道誰是前鋒、誰是場地球員」；業主選方案 1：免費真人 3D 模型）
-//   - 模型 assets/pilot.glb：MakeHuman 官方素材（CC0，可放公開 repo），經 github.com/kblood/CharacterCreator
-//     的 CC0 輸出檔（output/base_body.glb、clothing_tshirt/jeans/shoes、hair_short02）烘焙成「成年男性＋T恤
-//     ＋牛仔褲＋球鞋＋短髮＋號碼背心」一個檔（1.4MB，53 根骨頭 game_engine 骨架）。授權說明 assets/pilot_LICENSE.txt。
-//   - 6 位選手站在兩端的選手區（藍隊在藍場 −x 那端、紅隊在紅場 +x 那端，面向場內）；每位對應 drones[i]。
+// 場邊虛擬選手（2026-10-31，業主：「能否有虛擬選手假裝在遙控，這選手要和真人一樣逼真，而且要著背心，讓人知道誰是前鋒、誰是場地球員」；
+//   業主選方案 1：免費真人 3D 模型。同日業主第二輪：「選手要有男有女、國小～高中年紀」「手部和身體分離不自然」
+//   「進球不會舉起遙控器歡呼」「選手可以時不時稍微移動位置，感受比賽緊張氣氛」，並附比賽照片：紅隊全紅、藍隊全藍的號碼背心）
+//   - 模型 assets/pilot.glb（2.6MB）：MakeHuman 官方素材（CC0，可放公開 repo），經 github.com/kblood/CharacterCreator 的 CC0
+//     輸出檔烘焙成 4 種青少年（scene 0 男 11 歲、1 女 13 歲綁馬尾、2 男 16 歲、3 女 17 歲短髮），都穿 T 恤＋牛仔褲＋球鞋＋號碼背心。
+//     授權說明 assets/pilot_LICENSE.txt；烘焙腳本在專案資料夾 _tools/pilot_bake.mjs。
+//   - 選手站在兩端的選手區（藍隊在藍場 −x 那端、紅隊在紅場 +x 那端，面向場內）；每位對應 drones[i]。
 //   - 只讀各機的「畫面狀態」（mesh 位置、input、crash），不碰物理 → 回放／示範賽／連線對戰都相容。
 //   - 載入失敗（或沒網路抓不到 GLTFLoader）就不顯示選手，比賽完全不受影響。
-//   - 會動：頭與上身跟著自己那台機轉、手上的遙控器搖桿跟實際輸入動、隨輸入身體微側傾、呼吸／重心晃動、
-//     進球舉手歡呼（對方進球：搖頭）、自己的機墜機：一手抱頭。
+//   - 會動：在選手區裡跟著自己的機左右挪步、偶爾蹲低或往前靠、頭與上身追著自己的機轉；雙手一直握著遙控器（手肘夾在身體兩側），
+//     搖桿跟實際輸入動；進球得分隊原地小跳一下、失分隊低頭搖頭；自己的機墜機：身體前傾蹲低盯著看。
 // ============================================================
 const PILOT_URL = 'assets/pilot.glb';
 const PILOT_LIBS = ['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js',
                     'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js'];
-// 背心配色（要改顏色／字只改這張表）：前鋒＝跟自己那台機的尾燈同色（紅隊前鋒藍、藍隊前鋒紅）＋大字「前鋒」；
-//   場地球員＝隊色＋號碼。背心滾邊一律是隊色，站位也在自己半場那側，所以一眼看得出是哪隊。
-const PILOT_VEST = {
-  red:  { striker:{bg:'#1d63ff', fg:'#ffffff', txt:'前鋒', sub:'STRIKER'},
-          defender:{bg:'#d9202f', fg:'#ffffff', txt:'2', sub:'場地球員'},
-          harasser:{bg:'#d9202f', fg:'#ffffff', txt:'3', sub:'場地球員'} },
-  blue: { striker:{bg:'#ff2433', fg:'#ffffff', txt:'前鋒', sub:'STRIKER'},
-          defender:{bg:'#1f5fd6', fg:'#ffffff', txt:'5', sub:'場地球員'},
-          harasser:{bg:'#1f5fd6', fg:'#ffffff', txt:'6', sub:'場地球員'} },
-};
-const PILOT_TEAM_TRIM = {red:'#ff3b4a', blue:'#3b8bff'};
-// 站位（2026-10-31 業主更正，附比賽照片：「選手應該站在選手區，也就是左右兩側，而非裁判的位置」）：
-//   選手區＝場地兩個短邊外面——藍隊站藍場（−x）那端、紅隊站紅場（+x）那端，面向場內；長邊後方是裁判位置，不站人。
-//   PILOT_X＝離場地中心的距離（端網 3.0、充氣管外緣約 3.3、端邊看台 4.3 起）；PILOT_SPOT＝沿端線的 z 位置（+z＝觀眾面）
+// 背心（業主附比賽照片指定：紅隊都紅色、藍隊都藍色）：網眼號碼背心＋前後黑色大號碼；前鋒在號碼上方多一行「前鋒」。
+//   要改顏色／號碼只改這兩張表。
+const PILOT_VEST = { red:'#e3342c', blue:'#2459d8', fg:'#151515' };
+const PILOT_NUM = { red:{striker:'7', defender:'4', harasser:'5'}, blue:{striker:'10', defender:'8', harasser:'9'} };
+// 誰用哪個體型（glb 的 scene 編號：0 男11、1 女13、2 男16、3 女17）——每隊有男有女
+const PILOT_CAST = { red:{striker:2, defender:1, harasser:0}, blue:{striker:3, defender:0, harasser:1} };
+// 站位（業主附比賽照片更正：「選手應該站在選手區，也就是左右兩側，而非裁判的位置」）：
+//   選手區＝場地兩個短邊外面；PILOT_X＝離場地中心的距離（端網 3.0、充氣管外緣約 3.3、端邊看台 4.3 起），
+//   PILOT_SPOT＝沿端線的 z 位置（+z＝觀眾面）。比賽中會在 PILOT_ROAM 範圍內挪動。
 const PILOT_X = 3.62;
-const PILOT_SPOT = { striker:0.05, defender:0.9, harasser:-0.85 };
-// 每人 T 恤／髮色／身高略有不同，看起來不像複製人
+const PILOT_SPOT = { striker:0.05, defender:0.95, harasser:-0.9 };
+const PILOT_ROAM = { z:0.45, xIn:0.22, xOut:0.25 };
+// 每人 T 恤（照片多半是白／淺色）、髮色、身高微調
 const PILOT_LOOK = [
-  {shirt:'#f2f2f0', hair:'#1b1410', s:1.00}, {shirt:'#2b2f38', hair:'#120d0a', s:0.975}, {shirt:'#8c96a3', hair:'#2a1c13', s:1.02},
-  {shirt:'#1e2a44', hair:'#141010', s:0.99}, {shirt:'#e9e4d8', hair:'#22160f', s:1.015}, {shirt:'#3a3a3a', hair:'#0f0c0a', s:0.985},
+  {shirt:'#f4f4f2', hair:'#1b1410', s:1.00}, {shirt:'#e6eaf0', hair:'#120d0a', s:0.985}, {shirt:'#2b2f38', hair:'#2a1c13', s:1.015},
+  {shirt:'#f2eee4', hair:'#141010', s:0.995}, {shirt:'#ffffff', hair:'#22160f', s:1.01}, {shirt:'#d9dee4', hair:'#0f0c0a', s:0.99},
 ];
-const PILOT = { state:'idle', list:[], tpl:null, err:null };
+const PILOT = { state:'idle', list:[], scenes:null, err:null };
 
-function pilotLoadScript(src){
-  return new Promise((ok, bad)=>{
-    const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ()=>bad(new Error('load ' + src));
-    document.head.appendChild(s);
-  });
-}
 function pilotsLoad(){
   if(PILOT.state !== 'idle') return;
   PILOT.state = 'loading';
   (async()=>{
     for(const u of PILOT_LIBS) if(!(u.includes('GLTFLoader') ? THREE.GLTFLoader : THREE.SkeletonUtils)) await pilotLoadScript(u);
     const gltf = await new Promise((ok, bad)=>new THREE.GLTFLoader().load(PILOT_URL, ok, undefined, bad));
-    PILOT.tpl = gltf.scene;
+    PILOT.scenes = gltf.scenes;
     drones.forEach((d, i)=>PILOT.list.push(pilotBuild(d, i)));
     PILOT.state = 'ready';
   })().catch(e=>{ PILOT.state = 'failed'; PILOT.err = e; console.info('[場邊選手] 載入失敗，不顯示選手（不影響比賽）', e); });
@@ -6548,33 +6539,241 @@ function pilotsLoad(){
 
 // ---- 背心貼圖：u 0.25＝背中心、0.75＝胸前中心；v 0＝領口 ----
 function pilotVestTex(team, role){
-  const V = PILOT_VEST[team][role], trim = PILOT_TEAM_TRIM[team];
+  const bg = PILOT_VEST[team], num = PILOT_NUM[team][role], striker = role === 'striker';
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 512;
   const g = cv.getContext('2d');
-  g.fillStyle = V.bg; g.fillRect(0, 0, 1024, 512);
-  g.globalAlpha = 0.14; g.fillStyle = '#000';                   // 網眼布紋
-  for(let y = 0; y < 512; y += 6) for(let x = (y/6 % 2) * 3; x < 1024; x += 6) g.fillRect(x, y, 2, 2);
+  g.fillStyle = bg; g.fillRect(0, 0, 1024, 512);
+  g.globalAlpha = 0.2; g.fillStyle = '#000';                    // 網眼布的小洞
+  for(let y = 0; y < 512; y += 7) for(let x = (y/7 % 2) * 3.5; x < 1024; x += 7) g.fillRect(x, y, 3, 3);
+  g.globalAlpha = 0.25; g.fillRect(0, 0, 1024, 14); g.fillRect(0, 498, 1024, 14);   // 領口／下襬收邊（同色深一點）
   g.globalAlpha = 1;
-  g.fillStyle = trim; g.fillRect(0, 0, 1024, 26); g.fillRect(0, 486, 1024, 26);   // 領口／下襬隊色滾邊
-  g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(0, 26, 1024, 4); g.fillRect(0, 482, 1024, 4);
-  const big = V.txt.length > 1;
-  const draw = (cx, flip)=>{
-    g.save(); g.translate(cx, 0); if(flip) g.scale(-1, 1);
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = big ? '900 170px "PingFang TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",sans-serif' : '900 260px "Arial Black",Arial,sans-serif';
-    g.lineWidth = 14; g.strokeStyle = 'rgba(0,0,0,.35)'; g.strokeText(V.txt, 0, big ? 215 : 235);
-    g.fillStyle = V.fg; g.fillText(V.txt, 0, big ? 215 : 235);
-    g.font = '800 44px "PingFang TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",Arial,sans-serif';
-    g.fillText(V.sub, 0, big ? 360 : 410);
+  const draw = (cx, big)=>{
+    g.save(); g.translate(cx, 0); g.scale(-1, 1);                 // 圓柱 UV 的 u 方向跟畫布相反，畫字要鏡射
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = PILOT_VEST.fg;
+    let y = striker ? 268 : 240;
+    if(striker){
+      g.font = '900 64px "PingFang TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",sans-serif';
+      g.fillText('前鋒', 0, 92);
+    }
+    g.font = (big ? '900 230px' : '900 190px') + ' "Arial Black","Helvetica Neue",Arial,sans-serif';
+    g.save(); g.scale(0.82, 1); g.fillText(num, 0, y); g.restore();   // 運動背心的瘦長數字
     g.restore();
   };
-  draw(256, PILOT_VEST_FLIP.back); draw(768, PILOT_VEST_FLIP.front);
+  draw(256, true); draw(768, false);
   const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
   t.flipY = false;                                               // glTF 的 UV 慣例
   return t;
 }
-const PILOT_VEST_FLIP = {back:true, front:true};
 
+function pilotBuild(d, i){
+  const root = new THREE.Group();
+  const model = THREE.SkeletonUtils.clone(PILOT.scenes[PILOT_CAST[d.team][d.role]]);
+  root.add(model);
+  const look = PILOT_LOOK[i % PILOT_LOOK.length];
+  const sgn = d.team === 'red' ? 1 : -1;
+  root.scale.setScalar(look.s);
+  // GLTFLoader 會把 4 個 scene 裡重複的骨頭名稱改成 pelvis_1、pelvis_2…；四種體型骨架階層相同，所以照走訪順序對回第 0 個的名字
+  if(!PILOT.boneNames){ PILOT.boneNames = []; PILOT.scenes[0].traverse(o=>{ if(o.isBone) PILOT.boneNames.push(o.name); }); }
+  const B = {}; let bi = 0;
+  model.traverse(o=>{
+    if(o.isBone){ o.name = PILOT.boneNames[bi++]; B[o.name] = o; }
+    if(o.isMesh){
+      o.frustumCulled = false;
+      o.castShadow = !ENV_LOW && !/Cornea|Eyelash|Eyebrow/.test(o.material.name);
+      if(o.material.name === 'Vest'){ o.material = o.material.clone(); o.material.map = pilotVestTex(d.team, d.role); o.material.needsUpdate = true; }
+      else if(o.material.name === 'Tshirt'){ o.material = o.material.clone(); o.material.color.set(look.shirt).convertSRGBToLinear(); }
+      else if(o.material.name === 'Hair'){ o.material = o.material.clone(); o.material.color.set(look.hair).convertSRGBToLinear(); }
+      else if(o.material.name === 'Jeans'){ o.material = o.material.clone(); o.material.color.multiplyScalar(0.55 + (i%3)*0.12); }
+    }
+  });
+  const radio = pilotRadio();
+  root.add(radio);
+  scene.add(root);
+  root.updateMatrixWorld(true);
+  const rest = {};
+  for(const k in B) rest[k] = B[k].quaternion.clone();
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const wp = n=>B[n].getWorldPosition(new THREE.Vector3()).applyMatrix4(inv);
+  const len = {};
+  ['l','r'].forEach(s=>{
+    len['u'+s] = wp('upperarm_'+s).distanceTo(wp('lowerarm_'+s));
+    len['f'+s] = wp('lowerarm_'+s).distanceTo(wp('hand_'+s));
+  });
+  const leg = wp('thigh_l').distanceTo(wp('calf_l')) + wp('calf_l').distanceTo(wp('foot_l'));
+  const hy = wp('head').y;                                       // 頭的高度（看機的視線起點、體型比例）
+  const home = new THREE.Vector2(sgn * PILOT_X, PILOT_SPOT[d.role]);
+  const P = {
+    d, i, root, model, B, rest, len, leg, hy, k: hy / 1.55, radio, sgn, home,
+    pos: home.clone(), goal: home.clone(), face: -sgn*Math.PI/2, moveT: 1 + Math.random()*3, stepPh: 0, stepAmp: 0,
+    yaw: 0, pitch: 0.1, lean: 0, crouch: 0, crouchT: 0, squat: 0, squatT: 4 + Math.random()*12,
+    glance: 0, glanceT: 2 + Math.random()*5, phase: Math.random()*10,
+    react: null, reactT: 0, wasCrash: false, stick: [0,0,0,0],
+  };
+  root.position.set(home.x, 0, home.y); root.rotation.y = P.face;
+  return P;
+}
+
+// 每幀：在 syncMesh／回放擺完模型之後呼叫
+function pilotsTick(dt, t){
+  if(PILOT.state !== 'ready') return;
+  const show = rpMatchMode() || (state==='menu' && mode!=='race');
+  const live = state === 'play';                                 // 比賽進行中才走動（暫停／回放時站著）
+  for(const P of PILOT.list){
+    const d = P.d, vis = show && !d.benched && d.mesh.grp.visible;
+    P.root.visible = vis;
+    if(!vis) continue;
+    pilotMove(P, live ? dt : 0, t);
+    pilotPose(P, dt, t);
+  }
+}
+function pilotsOnGoal(team){
+  if(PILOT.state !== 'ready') return;
+  for(const P of PILOT.list){
+    if(P.d.benched) continue;
+    P.react = P.d.team === team ? 'cheer' : 'sad';
+    P.reactT = P.d.team === team ? 1.1 + Math.random()*0.4 : 1.4 + Math.random()*0.5;
+  }
+}
+
+// ---- 走位：在選手區裡跟著自己的機挪步、隊友之間保持距離 ----
+function pilotMove(P, dt, t){
+  if(dt <= 0){ P.stepAmp *= 0.9; return; }
+  const d = P.d, mp = d.mesh.grp.position;
+  P.moveT -= dt;
+  if(P.moveT <= 0){                                              // 每 1.5～5 秒換一個想站的位置
+    P.moveT = 1.5 + Math.random()*3.5;
+    const follow = THREE.MathUtils.clamp((mp.z - P.home.y)*0.45, -PILOT_ROAM.z, PILOT_ROAM.z);
+    const depth = (Math.random() < 0.35 ? -PILOT_ROAM.xIn*Math.random() : PILOT_ROAM.xOut*Math.random()*0.7);
+    P.goal.set(P.home.x + P.sgn*depth, P.home.y + follow + (Math.random()-0.5)*0.25);
+  }
+  // 隊友間至少 0.6m（沿端線）
+  for(const o of PILOT.list){
+    if(o === P || o.d.team !== P.d.team || o.d.benched) continue;
+    const dz = P.goal.y - o.pos.y;
+    if(Math.abs(dz) < 0.6 && Math.abs(P.goal.x - o.pos.x) < 0.5) P.goal.y = o.pos.y + (dz >= 0 ? 0.6 : -0.6);
+  }
+  P.goal.y = THREE.MathUtils.clamp(P.goal.y, -1.45, 1.55);
+  const dx = P.goal.x - P.pos.x, dz = P.goal.y - P.pos.y, dist = Math.hypot(dx, dz);
+  const v = Math.min(0.55, dist*2.2);                            // 小碎步，越接近越慢
+  if(dist > 0.01){ P.pos.x += dx/dist*v*dt; P.pos.y += dz/dist*v*dt; }
+  // 腳的方向：大致面向場內，但會往自己那台機的方向轉一點
+  const wantFace = -P.sgn*Math.PI/2 + THREE.MathUtils.clamp(Math.atan2(mp.x - P.pos.x, mp.z - P.pos.y) - (-P.sgn*Math.PI/2), -0.7, 0.7)*0.45;
+  let df = wantFace - P.face; df = Math.atan2(Math.sin(df), Math.cos(df));
+  const turn = THREE.MathUtils.clamp(df, -1.2*dt, 1.2*dt);
+  P.face += turn;
+  // 步伐：移動或轉身時兩腳交替抬起
+  const moving = v + Math.abs(turn)/dt*0.25;
+  P.stepAmp += (THREE.MathUtils.clamp(moving/0.35, 0, 1) - P.stepAmp)*(1 - Math.exp(-dt*8));
+  P.stepPh += dt*(moving > 0.03 ? 9 : 0);
+  P.root.position.set(P.pos.x, 0, P.pos.y);
+  P.root.rotation.y = P.face;
+  // 蹲低：自己的機在對方球門附近（快得分）時壓低重心；偶爾有人整個蹲下來飛（比賽照片裡就有）
+  const atk = d.team === 'red' ? -1 : 1;
+  const nearGoal = Math.max(0, 1 - Math.abs(mp.x - atk*RING.x)/1.2);
+  P.squatT -= dt;
+  if(P.squatT <= 0){ P.squat = P.squat ? 0 : (Math.random() < 0.5 ? 1 : 0); P.squatT = P.squat ? 4 + Math.random()*6 : 8 + Math.random()*14; }
+  P.crouchT = 0.06 + nearGoal*0.22 + P.squat*0.55;
+  P.glanceT -= dt;
+  if(P.glanceT <= 0){ P.glance = P.glance ? 0 : 1; P.glanceT = P.glance ? 0.35 + Math.random()*0.3 : 3 + Math.random()*6; }
+}
+
+function pilotPose(P, dt, t){
+  const {B, rest, root, d, model} = P;
+  for(const k in B) B[k].quaternion.copy(rest[k]);
+  root.updateMatrixWorld(true);
+
+  const crashing = !!d.crash && state !== 'menu';
+  if(crashing && !P.wasCrash){ P.react = 'crash'; P.reactT = 1.8; }
+  P.wasCrash = crashing;
+  if(P.reactT > 0){ P.reactT -= dt; if(P.reactT <= 0) P.react = null; }
+  const R = P.react, rk = R ? Math.min(1, Math.min(P.reactT, 0.3)/0.3) : 0;
+
+  // 看自己的機（目標轉到選手的局部座標；選手面向 local +z）
+  const tl = root.worldToLocal(_pv[3].copy(d.mesh.grp.position));
+  let wantYaw = Math.atan2(tl.x, tl.z - 0.03);
+  let wantPitch = -Math.atan2(tl.y - P.hy, Math.hypot(tl.x, tl.z));
+  if(P.glance && !R) wantYaw += P.sgn*0.9*(P.i%3===0 ? 1 : -1);  // 偶爾瞄一下隊友／對手
+  wantYaw = THREE.MathUtils.clamp(wantYaw, -1.45, 1.45);
+  wantPitch = THREE.MathUtils.clamp(wantPitch, -0.6, 0.6);
+  const kk = 1 - Math.exp(-dt*8);
+  P.yaw += (wantYaw - P.yaw)*kk; P.pitch += (wantPitch - P.pitch)*kk;
+  const inp = d.input || {};
+  const leanWant = THREE.MathUtils.clamp(-(inp.roll||0)*0.06 - P.yaw*0.03, -0.1, 0.1);   // 跟著側飛「帶身體」
+  P.lean += (leanWant - P.lean)*(1 - Math.exp(-dt*5));
+  let cw = P.crouchT + (R==='crash' ? 0.35*rk : 0);
+  if(R==='cheer') cw += Math.abs(Math.sin((1.5 - P.reactT)*9))*0.32*rk;   // 得分：原地小跳兩下
+  P.crouch += (cw - P.crouch)*(1 - Math.exp(-dt*(R==='cheer' ? 16 : 5)));
+
+  const br = Math.sin(t*1.9 + P.phase), sw = Math.sin(t*0.6 + P.phase*1.3);
+  const upW = PILOT_UP, fwW = PILOT_FW.set(0,0,1).applyQuaternion(root.quaternion);
+  const rgt = PILOT_RT.set(1,0,0).applyQuaternion(root.quaternion);
+  const tmpQ = _pq[2];
+
+  // 腿：蹲（大腿往前 θ、小腿往後 2θ、腳掌補回 → 腳踝留在髖關節正下方）＋走路抬腳＋重心左右晃
+  const th = THREE.MathUtils.clamp(P.crouch, 0, 0.95);
+  const stepL = Math.max(0, Math.sin(P.stepPh))*P.stepAmp*0.42, stepR = Math.max(0, -Math.sin(P.stepPh))*P.stepAmp*0.42;
+  pilotRotW(B.pelvis, tmpQ.setFromAxisAngle(fwW, sw*0.03));
+  [['l', stepL], ['r', stepR]].forEach(([s, lift])=>{
+    pilotRotW(B['thigh_'+s], tmpQ.setFromAxisAngle(fwW, -sw*0.03));
+    pilotRotW(B['thigh_'+s], tmpQ.setFromAxisAngle(rgt, -(th + lift)));
+    pilotRotW(B['calf_'+s],  tmpQ.setFromAxisAngle(rgt, 2*th + 2*lift));
+    pilotRotW(B['foot_'+s],  tmpQ.setFromAxisAngle(rgt, -(th + lift)));
+  });
+  model.position.y = -P.leg*(1 - Math.cos(th)) + (R==='cheer' ? 0 : 0);
+  // 上身：轉向占 35%、其餘給脖子／頭；蹲越低上身越前傾
+  const yawBody = P.yaw*0.35, yawHead = P.yaw - yawBody;
+  ['spine_01','spine_02','spine_03'].forEach(n=>{
+    pilotRotW(B[n], tmpQ.setFromAxisAngle(upW, yawBody/3));
+    pilotRotW(B[n], tmpQ.setFromAxisAngle(rgt, 0.03 + th*0.22 + br*0.008 + (R==='sad' ? 0.07*rk : 0) - (R==='cheer' ? 0.04*rk : 0)));
+    pilotRotW(B[n], tmpQ.setFromAxisAngle(fwW, P.lean/3 - sw*0.012));
+  });
+  const yawQ = new THREE.Quaternion().setFromAxisAngle(upW, yawHead);
+  const rgtH = rgt.clone().applyQuaternion(yawQ).applyQuaternion(_pq[1].setFromAxisAngle(upW, yawBody));
+  const shake = R==='sad' ? Math.sin(t*9)*0.22*rk : 0;
+  pilotRotW(B.neck_01, tmpQ.setFromAxisAngle(upW, yawHead*0.4 + shake*0.5));
+  pilotRotW(B.head, tmpQ.setFromAxisAngle(upW, yawHead*0.6 + shake*0.5));
+  pilotRotW(B.neck_01, tmpQ.setFromAxisAngle(rgtH, P.pitch*0.4 - th*0.15));
+  pilotRotW(B.head, tmpQ.setFromAxisAngle(rgtH, P.pitch*0.6 - th*0.1 + (R==='sad' ? 0.3*rk : 0)));
+
+  // 遙控器：肚子前面、手肘夾在身體兩側的高度；面板往上斜朝臉
+  const chest = B.spine_02.getWorldPosition(new THREE.Vector3());
+  const bodyQ = new THREE.Quaternion().setFromAxisAngle(_pv[0].set(0,1,0), yawBody).premultiply(root.quaternion);
+  const sc = root.scale.x*P.k;
+  const off = new THREE.Vector3(0, 0.02 + br*0.004, 0.24).multiplyScalar(sc).applyQuaternion(bodyQ);
+  P.radio.quaternion.copy(bodyQ).multiply(PILOT_FLIP).multiply(tmpQ.setFromAxisAngle(_pv[0].set(1,0,0), -0.85 - th*0.25));
+  P.radio.position.copy(chest.add(off));
+  root.worldToLocal(P.radio.position);
+  P.radio.quaternion.premultiply(_pq[1].copy(root.quaternion).invert());
+  P.radio.updateMatrixWorld(true);
+
+  // 搖桿跟著實際輸入（Mode 2：左＝油門／機頭旋轉、右＝前後／側飛）
+  const want = [-(inp.yawRate||0)/YAW_RATE, inp.throttle||0, inp.roll||0, inp.pitch||0];
+  for(let k=0;k<4;k++) P.stick[k] += (THREE.MathUtils.clamp(want[k],-1,1) - P.stick[k])*(1 - Math.exp(-dt*18));
+  const [L, Rt] = P.radio.userData.sticks;
+  L.rotation.set(-P.stick[1]*0.38, P.stick[0]*0.38, 0);
+  Rt.rotation.set(-P.stick[3]*0.38, P.stick[2]*0.38, 0);
+
+  // 雙手：兩節 IK 到握把；手肘往下、往後收（夾在身體兩側，不外張）
+  const rq = P.radio.getWorldQuaternion(new THREE.Quaternion());
+  const gripL = P.radio.localToWorld(new THREE.Vector3(-PILOT_GRIP[0], PILOT_GRIP[1], PILOT_GRIP[2]));
+  const gripR = P.radio.localToWorld(new THREE.Vector3( PILOT_GRIP[0], PILOT_GRIP[1], PILOT_GRIP[2]));
+  const down = new THREE.Vector3(0,-1,0), bk = new THREE.Vector3(0,0,-1).applyQuaternion(bodyQ);
+  const out = s=>new THREE.Vector3(s==='l'?1:-1, 0, 0).applyQuaternion(bodyQ);
+  ['l','r'].forEach(s=>{
+    pilotIK(P, s, s==='l' ? gripL : gripR, down.clone().add(bk.clone().multiplyScalar(0.7)).add(out(s).multiplyScalar(0.12)));
+    const m = s==='l' ? 1 : -1;
+    pilotHand(P, s, new THREE.Vector3(m*PILOT_HF[0], PILOT_HF[1], PILOT_HF[2]).applyQuaternion(rq),
+                    new THREE.Vector3(-m*PILOT_HB[0], PILOT_HB[1], PILOT_HB[2]).applyQuaternion(rq));
+    pilotFingers(P, s, 1.05, 0.55 + P.stick[s==='l' ? 1 : 3]*0.15);
+  });
+}
+
+function pilotLoadScript(src){
+  return new Promise((ok, bad)=>{
+    const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ()=>bad(new Error('load ' + src));
+    document.head.appendChild(s);
+  });
+}
 // ---- 遙控器（程序化：機身、兩個搖桿、握把、天線、螢幕）；原點＝機身中心，+y＝上緣、+z＝面向選手 ----
 function pilotRadio(){
   const g = new THREE.Group();
@@ -6605,50 +6804,6 @@ function pilotRadio(){
   g.traverse(o=>{ if(o.isMesh) o.castShadow = true; });
   g.userData.sticks = sticks;
   return g;
-}
-
-function pilotBuild(d, i){
-  const root = new THREE.Group();
-  const model = THREE.SkeletonUtils.clone(PILOT.tpl);
-  root.add(model);
-  const look = PILOT_LOOK[i % PILOT_LOOK.length];
-  const sgn = d.team === 'red' ? 1 : -1;
-  root.position.set(sgn * PILOT_X, 0, PILOT_SPOT[d.role]);
-  root.rotation.y = -sgn * Math.PI/2;                  // 面向場內（藍隊朝 +x、紅隊朝 −x）
-  root.scale.setScalar(look.s);
-  const B = {};
-  model.traverse(o=>{
-    if(o.isBone) B[o.name] = o;
-    if(o.isMesh){
-      o.frustumCulled = false;
-      o.castShadow = !/Cornea|Eyelash|Eyebrow/.test(o.material.name);
-      if(o.material.name === 'Vest'){ o.material = o.material.clone(); o.material.map = pilotVestTex(d.team, d.role); o.material.needsUpdate = true; }
-      else if(o.material.name === 'Tshirt'){ o.material = o.material.clone(); o.material.color.set(look.shirt).convertSRGBToLinear(); }
-      else if(o.material.name === 'Hair'){ o.material = o.material.clone(); o.material.color.set(look.hair).convertSRGBToLinear(); }
-      else if(o.material.name === 'Jeans'){ o.material = o.material.clone(); o.material.color.multiplyScalar(0.55 + (i%3)*0.12); }
-    }
-  });
-  const radio = pilotRadio();
-  root.add(radio);
-  scene.add(root);
-  root.updateMatrixWorld(true);
-  // 綁定姿勢（rest）：每根骨頭的 local 四元數，與骨長
-  const rest = {};
-  for(const k in B) rest[k] = B[k].quaternion.clone();
-  const wp = n=>B[n].getWorldPosition(new THREE.Vector3()).applyMatrix4(new THREE.Matrix4().copy(root.matrixWorld).invert());
-  const len = {};
-  ['l','r'].forEach(s=>{
-    len['u'+s] = wp('upperarm_'+s).distanceTo(wp('lowerarm_'+s));
-    len['f'+s] = wp('lowerarm_'+s).distanceTo(wp('hand_'+s));
-  });
-  const P = {
-    d, i, root, model, B, rest, len, radio, sgn,
-    yaw: 0, pitch: 0.1, lean: 0, phase: Math.random()*10,
-    react: null, reactT: 0,          // 'cheer' | 'sad' | 'crash'
-    wasCrash: false,
-    stick: [0,0,0,0],
-  };
-  return P;
 }
 
 // ---- 小工具 ----
@@ -6719,128 +6874,6 @@ function pilotFingers(P, s, curl, thumb){
   }
 }
 
-// 每幀：在 syncMesh／回放擺完模型之後呼叫
-function pilotsTick(dt, t){
-  if(PILOT.state !== 'ready') return;
-  const show = rpMatchMode() || (state==='menu' && mode!=='race');
-  for(const P of PILOT.list){
-    const d = P.d, vis = show && !d.benched && d.mesh.grp.visible;
-    P.root.visible = vis;
-    if(!vis) continue;
-    pilotPose(P, dt, t);
-  }
-}
-function pilotsOnGoal(team){
-  if(PILOT.state !== 'ready') return;
-  for(const P of PILOT.list){
-    if(P.d.benched) continue;
-    P.react = P.d.team === team ? 'cheer' : 'sad';
-    P.reactT = P.d.team === team ? 2.4 + Math.random()*0.6 : 1.6 + Math.random()*0.6;
-  }
-}
-
-function pilotPose(P, dt, t){
-  const {B, rest, root, d} = P;
-  // 1) 全部回到綁定姿勢
-  for(const k in B) B[k].quaternion.copy(rest[k]);
-  B.pelvis.position.y = B.pelvis.userData.y0 ?? (B.pelvis.userData.y0 = B.pelvis.position.y);
-  root.updateMatrixWorld(true);
-
-  // 反應狀態：墜機（自己的機）優先
-  const crashing = !!d.crash && state !== 'menu';
-  if(crashing && !P.wasCrash){ P.react = 'crash'; P.reactT = 2.2; }
-  P.wasCrash = crashing;
-  if(P.reactT > 0){ P.reactT -= dt; if(P.reactT <= 0) P.react = null; }
-  const R = P.react, rk = R ? Math.min(1, Math.min(P.reactT, 0.35)/0.35) : 0;   // 進出淡入淡出
-
-  // 2) 看自己的機：目標方向（root 局部）
-  const tgt = d.mesh.grp.getWorldPosition(_pv[4]);
-  const tl = root.worldToLocal(_pv[3].copy(tgt));                  // 目標轉到選手自己的座標（選手面向 local +z）
-  const dx = tl.x, dy = tl.y - 1.62, dz = tl.z - 0.03;
-  let wantYaw = Math.atan2(dx, dz);                                // 0＝正前方
-  let wantPitch = -Math.atan2(dy, Math.hypot(dx, dz));             // 正＝低頭
-  wantYaw = THREE.MathUtils.clamp(wantYaw, -1.45, 1.45);
-  wantPitch = THREE.MathUtils.clamp(wantPitch, -0.6, 0.55);
-  const kk = 1 - Math.exp(-dt*7);                                  // 人眼追機有一點延遲
-  P.yaw += (wantYaw - P.yaw)*kk; P.pitch += (wantPitch - P.pitch)*kk;
-  const inp = d.input || {};
-  const leanWant = THREE.MathUtils.clamp(-(inp.roll||0)*0.05 - P.yaw*0.03, -0.09, 0.09);   // 跟著機身側飛「帶身體」
-  P.lean += (leanWant - P.lean)*(1 - Math.exp(-dt*4));
-
-  // 呼吸＋重心晃動
-  const br = Math.sin(t*1.7 + P.phase), sw = Math.sin(t*0.45 + P.phase*1.3);
-  B.pelvis.position.y = B.pelvis.userData.y0;
-  const upW = PILOT_UP, fwW = PILOT_FW.set(0,0,1).applyQuaternion(root.quaternion);
-  pilotRotW(B.pelvis, _pq[2].setFromAxisAngle(fwW, sw*0.025));
-  pilotRotW(B.thigh_l, _pq[2].setFromAxisAngle(fwW, -sw*0.025));
-  pilotRotW(B.thigh_r, _pq[2].setFromAxisAngle(fwW, -sw*0.025));
-  // 上身：轉向占 35%，其餘給脖子／頭；身體微前傾、隨輸入側傾
-  const rgt = PILOT_RT.set(1,0,0).applyQuaternion(root.quaternion);
-  const yawBody = P.yaw*0.35, yawHead = P.yaw - yawBody;
-  ['spine_01','spine_02','spine_03'].forEach((n, k)=>{
-    pilotRotW(B[n], _pq[2].setFromAxisAngle(upW, yawBody/3));
-    pilotRotW(B[n], _pq[2].setFromAxisAngle(rgt, 0.035 + br*0.008 + (R==='sad' ? 0.06*rk : 0)));
-    pilotRotW(B[n], _pq[2].setFromAxisAngle(fwW, P.lean/3 - sw*0.012));
-  });
-  // 頭：yaw 繞世界上方、pitch 繞「轉頭後」的右方
-  const yawQ = new THREE.Quaternion().setFromAxisAngle(upW, yawHead);
-  const rgtH = rgt.clone().applyQuaternion(yawQ).applyQuaternion(_pq[1].setFromAxisAngle(upW, yawBody));
-  let shake = R==='sad' ? Math.sin(t*9)*0.25*rk : 0;
-  pilotRotW(B.neck_01, _pq[2].setFromAxisAngle(upW, yawHead*0.4 + shake*0.5));
-  pilotRotW(B.head, _pq[2].setFromAxisAngle(upW, yawHead*0.6 + shake*0.5));
-  pilotRotW(B.neck_01, _pq[2].setFromAxisAngle(rgtH, P.pitch*0.4));
-  pilotRotW(B.head, _pq[2].setFromAxisAngle(rgtH, P.pitch*0.6 - (R==='sad' ? 0.25*rk : 0)));
-
-  // 3) 遙控器：掛在胸前（跟著 spine_03 一起轉），面板朝向臉、往上斜
-  const sp = B.spine_03;
-  const chest = sp.getWorldPosition(new THREE.Vector3());
-  const bodyQ = new THREE.Quaternion().setFromAxisAngle(_pv[0].set(0,1,0), yawBody).premultiply(root.quaternion);
-  const off = new THREE.Vector3(0, -0.02, 0.26 + br*0.003).multiplyScalar(root.scale.x).applyQuaternion(bodyQ);
-  let radioPos = chest.add(off);
-  let tilt = -0.95;                                                // 面板往上翻（看得到螢幕）
-  if(R==='cheer'){                                                 // 進球：雙手舉高
-    const up = Math.sin(Math.min(1, (2.6 - P.reactT)/0.4) * Math.PI/2) * rk;
-    radioPos.add(_pv[1].set(0, 0.86*up*root.scale.x, -0.16*up).applyQuaternion(bodyQ));
-    radioPos.y += Math.abs(Math.sin(t*8))*0.05*up;
-    tilt = -0.95 + 1.1*up;
-  }
-  P.radio.quaternion.copy(bodyQ).multiply(PILOT_FLIP).multiply(_pq[2].setFromAxisAngle(_pv[0].set(1,0,0), tilt));
-  P.radio.position.copy(radioPos);
-  root.worldToLocal(P.radio.position);
-  P.radio.quaternion.premultiply(_pq[1].copy(root.quaternion).invert());
-  P.radio.updateMatrixWorld(true);
-
-  // 搖桿跟著實際輸入（Mode 2：左＝油門／機頭旋轉、右＝前後／側飛）
-  const want = [-(inp.yawRate||0)/YAW_RATE, inp.throttle||0, inp.roll||0, inp.pitch||0];
-  for(let k=0;k<4;k++) P.stick[k] += (THREE.MathUtils.clamp(want[k],-1,1) - P.stick[k])*(1 - Math.exp(-dt*18));
-  const [L, Rt] = P.radio.userData.sticks;
-  L.rotation.set(-P.stick[1]*0.38, P.stick[0]*0.38, 0);
-  Rt.rotation.set(-P.stick[3]*0.38, P.stick[2]*0.38, 0);
-
-  // 4) 雙手：IK 到握把，拇指放在搖桿上
-  const rq = P.radio.getWorldQuaternion(new THREE.Quaternion());
-  const gripL = P.radio.localToWorld(new THREE.Vector3(-PILOT_GRIP[0], PILOT_GRIP[1], PILOT_GRIP[2]));
-  const gripR = P.radio.localToWorld(new THREE.Vector3( PILOT_GRIP[0], PILOT_GRIP[1], PILOT_GRIP[2]));
-  const down = new THREE.Vector3(0,-1,0), bk = new THREE.Vector3(0,0,-1).applyQuaternion(bodyQ);
-  const out = s=>new THREE.Vector3(s==='l'?1:-1, 0, 0).applyQuaternion(bodyQ);
-  const crashHand = R==='crash' && rk > 0;
-  // 墜機：左手放開去抱頭
-  if(crashHand){
-    const headP = B.head.getWorldPosition(new THREE.Vector3());
-    const hTgt = headP.clone().add(new THREE.Vector3(0.1, 0.03, -0.03).multiplyScalar(root.scale.x).applyQuaternion(bodyQ));
-    const hL = gripL.clone().lerp(hTgt, rk);
-    pilotIK(P, 'l', hL, out('l').multiplyScalar(0.8).add(down.clone().multiplyScalar(0.3)).add(bk.clone().multiplyScalar(0.2)));
-    pilotHand(P, 'l', new THREE.Vector3(-0.3,1,0.2).applyQuaternion(bodyQ), new THREE.Vector3(1,0,0).applyQuaternion(bodyQ));
-    pilotFingers(P, 'l', 0.2, 0.2);
-  }else{
-    pilotIK(P, 'l', gripL, down.clone().add(out('l').multiplyScalar(0.55)).add(bk.clone().multiplyScalar(0.35)));
-    pilotHand(P, 'l', new THREE.Vector3(PILOT_HF[0], PILOT_HF[1], PILOT_HF[2]).applyQuaternion(rq), new THREE.Vector3(-PILOT_HB[0], PILOT_HB[1], PILOT_HB[2]).applyQuaternion(rq));
-    pilotFingers(P, 'l', 1.05, 0.55 + P.stick[1]*0.15);
-  }
-  pilotIK(P, 'r', gripR, down.clone().add(out('r').multiplyScalar(0.55)).add(bk.clone().multiplyScalar(0.35)));
-  pilotHand(P, 'r', new THREE.Vector3(-PILOT_HF[0], PILOT_HF[1], PILOT_HF[2]).applyQuaternion(rq), new THREE.Vector3(PILOT_HB[0], PILOT_HB[1], PILOT_HB[2]).applyQuaternion(rq));
-  pilotFingers(P, 'r', 1.05, 0.55 + P.stick[3]*0.15);
-}
 
 function loop(){
   requestAnimationFrame(loop);
