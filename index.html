@@ -43,6 +43,7 @@
   .sb-vs{font-size:18px;font-weight:900;color:#3a3a5c}
   #msg{top:22%;left:50%;transform:translateX(-50%);font-size:52px;font-weight:900;letter-spacing:4px;
     opacity:0;transition:opacity .25s;text-align:center;white-space:nowrap}
+  #msg.long{font-size:28px;letter-spacing:1px;white-space:normal;width:min(900px,92vw);line-height:1.35}
   #telemetry{right:16px;bottom:16px;background:rgba(8,12,24,.7);border:1px solid rgba(120,160,255,.2);
     border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.7;font-variant-numeric:tabular-nums;min-width:170px}
   #telemetry b{color:#9fc1ff}
@@ -278,6 +279,30 @@
   #mfDuoOpt .rAiDemo.blue button.sel{background:rgba(96,165,250,.25);border-color:#60a5fa}
   #mfDuoOpt .rAiDemo.red button.sel{background:rgba(248,113,113,.25);border-color:#f87171}
   #mfDuoOpt button[data-lv].sel{background:rgba(125,255,169,.2);border-color:#7dffa9}
+  /* ---- 選手訓練（2026-10-31）---- */
+  .c-trainp{--c:120,220,255}
+  #mfS2match .mfCard{width:218px}
+  #mfDuoOpt .rTrain,#mfDuoOpt .rTrainN{display:none}
+  #menuFlow.trainM #mfDuoOpt,#menuFlow.trainM .rTrain{display:flex}
+  #menuFlow.trainM.trainAtk .rTrainN{display:flex}
+  #mfDuoOpt button[data-tr].sel,#mfDuoOpt button[data-tn].sel{background:rgba(120,220,255,.2);border-color:#78dcff}
+  #aiLvDesc{max-width:640px;text-align:left;font-size:13px;line-height:1.55;color:#cfe0fb;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px 14px}
+  #aiLvDesc b{color:#fff} #aiLvDesc .k{display:inline-block;min-width:5.2em;color:#9fb4d8;font-weight:700}
+  #aiLvDesc .hi{color:#ffe08a}
+  #aiLvCmp{max-width:760px;font-size:12.5px;color:#cfe0fb}
+  #aiLvCmp summary{cursor:pointer;color:#9fd8ff;text-align:center;list-style:none;padding:2px 0}
+  #aiLvCmp summary::-webkit-details-marker{display:none}
+  #aiLvTable table{border-collapse:collapse;margin-top:6px;background:rgba(7,7,26,.6);border-radius:10px;overflow:hidden}
+  #aiLvTable th,#aiLvTable td{border:1px solid rgba(255,255,255,.08);padding:5px 8px;text-align:left;vertical-align:top;line-height:1.45}
+  #aiLvTable th{color:#9fb4d8;font-weight:700;white-space:nowrap}
+  #aiLvTable td:first-child{white-space:nowrap;font-weight:800}
+  #aiLvTable tr.sel td{background:rgba(125,255,169,.12)}
+  #aiLvTable .dim{opacity:.45}
+  #trainHUD{top:96px;left:50%;transform:translateX(-50%);background:rgba(7,7,26,.82);border:1px solid #1e1e40;border-radius:12px;
+    padding:6px 16px;font-size:13.5px;color:#cdd8ee;white-space:nowrap;text-align:center}
+  #trainHUD b{color:#7dffa9;font-size:17px;margin:0 2px} #trainHUD .bad{color:#f87171}
+  body.inMenu #trainHUD{visibility:hidden!important}
+  body.touch.phone #trainHUD{transform:translateX(-50%) scale(.72);transform-origin:top center}
   #menuFlow.duo .rTeam,#menuFlow.prac .rPlayers,#menuFlow.duo .rPad,#menuFlow.pracDuo .rPad{display:flex}
   .duoP .prac{display:none} body.duoPrac .duoP .prac{display:inline} body.duoPrac .duoP .arm{display:none}
   #mfDuoOpt button{padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#dfe7f7;font-size:14px;cursor:pointer;font-family:inherit}
@@ -307,6 +332,8 @@
     .mfCards{gap:10px;flex-wrap:nowrap} .mfCard{width:31%;max-width:220px;min-height:0;padding:12px 8px 10px;border-radius:16px}
     .mfCard .ic{font-size:34px} .mfCard b{font-size:16px} .mfCard span{font-size:11px}
     .mfCard .tag{font-size:9px;top:7px;left:7px}
+    #mfS2match .mfCard{width:24%}
+    #aiLvDesc{font-size:11.5px;padding:5px 10px} #mfDuoOpt{gap:5px} #mfDuoOpt button{padding:5px 11px;font-size:12.5px}
     .mfCard.rec::before{font-size:9px;top:8px;right:-34px}
     .mfScene{width:118px;height:78px;padding:6px 8px;border-radius:13px} .mfScene .em{font-size:24px} .mfScene b{font-size:13px} .mfScene small{display:none}
     .mfScenes{gap:8px} .mfGo{margin-top:12px;padding:10px 44px;font-size:17px} .mfBack{margin-top:8px;padding:5px 16px;font-size:12px}
@@ -442,6 +469,7 @@
   body.touch.phone #campHUD .brf{display:none}
   body.touch.phone #practiceHUD{transform:translateX(-50%) scale(.75)!important;transform-origin:top center;top:4px!important}
   body.touch.phone #msg{font-size:32px}
+  body.touch.phone #msg.long{font-size:17px}
   body.touch.phone #netBadge{top:auto!important;bottom:6px;right:50%!important;transform:translateX(50%) scale(.8);white-space:nowrap}
   body.touch.phone #credit{display:none}
   body.touch.phone #touchBtns button{width:38px;height:38px;font-size:17px}
@@ -572,6 +600,7 @@
     <div id="rpHint">拖曳畫面＝環繞觀看・滾輪縮放・空白鍵 播放/暫停・← → 逐格・↑ ↓ 速度・1~6 換鏡頭・G 進球瞬間・V/Esc 離開</div>
   </div>
 </div>
+<div class="hud" id="trainHUD" style="display:none"></div>
 <div class="hud" id="practiceHUD" style="display:none;top:12px;left:50%;transform:translateX(-50%);
   background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:14px;padding:10px 26px;
   text-align:center;font-size:14px;color:#cdd8ee;letter-spacing:1px">
@@ -691,6 +720,7 @@
         <button class="mfCard c-match" data-mode="player"><div class="ic">🤖</div><b>對戰 AI</b><span>你是紅隊 Striker<br>隊友和對手都是 AI</span></button>
         <button class="mfCard c-net" data-mode="net"><div class="ic">🌐</div><b>連線對戰</b><span>開房間給同學房號<br>1v1・2v2・3v3</span></button>
         <button class="mfCard c-duo" data-mode="duo"><div class="ic">👥</div><b>雙人對戰</b><span>同一台電腦左右分割畫面<br>兩支搖桿・藍 vs 紅</span></button>
+        <button class="mfCard c-trainp" data-mode="train"><div class="ic">🏋️</div><b>選手訓練</b><span>選攻擊手或防守手<br>對 AI 專項練習</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS3">
@@ -698,8 +728,12 @@
       <div id="mfDuoOpt">
         <div class="row rPlayers">人數：<button data-pd="0">👤 單人</button><button data-pd="1">👥 雙人（左右分割畫面）</button></div>
         <div class="row rTeam">隊伍：<button data-v="0">⬜ 只有兩人（1v1）</button><button data-v="1">🤖 加 AI 隊友（3v3）</button></div>
+        <div class="row rTrain">我要練：<button data-tr="atk">⚔️ 攻擊手（Striker）</button><button data-tr="def">🛡️ 防守手（Defender）</button></div>
+        <div class="row rTrainN">AI 防守：<button data-tn="1">🛡️ 1 個（Defender 卡位）</button><button data-tn="2">🛡️🛡️ 2 個（＋Harasser 衝撞）</button></div>
+        <div class="row rTrain"><small id="trainDesc" style="color:#bcd3f5"></small></div>
         <div class="row rAi">AI 難度：<button data-lv="1">🐣 新手</button><button data-lv="2">🙂 入門</button><button data-lv="3">💪 進階</button><button data-lv="4">🔥 高手</button><button data-lv="5">👑 大師</button></div>
-        <div class="row rAi"><small id="aiLvDesc" style="color:#bcd3f5"></small></div>
+        <div class="row rAi"><div id="aiLvDesc"></div></div>
+        <div class="row rAi"><details id="aiLvCmp"><summary>📋 五個難度差在哪？（點開比較）</summary><div id="aiLvTable"></div></details></div>
         <div class="row rAiDemo blue"><span class="tm">🔵 藍隊 AI</span><button data-dlv="blue:1">🐣 新手</button><button data-dlv="blue:2">🙂 入門</button><button data-dlv="blue:3">💪 進階</button><button data-dlv="blue:4">🔥 高手</button><button data-dlv="blue:5">👑 大師</button></div>
         <div class="row rAiDemo red"><span class="tm">🔴 紅隊 AI</span><button data-dlv="red:1">🐣 新手</button><button data-dlv="red:2">🙂 入門</button><button data-dlv="red:3">💪 進階</button><button data-dlv="red:4">🔥 高手</button><button data-dlv="red:5">👑 大師</button></div>
         <div class="row rAiDemo"><small id="aiDemoDesc" style="color:#bcd3f5"></small></div>
@@ -731,6 +765,7 @@
     <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
     <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
     <button class="modeBtn" id="btnDuo">👥 左右雙人對戰</button>
+    <button class="modeBtn" id="btnTrain">🏋️ 選手訓練</button>
   </div>
   <div id="fsTip">📱 想要全螢幕飛行？iPhone 請點網址列左邊的 <b>≡</b> →「<b>隱藏工具列</b>」，或 <a id="fsTipMore">加入主畫面（看作法）</a></div>
   <div id="netPanel" style="display:none">
@@ -2467,13 +2502,13 @@ class Drone{
   }
 }
 
-function chaosOn(){ return mode==='player' || mode==='demo' || mode==='net' || (mode==='duo' && DUO.kind==='match'); }
+function chaosOn(){ return mode==='player' || mode==='train' || mode==='demo' || mode==='net' || (mode==='duo' && DUO.kind==='match'); }
 function crashMsgTo(d, text, color, dur){   // 墜機／卡網訊息只給操控那台的真人看
-  if(mode==='player' && d.isPlayer) flashMsg(text, color, dur);
+  if(isSoloHuman(d)) flashMsg(text, color, dur);
   else if(mode==='duo' && duoSideOf(d) >= 0) duoMsg(duoSideOf(d), text, color, dur);
 }
 function crashResist(d){   // 越高級的飛手越救得回來：AI Lv1 ×1.15 … Lv5 ×0.75；真人一律 ×1
-  if(d.isPlayer && mode==='player') return 1;
+  if(isSoloHuman(d)) return 1;
   if(mode==='duo' && duoSideOf(d) >= 0) return 1;
   if(mode==='net' && NET.slotOwners && NET.slotOwners[drones.indexOf(d)]) return 1;
   return 1.3 - 0.12*(d.lv||1);
@@ -2617,6 +2652,7 @@ function playFx(data){
     const rF = Math.max(0, rawScore('red')), bF = Math.max(0, rawScore('blue'));
     const res = rF>bF ? '紅隊獲勝！🏆' : bF>rF ? '藍隊獲勝！🏆' : '平手！';
     const neg = (rawScore('red') < 0 || rawScore('blue') < 0) ? '（負分記為 0）' : '';
+    if(mode==='train'){ flashMsg(trainEndText(), '#ffe680', 9999); return; }
     flashMsg('最終 ' + bF + ' : ' + rF + neg + '　' + res + '（按 R 重賽）',
       rF>bF ? '#f87171' : bF>rF ? '#60a5fa' : '#ffe680', 9999);
   }
@@ -2631,7 +2667,7 @@ function checkGoals(){
     if(d.role==='striker' && !d.canScore
        && Math.sign(d.pos.x||1)!==Math.sign(atkRing.x) && Math.abs(d.pos.x)>0.4){
       d.canScore = true;
-      if(d.isPlayer && mode==='player') flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
+      if(isSoloHuman(d)) flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
       else if(mode==='duo' && duoSideOf(d)>=0) duoMsg(duoSideOf(d), '得分權已解鎖 ✓', '#7dffa9', 1.2);
       else if(mode==='net' && NET.slotOwners[i]) fireFx({type:'unlock'}, NET.slotOwners[i]);
     }
@@ -2666,7 +2702,7 @@ function updateFouls(dt){
       (d.pos.x-ownRing.x)**2 + (d.pos.y-ownRing.y)**2 + (d.pos.z-ownRing.z)**2);
     if(dist < FOUL_ZONE && !d.crash){   // 墜機躺在禁區裡不算守門
       d.zoneT += dt;
-      if(d.isPlayer && mode==='player' && d.zoneT>1.5 && !d.zoneWarned){
+      if(isSoloHuman(d) && d.zoneT>1.5 && !d.zoneWarned){
         d.zoneWarned = true;
         flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
       }else if(mode==='duo' && duoSideOf(d)>=0 && d.zoneT>1.5 && !d.zoneWarned){
@@ -2812,12 +2848,34 @@ function flyToward(d, target, maxV, dt, faceYaw){   // faceYaw：指定機頭方
 //   難度只改 AI 的判斷，物理（推力、阻力、最高速度）大家都一樣。
 // ============================================================
 const AI_LV_KEY = 'hsinchuDroneAiLvV1';
+// 2026-10-31 選手訓練：業主要「描述五個難度的差別，讓人比較好了解」→ 每級多三欄白話說明（數字對應下面的 AI_P）
+//   react 反應與手感；atk AI 當前鋒時怎麼攻；def AI 當防守時怎麼守；who 適合誰
 const AI_LEVELS = [null,
-  {ic:'🐣', name:'新手', desc:'原本的 AI：進攻直來直往、防守慢半拍'},
-  {ic:'🙂', name:'入門', desc:'反應快一點，防守會稍微預判'},
-  {ic:'💪', name:'進階', desc:'會挑空檔進攻，防守站在射門線上'},
-  {ic:'🔥', name:'高手', desc:'看到縫隙就衝，防守會短暫堵門、隊友補位'},
-  {ic:'👑', name:'大師', desc:'一直進攻鑽縫隙，防守輪流堵門，很難攻進去'},
+  {ic:'🐣', name:'新手', desc:'原本的 AI：進攻直來直往、防守慢半拍',
+   react:'反應約 0.45 秒，手最抖，推桿只推六成（飛得慢）',
+   atk:'固定幾條路線，慢慢對準框心才衝；前面有人就繞開，不會假動作',
+   def:'守在禁區外緣、幾乎不預判，常追不上衝刺；干擾機偶爾撞一下、撞完休息很久',
+   who:'第一次對 AI、剛學會穿框'},
+  {ic:'🙂', name:'入門', desc:'反應快一點，防守會稍微預判',
+   react:'反應約 0.36 秒，手比較穩',
+   atk:'會挑比較空的路線，但到了射門點要猶豫 1 秒多才敢衝（防守來得及補）',
+   def:'站在「前鋒→球門」連線上卡位，預判 0.25 秒；不堵門、隊友不補位',
+   who:'能穩定穿框，開始練閃人'},
+  {ic:'💪', name:'進階', desc:'會挑空檔進攻，防守站在射門線上',
+   react:'反應約 0.26 秒，機頭固定朝前、用平移鑽（像真人選手）',
+   atk:'每 1 秒重找空檔路線，猶豫只剩 0.6 秒；會閃開衝撞',
+   def:'卡射門線、預判 0.35 秒，干擾機靠近就撞、撞完很快回來',
+   who:'社團比賽程度'},
+  {ic:'🔥', name:'高手', desc:'看到縫隙就衝，防守會短暫堵門、隊友補位',
+   react:'反應約 0.18 秒，推桿敢推到底（最高速）',
+   atk:'看到通往框心的縫隙就直接全速衝，幾乎不猶豫；被堵會換路線或在門前左右晃假動作',
+   def:'你逼近時會進禁區堵門最多 1.2 秒，退出後冷卻 1.4 秒＝你的進攻空檔；隊友會補位',
+   who:'校隊、準備出賽'},
+  {ic:'👑', name:'大師', desc:'一直進攻鑽縫隙，防守輪流堵門，很難攻進去',
+   react:'反應約 0.12 秒，幾乎不手抖',
+   atk:'每 0.1 秒重算縫隙，一直在找空檔；進球後最短路線回半場解鎖、馬上再攻',
+   def:'輪流堵門（1.6 秒、冷卻只有 1 秒），干擾機平時站第二道防線、你進危險區才全力撞',
+   who:'挑戰極限'},
 ];
 // err 反應誤差倍率；sDash/sApp/sRet 衝刺／進場／回防速度；dfV 防守速度；lead 預判秒數；
 // hTrig/hV/hRest/hLead 衝撞觸發距離／速度／喘息[最短,隨機]／預判；strat Striker 換路線間隔[最短,隨機]；
@@ -3759,6 +3817,7 @@ const msgEl = document.getElementById('msg');
 let msgTimer = 0;
 function flashMsg(text, color, dur){
   msgEl.textContent = text; msgEl.style.color = color;
+  msgEl.classList.toggle('long', text.length > 30);   // 訓練結算等長訊息：字縮小、可換行
   msgEl.style.opacity = 1; msgTimer = dur;
 }
 function updateHUD(){
@@ -3768,8 +3827,9 @@ function updateHUD(){
     document.getElementById('tAlt').textContent = Math.max(0,hd.pos.y-DRONE_R).toFixed(1);
     document.getElementById('tThr').textContent = Math.round(hd.thrustN/(MASS*G)*100);
     const badge = document.getElementById('armBadge');
-    badge.textContent = hd.canScore ? '已解鎖' : '需回防';
-    badge.className = hd.canScore ? 'armed' : 'disarmed';
+    const def = hd.role !== 'striker';
+    badge.textContent = def ? '防守' : hd.canScore ? '已解鎖' : '需回防';
+    badge.className = def || hd.canScore ? 'armed' : 'disarmed';
   }
   // 搖桿即時狀態（每幀直接查詢瀏覽器，方便除錯）
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -3800,6 +3860,7 @@ const camPos = V3(0,3.5,6.5), camLook = V3(0,1,0);
 // 連線對戰時鏡頭跟拍「我方配對到的機」；未配位（觀戰）則退回全場鏡頭
 function camDrone(){
   if(mode==='net') return NET.mySlot>=0 ? drones[NET.mySlot] : null;
+  if(mode==='train') return trainHuman();
   return player;
 }
 // 滑鼠／手指拖曳調整觀看角度（2026-10-31，業主：「我也要能夠透過滑鼠調整觀看角度」）
@@ -3931,7 +3992,9 @@ function restart(){
   rpReset();                                    // 清掉上一場的回放片段
   aiApplyLevels();                              // AI 難度（Lv1~5）
   setState('play');
-  fireFx({type:'start', ai: (mode==='player' || mode==='demo' || (mode==='duo' && DUO.ai)) ? aiMatchLabel() : null});
+  trainReset();
+  fireFx({type:'start', ai: mode==='train' ? trainOppLabel() : (mode==='player' || mode==='demo' || (mode==='duo' && DUO.ai)) ? aiMatchLabel() : null});
+  if(mode==='train') flashMsg((TRAIN.role==='atk' ? '⚔️ 攻擊訓練開始！' : '🛡️ 防守訓練開始！') + ' ' + trainOppLabel(), '#ffe680', 1.8);
 }
 function endMatch(){
   setState('over');
@@ -4048,6 +4111,115 @@ function duoAssign(){   // 依目前接了幾支搖桿決定每邊用什麼操�
   DUO.nPads = ps.length;
 }
 function duoSideOf(d){ return DUO.sides[0].d===d ? 0 : DUO.sides[1].d===d ? 1 : -1; }
+// ============================================================
+// 選手訓練（2026-10-31，業主：「希望有個選手訓練模式，選我是攻擊手可以練習攻擊，AI 是 1~2 個防禦；
+//   選我是防守手，AI 是前鋒，可以選擇攻擊難度（之前 AI 的五個難度），也要描述這五個的差別」）
+//   - 走一般比賽流程（計時、計分、違規、回放都一樣），只是用 benched 讓不參與的機退場：
+//       攻擊訓練：你＝紅隊 Striker；場上只有藍隊 Defender（＋Harasser，選 2 個時）
+//       防守訓練：你＝紅隊 Defender（drones[1]）；場上只有藍隊 Striker，它的進攻強度＝AI 難度
+//   - 真人操控的那台由 trainHuman() 決定（鏡頭、輸入、提示訊息、遙測都跟著它）
+//   - 統計：防守訓練記 AI 射門（衝刺）次數，擋下＝射門−失分；成績最佳紀錄依「角色／人數／難度」分開存
+// ============================================================
+const TRAIN_KEY = 'hsinchuDroneTrainV1', TRAIN_BEST_KEY = 'hsinchuDroneTrainBestV1';
+const TRAIN = {role:'atk', nDef:1, shots:0, prevDash:false, best:{}};
+try{ const o = JSON.parse(localStorage.getItem(TRAIN_KEY)||'{}')||{};
+  if(o.role==='def') TRAIN.role = 'def'; if(o.nDef===2) TRAIN.nDef = 2; }catch(e){}
+try{ TRAIN.best = JSON.parse(localStorage.getItem(TRAIN_BEST_KEY)||'{}')||{}; }catch(e){}
+function trainSaveOpt(){ try{ localStorage.setItem(TRAIN_KEY, JSON.stringify({role:TRAIN.role, nDef:TRAIN.nDef})); }catch(e){} }
+function trainHuman(){ return TRAIN.role==='def' ? drones[1] : player; }
+function soloMode(){ return mode==='player' || mode==='train'; }
+function isSoloHuman(d){ return mode==='train' ? d===trainHuman() : (mode==='player' && d.isPlayer); }
+function trainIn(d){   // 這台機在訓練中有沒有上場
+  if(d===trainHuman()) return true;
+  if(TRAIN.role==='atk') return d.team==='blue' && (d.role==='defender' || (d.role==='harasser' && TRAIN.nDef===2));
+  return d.team==='blue' && d.role==='striker';
+}
+function trainBestKey(){ return TRAIN.role + (TRAIN.role==='atk' ? TRAIN.nDef : '') + ':' + AI_LV; }
+function trainOppLabel(){
+  return TRAIN.role==='atk' ? 'AI 防守 ×' + TRAIN.nDef + '・' + aiLabel() : 'AI 前鋒・' + aiLabel();
+}
+function trainUpdateHUD(){
+  const el = document.getElementById('trainHUD');
+  if(mode!=='train'){ if(el.style.display!=='none') el.style.display = 'none'; return; }
+  if(el.style.display!=='block') el.style.display = 'block';
+  let h;
+  if(TRAIN.role==='atk'){
+    const f = score.red.o + score.red.d;
+    h = '⚔️ 攻擊訓練（' + trainOppLabel() + '）　進球<b>' + score.red.g + '</b>' + (f ? '　<span class="bad">違規 ' + f + '</span>' : '');
+  }else{
+    const g = score.blue.g, sv = Math.max(0, TRAIN.shots - g);
+    h = '🛡️ 防守訓練（' + trainOppLabel() + '）　AI 射門 ' + TRAIN.shots + '　擋下<b>' + sv + '</b>　失分 <span class="bad">' + g + '</span>'
+      + (score.red.d ? '　<span class="bad">守門違規 ' + score.red.d + '</span>' : '');
+  }
+  if(el.innerHTML !== h) el.innerHTML = h;
+  const sb = document.getElementById('scoreboard').getBoundingClientRect();   // 緊貼在計分板下方（各種螢幕縮放都不重疊）
+  const top = Math.round(sb.bottom + 6) + 'px';
+  if(el.style.top !== top) el.style.top = top;
+}
+function trainTick(){   // 每幀：防守訓練記 AI 前鋒「起跑衝門」的次數
+  if(mode!=='train' || TRAIN.role!=='def') return;
+  const s = drones[3];
+  if(s.dash && !TRAIN.prevDash) TRAIN.shots++;
+  TRAIN.prevDash = !!s.dash;
+}
+function trainApplyBench(){
+  drones.forEach(d=>{ const b = !trainIn(d); d.benched = b; setDroneVisible(d, !b); });
+}
+function trainReset(){ TRAIN.shots = 0; TRAIN.prevDash = false; }
+function trainEndText(){   // 終場訊息（取代一般的「紅隊獲勝」）
+  const k = trainBestKey(), old = TRAIN.best[k];
+  let line, val, better;
+  if(TRAIN.role==='atk'){
+    val = score.red.g; better = old===undefined || val > old;
+    line = '攻擊訓練結束：進了 ' + val + ' 球（' + trainOppLabel() + '）';
+  }else{
+    val = score.blue.g; better = old===undefined || val < old;
+    line = '防守訓練結束：AI 射門 ' + TRAIN.shots + ' 次，你擋下 ' + Math.max(0, TRAIN.shots-val) + ' 次、失 ' + val + ' 分';
+  }
+  if(better){ TRAIN.best[k] = val; try{ localStorage.setItem(TRAIN_BEST_KEY, JSON.stringify(TRAIN.best)); }catch(e){} }
+  const bestTxt = better ? (old===undefined ? '　🏅 第一筆紀錄' : '　🏅 新紀錄！')
+    : '　最佳：' + (TRAIN.role==='atk' ? '進 ' + old + ' 球' : '失 ' + old + ' 分');
+  return line + bestTxt + '（按 R 再練一次）';
+}
+function trainStart(){
+  startGame('train');
+  trainApplyBench();
+  drones.forEach(d=>d.reset());
+  trainReset();
+  document.querySelector('#telemetry b').textContent = TRAIN.role==='atk'
+    ? '你的 Striker（攻擊訓練）' : '你的 Defender（防守訓練）';
+}
+function trainCleanup(){   // 離開訓練：讓退場的機回來（雙人對戰／連線另外自己管 benched）
+  if(mode!=='train') return;
+  document.getElementById('trainHUD').style.display = 'none';
+  if(!NET.connected) drones.forEach(d=>{ if(d.benched){ d.benched = false; d.reset(); } setDroneVisible(d, true); });
+}
+document.getElementById('btnTrain').addEventListener('click', trainStart);
+// 難度說明：選中的那級詳細寫出來；訓練時只強調「你要面對的那一面」（練攻擊看 AI 防守、練防守看 AI 進攻）
+function aiLvRenderDesc(st){
+  const ad = document.getElementById('aiLvDesc'); if(!ad) return;
+  const L = AI_LEVELS[AI_LV];
+  const tr = !!st && st.mode === 'train';
+  const showAtk = !tr || TRAIN.role==='def', showDef = !tr || TRAIN.role==='atk';
+  ad.innerHTML = '<b>' + L.ic + ' ' + L.name + '</b>　<span style="color:#9fb4d8">適合：' + L.who + '</span><br>'
+    + '<span class="k">反應手感</span>' + L.react
+    + (showAtk ? '<br><span class="k' + (tr ? ' hi' : '') + '">AI 進攻</span>' + L.atk : '')
+    + (showDef ? '<br><span class="k' + (tr ? ' hi' : '') + '">AI 防守</span>' + L.def : '');
+  const tb = document.getElementById('aiLvTable');
+  const key = (tr ? TRAIN.role : 'all') + AI_LV;
+  if(tb && tb.dataset.k !== key){
+    tb.dataset.k = key;
+    tb.innerHTML = '<table><tr><th>等級</th><th>反應手感</th><th' + (showAtk?'':' class="dim"') + '>AI 進攻</th><th' + (showDef?'':' class="dim"') + '>AI 防守</th></tr>'
+      + [1,2,3,4,5].map(i=>{ const A = AI_LEVELS[i];
+        return '<tr' + (i===AI_LV?' class="sel"':'') + '><td>' + A.ic + ' ' + A.name + '</td><td>' + A.react + '</td><td' + (showAtk?'':' class="dim"') + '>' + A.atk
+          + '</td><td' + (showDef?'':' class="dim"') + '>' + A.def + '</td></tr>'; }).join('') + '</table>';
+  }
+  const td = document.getElementById('trainDesc');
+  if(td) td.textContent = TRAIN.role==='atk'
+    ? (TRAIN.nDef===1 ? '你是紅隊 Striker，對手只有 1 台 AI 防守機在藍框前卡位。練習找縫隙、穿框、得分後回半場解鎖再攻。'
+                      : '你是紅隊 Striker，對手 2 台 AI：Defender 卡射門線、Harasser 會衝撞你。練習閃撞擊、假動作騙開防守。')
+    : '你是紅隊 Defender，AI 前鋒（藍隊 Striker）會一直攻紅框。練習卡射門線、預判、擋下衝刺；別在球門區逗留超過 3 秒（防守違規）。';
+}
 function duoSyncOpt(){
   document.querySelectorAll('#mfDuoOpt button[data-v]').forEach(b=>b.classList.toggle('sel', (b.dataset.v==='1') === DUO.ai));
   document.querySelectorAll('#mfDuoOpt button[data-pad]').forEach(b=>b.classList.toggle('sel', +b.dataset.pad === DUO.padSide));
@@ -4056,10 +4228,14 @@ function duoSyncOpt(){
   mf.classList.toggle('pracDuo', mf.classList.contains('prac') && DUO.pracDuo);
   // AI 難度列：對戰 AI、觀看示範、雙人對戰加 AI 隊友時才出現
   let st = null; try{ st = MF; }catch(e){}   // MF 宣告在後面，模組初始化途中呼叫時還不能讀
-  mf.classList.toggle('aiLv', !!st && st.stage === '3' && (st.mode === 'player' || (st.mode === 'duo' && DUO.ai)));
+  mf.classList.toggle('aiLv', !!st && st.stage === '3' && (st.mode === 'player' || st.mode === 'train' || (st.mode === 'duo' && DUO.ai)));
+  mf.classList.toggle('trainM', !!st && st.stage === '3' && st.mode === 'train');
+  mf.classList.toggle('trainAtk', TRAIN.role === 'atk');
+  document.querySelectorAll('#mfDuoOpt button[data-tr]').forEach(b=>b.classList.toggle('sel', b.dataset.tr === TRAIN.role));
+  document.querySelectorAll('#mfDuoOpt button[data-tn]').forEach(b=>b.classList.toggle('sel', +b.dataset.tn === TRAIN.nDef));
   mf.classList.toggle('aiLvDemo', !!st && st.stage === '3' && st.mode === 'demo');   // 觀看示範：兩隊各選一個等級
   document.querySelectorAll('#mfDuoOpt button[data-lv]').forEach(b=>b.classList.toggle('sel', +b.dataset.lv === AI_LV));
-  const ad = document.getElementById('aiLvDesc'); if(ad) ad.textContent = AI_LEVELS[AI_LV].desc;
+  aiLvRenderDesc(st);
   document.querySelectorAll('#mfDuoOpt button[data-dlv]').forEach(b=>{
     const [tm, lv] = b.dataset.dlv.split(':'); b.classList.toggle('sel', AI_DEMO[tm] === +lv); });
   const dd = document.getElementById('aiDemoDesc');
@@ -4076,6 +4252,8 @@ document.querySelectorAll('#mfDuoOpt button').forEach(b=>b.addEventListener('cli
   if(b.dataset.pad !== undefined) DUO.padSide = +b.dataset.pad;
   if(b.dataset.pd !== undefined) DUO.pracDuo = b.dataset.pd === '1';
   if(b.dataset.lv !== undefined) aiSetLevel(+b.dataset.lv);
+  if(b.dataset.tr !== undefined){ TRAIN.role = b.dataset.tr; trainSaveOpt(); }
+  if(b.dataset.tn !== undefined){ TRAIN.nDef = +b.dataset.tn; trainSaveOpt(); }
   if(b.dataset.dlv !== undefined){ const [tm, lv] = b.dataset.dlv.split(':'); aiSetDemo(tm, +lv); }
   duoSaveOpt(); duoSyncOpt();
 }));
@@ -4132,6 +4310,7 @@ function duoStart(){
 }
 document.getElementById('btnDuo').addEventListener('click', duoStart);
 function duoCleanup(){
+  trainCleanup();
   if(!document.body.classList.contains('duo')) return;
   document.body.classList.remove('duo', 'duoPrac', 'duoRace');
   DUO.kind = 'match'; DUO.on = false;
@@ -4823,7 +5002,7 @@ const MF_SCENE_BG = {
   neon:'linear-gradient(180deg,#0b0d2a 0%,#3a1060 55%,#ff3db4 100%)',
   orbit:'radial-gradient(circle at 75% 85%,#3f7fd8 0 22%,#0a1a3a 23%,#000 70%)',
 };
-const MF_MODE_BTN = {player:'btnPlayer', practice:'btnPractice', demo:'btnDemo', campaign:'btnCampaign', race:'btnRace', net:'btnNet', duo:'btnDuo'};
+const MF_MODE_BTN = {train:'btnTrain', player:'btnPlayer', practice:'btnPractice', demo:'btnDemo', campaign:'btnCampaign', race:'btnRace', net:'btnNet', duo:'btnDuo'};
 function mfShow(stage){
   MF.stage = stage;
   document.querySelectorAll('#menuFlow .mfStage').forEach(s=>s.classList.toggle('on', s.id === 'mfS' + stage));
@@ -6385,7 +6564,7 @@ const REPLAY = {on:false, clips:[], pending:[], idx:-1, ph:0, playing:true, spee
 const _rpProxy = {mesh:null, role:'', wobblePhase:0, pos:V3(0,0,0), vel:V3(0,0,0), yaw:0, tiltP:0, tiltR:0, disturb:0, propSpin:0, canScore:true,
   crash:null, rollQ:new THREE.Quaternion()};
 const _rpQ1 = new THREE.Quaternion(), _rpQ2 = new THREE.Quaternion();
-function rpMatchMode(){ return mode==='player' || mode==='demo' || mode==='net' || (mode==='duo' && DUO.kind==='match'); }
+function rpMatchMode(){ return mode==='player' || mode==='train' || mode==='demo' || mode==='net' || (mode==='duo' && DUO.kind==='match'); }
 function rpRecord(dt){
   if(!rpMatchMode() || state!=='play') return;
   REC.t += dt; REC.acc += dt;
@@ -7213,6 +7392,7 @@ function loop(){
 
     // 控制
     if(mode==='player') readPlayerInput();
+    else if(mode==='train') readInputInto(trainHuman().input);
     else if(mode==='duo') duoReadAll();
     else if(mode==='net' && NET.mySlot>=0) readInputInto(drones[NET.mySlot].input);
     drones.forEach((d,i)=>{
@@ -7227,6 +7407,8 @@ function loop(){
         // 自己的機：input 已由上面 readInputInto 寫入
       }else if(mode==='duo'){
         if(duoSideOf(d)<0 && !d.benched) aiThink(d, dt);   // 兩位真人以外：AI 隊友（或 1v1 時退場）
+      }else if(mode==='train'){
+        if(!d.benched && d!==trainHuman()) aiThink(d, dt);   // 訓練：上場的 AI 對手
       }else if(!d.isPlayer || mode==='demo'){
         aiThink(d, dt);
       }
@@ -7242,6 +7424,7 @@ function loop(){
       acc -= H;
     }
     updateFouls(dt);
+    trainTick();
   }
   if(mode==='net' && NET.isHost) netMaybeBroadcastSnapshot();   // 房主：無論何種 state 都持續廣播（暫停/賽後也同步）
   watchTick();                                  // 觀賽直播：直播主送畫面、觀眾套用（見 WATCH）
@@ -7291,6 +7474,7 @@ function loop(){
   const duoOn = DUO.on && state!=='menu' && !REPLAY.on;   // 回放中一律全螢幕單一鏡頭
   if(!duoOn) updateOccluders(dt, REPLAY.on ? rpFocus() : null);
   updateHUD();
+  trainUpdateHUD();
   updateCamera(dt);
   if(REPLAY.on) rpCamera(dt);
   if(duoOn) duoFrame(dt);                       // 左右兩個鏡頭＋各自的遮擋半透明／HUD
