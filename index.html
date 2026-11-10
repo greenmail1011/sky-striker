@@ -856,7 +856,9 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- 2026-11-05 離線版：函式庫改放 lib/（跟 index.html 一起上傳）；lib/ 沒上傳時自動退回 CDN。 -->
+<script src="lib/three.min.js"></script>
+<script>window.THREE || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
 <script type="module">
 /* ============================================================
    無人機足球模擬器 — 新竹市無人機創新科技協會©
@@ -1088,78 +1090,182 @@ function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
 }
 
 // ---------- 觀眾席與廣告板（氛圍） ----------
-function makeCrowdFrames(){
-  // 固定同一群觀眾的座位與衣色，畫出多張不同姿勢影格 → 輪播即是同一群人在動
-  const rows=[];
-  for(let row=0; row<4; row++){
-    const y0=20+row*44, ppl=[];
-    for(let x=8; x<1024; x+=12+Math.random()*5){
-      ppl.push({x, hue:Math.random()*360, lt:38+Math.random()*30,
-        skin:`hsl(${28+Math.random()*22},45%,${52+Math.random()*22}%)`,
-        energy:Math.random()});                  // 有人安靜、有人激動
-    }
-    rows.push({y0, ppl});
-  }
-  const frames=[];
-  for(let f=0; f<3; f++){
-    const cv=document.createElement('canvas'); cv.width=1024; cv.height=192;
-    const g=cv.getContext('2d');
-    g.fillStyle='#0b0e18'; g.fillRect(0,0,1024,192);
-    for(const {y0,ppl} of rows){
-      g.fillStyle='rgba(0,0,0,.35)'; g.fillRect(0,y0+22,1024,18);
-      for(const p of ppl){
-        const hot = p.energy>0.6;
-        const y = y0 - (hot && Math.random()<0.6 ? Math.random()*4 : 0);  // 起身跳動
-        g.fillStyle=`hsl(${p.hue},55%,${p.lt}%)`;
-        g.fillRect(p.x-4, y+7, 9, 15);                       // 身體
-        if(hot && Math.random()<0.55){                       // 舉手歡呼
-          g.fillRect(p.x-7, y-3, 3, 9); g.fillRect(p.x+5, y-3, 3, 9);
-        }
-        g.fillStyle=p.skin;
-        g.beginPath(); g.arc(p.x, y+2, 4.2, 0, Math.PI*2); g.fill();
-      }
-    }
-    frames.push(new THREE.CanvasTexture(cv));
-  }
-  return frames;
-}
-const standGroups = [];    // 四面看台的 group：室內場景才顯示（見場景系統 setScene）
-const crowdMats = [];      // {mat, frames, fi, ft} 影格輪播
+// 2026-11-11 重做（業主：「人像選手和觀眾要更逼真、更精緻」）：
+//   - 看台：真實尺寸的階梯看台（每排高 0.36、深 0.78）＋塑膠座椅＋前排欄杆，中間留走道。
+//   - 觀眾：assets/crowd.webp＝用 3D 真人模型（同場邊選手的 MakeHuman CC0 模型）烘焙的圖集，
+//     12 個人 × 6 個姿勢（坐著看／前傾／鼓掌合／鼓掌開／坐著舉手／站起來歡呼），每格 128×256、對應實際 1.0×2.0m。
+//     全部觀眾是一個 instanced 網格（每人一片會朝鏡頭轉的立牌），姿勢在 shader 裡依時間＋個性＋現場氣氛（uExcite）切換：
+//     平常多半坐著、偶爾鼓掌；進球時 crowdCheer() 把氣氛拉高，熱情的人先站起來歡呼、之後陸續坐下。
+//   - 鏡頭在某面看台裡／後面時，那面看台整個不畫（不然全場轉播鏡頭前面會被人頭擋住）。
+//   - 圖集載不到（沒上傳 assets/crowd.webp）就只有空看台，不影響比賽。烘焙工具：_tools/crowdbake.html。
+const standGroups = [];    // 四面看台的 group：室內場景才顯示（見場景系統 setScene；每幀由 crowdTick 決定顯示）
 const flashSprites = [];   // 觀眾手機閃光燈
+const CROWD = { NP:12, NF:6, excite:0.1, mats:[], stands:[], tex:null };
+const STAND = { rows: 5, rise:0.36, tread:0.78, base:0.45, seatW:0.5 };
+function crowdMaterial(){
+  const mat = new THREE.ShaderMaterial({
+    uniforms:{ uMap:{value:CROWD.tex}, uTime:{value:0}, uExcite:{value:0.1}, uLight:{value:new THREE.Vector3(0.80,0.82,0.92)},
+      uFogC:{value:new THREE.Vector3()}, uFogN:{value:12}, uFogF:{value:40} },
+    vertexShader:`
+      attribute vec3 aPos; attribute float aYaw; attribute vec4 aInfo; attribute vec3 aTint;
+      uniform float uTime, uExcite;
+      varying vec2 vUv; varying vec3 vTint; varying float vFogD;
+      float hash(float n){ return fract(sin(n)*43758.5453); }
+      void main(){
+        float idx=aInfo.x, ph=aInfo.y, en=aInfo.z, sc=aInfo.w;
+        float slot = floor(uTime/(2.4+ph*3.2) + ph*10.);
+        float rnd = hash(slot*12.9898 + ph*78.233);
+        float frame = rnd < 0.62 ? 0. : 1.;                                  // 坐著看／前傾
+        float bounce = 0.;
+        float clapP = (0.05 + uExcite*0.9) * (0.4 + en);
+        if(rnd > 1. - clapP) frame = 2. + step(0., sin(uTime*(15.+ph*7.) + ph*30.));   // 鼓掌：合／開交替
+        float th = 1.12 - en*0.80;                                           // 越熱情越早站起來、越晚坐下
+        if(uExcite > th){
+          float b = sin(uTime*(6.5+ph*3.) + ph*20.);
+          frame = en > 0.5 ? 5. : (b > -0.2 ? 4. : 3.);
+          bounce = abs(b) * 0.09 * min(1., (uExcite-th)*4.);
+        }
+        vec3 toCam = cameraPosition - aPos;
+        float d = atan(toCam.x, toCam.z) - aYaw; d = atan(sin(d), cos(d));
+        float yaw = aYaw + clamp(d, -0.75, 0.75);
+        vec3 right = vec3(cos(yaw), 0., -sin(yaw));
+        float sway = sin(uTime*(0.7+ph*0.9) + ph*40.) * 0.010 * position.y;   // 坐著也會微微晃動
+        vec3 wp = aPos + right*(position.x*sc + sway) + vec3(0., position.y*sc + bounce, 0.);
+        vUv = vec2((idx + uv.x)/${CROWD.NP}.0, 1. - (frame + 1. - uv.y)/${CROWD.NF}.0);
+        vTint = aTint;
+        vec4 mv = viewMatrix * vec4(wp, 1.);
+        vFogD = -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader:`
+      uniform sampler2D uMap; uniform vec3 uLight, uFogC; uniform float uFogN, uFogF;
+      varying vec2 vUv; varying vec3 vTint; varying float vFogD;
+      void main(){
+        vec4 c = texture2D(uMap, vUv);
+        if(c.a < 0.42) discard;
+        vec3 col = c.rgb * vTint * uLight;
+        col = mix(col, uFogC, smoothstep(uFogN, uFogF, vFogD));
+        gl_FragColor = vec4(col, 1.);
+      }`,
+  });
+  mat.visible = false;            // 圖集載入後才顯示
+  CROWD.mats.push(mat);
+  return mat;
+}
 function buildStand(px, pz, ry, w){
   const grp = new THREE.Group();
-  grp.position.set(px, 0, pz); grp.rotation.y = ry;   // 面向場內
-  for(let tier=0; tier<2; tier++){     // 低矮兩層：觀眾是點綴，不搶場地的鏡頭
-    const frames = makeCrowdFrames();
-    const mat = new THREE.MeshBasicMaterial({map:frames[0], color:0xa8b0c8});
-    crowdMats.push({mat, frames, fi:0, ft:Math.random()*0.3});
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.25), mat);
-    p.position.set(0, 0.95 + tier*1.0, -tier*0.95);
-    p.rotation.x = -0.28;
-    grp.add(p);
-    const base = new THREE.Mesh(new THREE.BoxGeometry(w, 0.4+tier*0.95, 0.95),
-      new THREE.MeshStandardMaterial({color:0x12182a, roughness:1}));
-    base.position.set(0, (0.4+tier*0.95)/2, -tier*0.95 - 0.18);
-    grp.add(base);
-    for(let i=0;i<3;i++){   // 隨機手機閃光
-      const sm = new THREE.SpriteMaterial({color:0xffffff, transparent:true, opacity:0,
-        blending:THREE.AdditiveBlending, depthWrite:false});
-      const sp = new THREE.Sprite(sm);
-      sp.scale.set(0.14,0.14,1);
-      sp.position.set((Math.random()-0.5)*w*0.9,
-        0.95+tier*1.0+(Math.random()-0.5)*0.7, -tier*0.95+0.06);
-      grp.add(sp);
-      flashSprites.push({m:sm, t:Math.random()*4});
+  grp.position.set(px, 0, pz); grp.rotation.y = ry;   // 局部 +z＝面向場內，往 −z 一排一排墊高
+  const S = STAND, rows = S.rows;
+  const concrete = new THREE.MeshStandardMaterial({color:0x2a3040, roughness:.95});
+  const dark = new THREE.MeshStandardMaterial({color:0x151a26, roughness:1});
+  for(let r=0; r<rows; r++){
+    const h = S.base + r*S.rise;
+    const step = new THREE.Mesh(new THREE.BoxGeometry(w, h, S.tread), concrete);
+    step.position.set(0, h/2, -(r+0.5)*S.tread); grp.add(step);
+  }
+  const hb = S.base + rows*S.rise + 0.5;               // 後牆
+  const back = new THREE.Mesh(new THREE.BoxGeometry(w, hb, 0.12), dark);
+  back.position.set(0, hb/2, -rows*S.tread - 0.06); grp.add(back);
+  // 前排欄杆
+  const metal = new THREE.MeshStandardMaterial({color:0x8a93a6, roughness:.4, metalness:.7});
+  const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, w, 8), metal);
+  rail.rotation.z = Math.PI/2; rail.position.set(0, S.base+0.50, -0.04); grp.add(rail);
+  const rail2 = rail.clone(); rail2.position.y = S.base+0.26; grp.add(rail2);
+  const nPost = Math.round(w/1.5);
+  for(let i=0; i<=nPost; i++){
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6), metal);
+    p.position.set(-w/2 + i*w/nPost, S.base+0.25, -0.04); grp.add(p);
+  }
+  // 座位：中間留一條走道
+  const seats = [], aisle = w > 7 ? 0.8 : 0;
+  const perSide = Math.floor(((w - aisle)/2 - 0.15)/S.seatW);
+  for(let r=0; r<rows; r++) for(const sd of (aisle ? [-1,1] : [0])){
+    const n = aisle ? perSide : Math.floor((w-0.3)/S.seatW);
+    for(let i=0; i<n; i++){
+      const x = aisle ? sd*(aisle/2 + (i+0.5)*S.seatW) : (i+0.5-n/2)*S.seatW;
+      seats.push({x, y:S.base + r*S.rise, z:-(r+0.56)*S.tread, r});
+    }
+  }
+  const seatMat = new THREE.MeshStandardMaterial({color:0xffffff, roughness:.55});
+  const backs = new THREE.InstancedMesh(new THREE.BoxGeometry(S.seatW-0.06, 0.34, 0.035), seatMat, seats.length);
+  const pads  = new THREE.InstancedMesh(new THREE.BoxGeometry(S.seatW-0.06, 0.045, 0.38), seatMat, seats.length);
+  const M = new THREE.Matrix4(), col = new THREE.Color();
+  seats.forEach((s, i)=>{
+    backs.setMatrixAt(i, M.makeRotationX(-0.12).setPosition(s.x, s.y+0.60, s.z-0.20));
+    pads.setMatrixAt(i, M.makeTranslation(s.x, s.y+0.42, s.z));
+    col.setHex(0x1c3f8f).convertSRGBToLinear().multiplyScalar(0.8 + Math.random()*0.3);
+    backs.setColorAt(i, col); pads.setColorAt(i, col);
+  });
+  grp.add(backs, pads);
+  if(aisle){   // 走道階梯（每排中間多一階）
+    for(let r=0; r<rows-1; r++){
+      const st = new THREE.Mesh(new THREE.BoxGeometry(aisle-0.1, S.rise/2, S.tread/2), concrete);
+      st.position.set(0, S.base + r*S.rise + S.rise/4, -(r+0.75)*S.tread); grp.add(st);
     }
   }
   scene.add(grp);
+  grp.updateMatrixWorld(true);
+  // 觀眾：八成多的座位有人；同一排相鄰的人不重複
+  const quad = new THREE.PlaneGeometry(1, 2); quad.translate(0, 1, 0);
+  const geo = new THREE.InstancedBufferGeometry();
+  geo.index = quad.index; geo.setAttribute('position', quad.attributes.position); geo.setAttribute('uv', quad.attributes.uv);
+  const aPos=[], aYaw=[], aInfo=[], aTint=[], v = new THREE.Vector3(), heads = [];
+  let last = -1;
+  for(const s of seats){
+    if(Math.random() > 0.84) continue;
+    let idx; do{ idx = Math.floor(Math.random()*CROWD.NP); }while(idx === last); last = idx;
+    v.set(s.x + (Math.random()-0.5)*0.05, s.y, s.z - 0.02).applyMatrix4(grp.matrixWorld);
+    aPos.push(v.x, v.y, v.z); aYaw.push(ry);
+    aInfo.push(idx, Math.random(), Math.random(), 0.86 + Math.random()*0.08);
+    const sh = (0.86 + Math.random()*0.16) * (1 - s.r*0.035);                 // 後排稍暗
+    aTint.push(sh*(0.96+Math.random()*0.08), sh*(0.96+Math.random()*0.08), sh*(0.96+Math.random()*0.08));
+    heads.push(s);
+  }
+  geo.setAttribute('aPos',  new THREE.InstancedBufferAttribute(new Float32Array(aPos), 3));
+  geo.setAttribute('aYaw',  new THREE.InstancedBufferAttribute(new Float32Array(aYaw), 1));
+  geo.setAttribute('aInfo', new THREE.InstancedBufferAttribute(new Float32Array(aInfo), 4));
+  geo.setAttribute('aTint', new THREE.InstancedBufferAttribute(new Float32Array(aTint), 3));
+  geo.instanceCount = aYaw.length;
+  const people = new THREE.Mesh(geo, crowdMaterial());
+  people.frustumCulled = false;
+  scene.add(people);
+  for(let i=0; i<(w>7?8:5); i++){   // 隨機手機閃光（在某位觀眾的臉前）
+    const sm = new THREE.SpriteMaterial({color:0xffffff, transparent:true, opacity:0,
+      blending:THREE.AdditiveBlending, depthWrite:false});
+    const sp = new THREE.Sprite(sm), s = heads[Math.floor(Math.random()*heads.length)];
+    sp.scale.set(0.16,0.16,1);
+    sp.position.set(s.x, s.y+1.05, s.z+0.25);
+    grp.add(sp);
+    flashSprites.push({m:sm, t:Math.random()*6});
+  }
   standGroups.push(grp);
+  CROWD.stands.push({grp, people, inv:new THREE.Matrix4().copy(grp.matrixWorld).invert()});
 }
-// 四面看台環繞點綴
-buildStand(0, -(FIELD.hz+1.6), 0,            8);
-buildStand(0,  (FIELD.hz+1.6), Math.PI,      8);
-buildStand( (FIELD.hx+1.6), 0, -Math.PI/2,   5);
-buildStand(-(FIELD.hx+1.6), 0,  Math.PI/2,   5);
+// 四面看台環繞
+buildStand(0, -(FIELD.hz+1.6), 0,            9.2);
+buildStand(0,  (FIELD.hz+1.6), Math.PI,      9.2);
+buildStand( (FIELD.hx+1.6), 0, -Math.PI/2,   5.6);
+buildStand(-(FIELD.hx+1.6), 0,  Math.PI/2,   5.6);
+new THREE.TextureLoader().load('assets/crowd.webp', tex=>{
+  tex.anisotropy = 4; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
+  CROWD.tex = tex;
+  CROWD.mats.forEach(m=>{ m.uniforms.uMap.value = tex; m.visible = true; });
+}, undefined, ()=>console.info('[觀眾] assets/crowd.webp 載不到，只顯示空看台'));
+function crowdCheer(){ CROWD.excite = 1.35; }           // 進球：全場歡呼
+const _crowdV = new THREE.Vector3();
+function crowdTick(dt, t, on){
+  CROWD.excite = Math.max(0.10 + 0.05*Math.sin(t*0.23), CROWD.excite - dt*0.21);
+  const fc = scene.fog.color;
+  for(const m of CROWD.mats){
+    const u = m.uniforms;
+    u.uTime.value = t; u.uExcite.value = CROWD.excite;
+    u.uFogC.value.set(Math.sqrt(fc.r), Math.sqrt(fc.g), Math.sqrt(fc.b)); u.uFogN.value = scene.fog.near; u.uFogF.value = scene.fog.far;
+  }
+  for(const s of CROWD.stands){    // 鏡頭在這面看台裡／後面：整面不畫
+    const z = _crowdV.copy(camera.position).applyMatrix4(s.inv).z;
+    s.grp.visible = s.people.visible = on && z > 0.9;
+  }
+}
 // 廣告板
 function adBoard(px,pz,ry,color,w){
   const cv=document.createElement('canvas'); cv.width=512; cv.height=64;
@@ -1816,7 +1922,7 @@ function setScene(id){
   if(U.onActive) U.onActive();
   key.color.setHex(S.key[0]);   key.intensity  = S.key[1];
   fill.color.setHex(S.fill[0]); fill.intensity = S.fill[1];
-  standGroups.forEach(g=>g.visible = S.stands);      // 戶外/太空場景沒有看台
+  // 看台顯示與否：每幀由 crowdTick 依場景（S.stands）與鏡頭位置決定
   apron.visible = S.apron !== false;                 // 場地外圍深色地坪：只有室內場館才鋪
   try{ localStorage.setItem(SCENE_SAVE_KEY, S.id); }catch(e){}
   updateSceneBar();
@@ -2629,7 +2735,7 @@ function playFx(data){
     flashMsg('GOAL!  '+(data.team==='red'?'紅隊得分':'藍隊得分'),
       data.team==='red' ? '#ff5a5a' : '#5aa0ff', 2.2);
     ringPulse = {ring: data.ring==='E'?ringEast:ringWest, t:0};
-    sfx.goal(); sfx.cheer();
+    sfx.goal(); sfx.cheer(); crowdCheer();
     rpOnGoal(data);                              // 關鍵回放：切片段（示範賽自動播、有人玩的比賽出按鈕）
     pilotsOnGoal(data.team);                     // 場邊選手：得分隊原地小跳、失分隊低頭搖頭（手不放開遙控器）
   }else if(data.type==='foulAtk'){
@@ -4458,7 +4564,9 @@ async function netJoin(code, asHost){
     await loadTrystero();
   }catch(err){
     console.warn('連線對戰：連線模組載入失敗', err);
-    document.getElementById('netMsg').textContent = '連線模組載入失敗，請確認網路可以連到 esm.sh 後再試一次';
+    document.getElementById('netMsg').textContent = navigator.onLine === false
+      ? '目前沒有網路：連線對戰需要網路。單機練習、闖關、對 AI 比賽不需要網路，可以照常飛'
+      : '連線模組載入失敗，請確認網路可以連到 esm.sh 後再試一次';
     return;
   }finally{ NET.joining = false; }
   netTeardown();
@@ -4917,14 +5025,14 @@ function watchPopCount(){
   const el = document.getElementById('wpCount');
   if(el) el.textContent = '目前 ' + WATCH.peers.size + ' 人在看';
 }
-// QR Code：用到才從 cdnjs 載入；載不到就只顯示網址
+// QR Code：用到才載入（先用 lib/ 的本地檔，沒有才找 cdnjs）；載不到就只顯示網址
 function watchQR(url){
   const box = document.getElementById('wpQR');
   if(box.dataset.url === url) return;
   const draw = ()=>{ box.innerHTML = ''; box.dataset.url = url;
     try{ new QRCode(box, {text:url, width:150, height:150, correctLevel: QRCode.CorrectLevel.M}); }catch(e){ box.innerHTML = ''; } };
   if(window.QRCode) return draw();
-  if(!WATCH.qrLib) WATCH.qrLib = pilotLoadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
+  if(!WATCH.qrLib) WATCH.qrLib = libLoadScript('lib/qrcode.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
   WATCH.qrLib.then(draw).catch(()=>{ box.innerHTML = ''; });
 }
 document.getElementById('watchShare').addEventListener('click', e=>{ e.stopPropagation(); watchHostStart(); });
@@ -6909,8 +7017,8 @@ function rpKey(e){   // 回放中的鍵盤（比賽的按鍵這時都不作用�
 //     搖桿跟實際輸入動；進球得分隊原地小跳一下、失分隊低頭搖頭；自己的機墜機：身體前傾蹲低盯著看。
 // ============================================================
 const PILOT_URL = 'assets/pilot.glb';
-const PILOT_LIBS = ['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js',
-                    'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js'];
+const PILOT_LIBS = ['lib/GLTFLoader.js', 'lib/SkeletonUtils.js'];   // 本地檔；沒有才找 jsdelivr（見 libLoadScript）
+const PILOT_LIBS_CDN = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/';
 // 背心（業主附比賽照片指定：紅隊都紅色、藍隊都藍色）：網眼號碼背心＋前後黑色大號碼；前鋒在號碼上方多一行「前鋒」。
 //   要改顏色／號碼只改這兩張表。
 const PILOT_VEST = { red:'#e3342c', blue:'#2459d8', fg:'#151515' };
@@ -6936,7 +7044,7 @@ function pilotsLoad(){
   if(PILOT.state !== 'idle') return;
   PILOT.state = 'loading';
   (async()=>{
-    for(const u of PILOT_LIBS) if(!(u.includes('GLTFLoader') ? THREE.GLTFLoader : THREE.SkeletonUtils)) await pilotLoadScript(u);
+    for(const u of PILOT_LIBS) if(!(u.includes('GLTFLoader') ? THREE.GLTFLoader : THREE.SkeletonUtils)) await libLoadScript(u, PILOT_LIBS_CDN + (u.includes('GLTFLoader') ? 'loaders/GLTFLoader.js' : 'utils/SkeletonUtils.js'));
     const gltf = await new Promise((ok, bad)=>new THREE.GLTFLoader().load(PILOT_URL, ok, undefined, bad));
     PILOT.scenes = gltf.scenes;
     drones.forEach((d, i)=>PILOT.list.push(pilotBuild(d, i)));
@@ -6972,6 +7080,21 @@ function pilotVestTex(team, role){
   return t;
 }
 
+// 髮片法線改成「從頭中心往外」：原本每片髮片各自受光，看起來一片一片的
+function pilotHairNormals(mesh){
+  const g = mesh.geometry = mesh.geometry.clone(); g.computeBoundingBox();
+  const c = g.boundingBox.getCenter(new THREE.Vector3()), p = g.attributes.position, n = new Float32Array(p.count*3), v = new THREE.Vector3();
+  for(let i=0; i<p.count; i++){ v.fromBufferAttribute(p, i).sub(c).normalize(); n[i*3] = v.x; n[i*3+1] = v.y; n[i*3+2] = v.z; }
+  g.setAttribute('normal', new THREE.BufferAttribute(n, 3));
+}
+function pilotShadowTex(){
+  if(PILOT.shadowTex) return PILOT.shadowTex;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const g = cv.getContext('2d'), gr = g.createRadialGradient(32,32,2, 32,32,31);
+  gr.addColorStop(0, 'rgba(0,0,0,.85)'); gr.addColorStop(0.45, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0,0,64,64);
+  return PILOT.shadowTex = new THREE.CanvasTexture(cv);
+}
 function pilotBuild(d, i){
   const root = new THREE.Group();
   const model = THREE.SkeletonUtils.clone(PILOT.scenes[PILOT_CAST[d.team][d.role]]);
@@ -6989,9 +7112,14 @@ function pilotBuild(d, i){
       o.castShadow = !ENV_LOW && !/Cornea|Eyelash|Eyebrow/.test(o.material.name);
       if(o.material.name === 'Vest'){ o.material = o.material.clone(); o.material.map = pilotVestTex(d.team, d.role); o.material.needsUpdate = true; }
       else if(o.material.name === 'Tshirt'){ o.material = o.material.clone(); o.material.color.set(look.shirt).convertSRGBToLinear(); }
-      else if(o.material.name === 'Hair'){ o.material = o.material.clone(); o.material.color.set(look.hair).convertSRGBToLinear(); }
+      else if(o.material.name === 'Hair'){ o.material = o.material.clone(); o.material.color.set(look.hair).convertSRGBToLinear(); pilotHairNormals(o); o.material.roughness = 0.46; o.material.alphaToCoverage = true; }
       else if(o.material.name === 'Jeans'){ o.material = o.material.clone(); o.material.color.multiplyScalar(0.55 + (i%3)*0.12); }
-      else if(o.material.name === 'Skin'){ o.material = o.material.clone(); o.material.color.multiply(new THREE.Color(look.skin).convertSRGBToLinear()); }
+      else if(o.material.name === 'Skin'){ o.material = o.material.clone(); o.material.color.multiply(new THREE.Color(look.skin).convertSRGBToLinear());
+        // 2026-11-11：膚色不再被場館的藍色環境光染成紫白——加一點暖色自發光（當作皮膚透光）、降低法線強度與反光
+        o.material.emissive = new THREE.Color(0.20, 0.105, 0.07); o.material.emissiveMap = o.material.map; o.material.roughness = 0.62;
+        if(o.material.normalScale) o.material.normalScale.set(0.35, 0.35); }
+      else if(o.material.name === 'Eye'){ o.material = o.material.clone(); o.material.emissive = new THREE.Color(0.13, 0.125, 0.12); o.material.emissiveMap = o.material.map; }
+      else if(o.material.name === 'Iris'){ o.material = o.material.clone(); o.material.color.set(i%2 ? '#5a3a22' : '#43291a').convertSRGBToLinear(); }
       else if(o.material.name === 'Eyelash'){ o.material = o.material.clone(); o.material.color.set('#4a3a30').convertSRGBToLinear(); o.material.opacity = 0.75; o.material.transparent = true; }
       else if(o.material.name === 'Eyebrow'){ o.material = o.material.clone(); o.material.color.set(look.brow).convertSRGBToLinear(); o.material.opacity = 0.8; o.material.transparent = true; }
       if(o.morphTargetDictionary) morph.push(o);                  // 眨眼（blink）、眼球轉向（look_*）
@@ -6999,6 +7127,9 @@ function pilotBuild(d, i){
   });
   const radio = pilotRadio();
   root.add(radio);
+  // 腳下的接觸陰影（讓人「站在地上」而不是飄著）
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.05, 0.8), new THREE.MeshBasicMaterial({map:pilotShadowTex(), transparent:true, depthWrite:false, opacity:0.62}));
+  shadow.rotation.x = -Math.PI/2; shadow.position.y = 0.012; shadow.renderOrder = -1; root.add(shadow);
   scene.add(root);
   root.updateMatrixWorld(true);
   const rest = {};
@@ -7213,6 +7344,7 @@ function pilotFace(P, dt, R, rk, rawYaw, rawPitch, th){
 }
 let PILOT_EYE = 1;
 
+function libLoadScript(local, cdn){ return pilotLoadScript(local).catch(()=>pilotLoadScript(cdn)); }
 function pilotLoadScript(src){
   return new Promise((ok, bad)=>{
     const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ()=>bad(new Error('load ' + src));
@@ -7220,30 +7352,78 @@ function pilotLoadScript(src){
   });
 }
 // ---- 遙控器（程序化：機身、兩個搖桿、握把、天線、螢幕）；原點＝機身中心，+y＝上緣、+z＝面向選手 ----
+// 2026-11-11 重做（業主：「選手要更逼真、更精緻」）：從「黑盒子」改成真的遙控器外型——圓角機身、橡膠握把、
+//   金屬搖桿座＋滾花搖桿頭、LCD 螢幕、肩部撥桿、提把、摺疊天線、電源燈。外形尺寸與握把位置不變（PILOT_GRIP 不用改）。
+//   局部座標：x＝左右、y＝往上（天線那邊）、+z＝面板。
+function pilotRadioScreen(){
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 80;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#0b1622'; g.fillRect(0,0,128,80);
+  g.fillStyle = '#7fd4ff'; g.font = 'bold 15px Arial'; g.fillText('S3-FZT', 6, 18);
+  g.fillStyle = '#9dffb0'; g.fillRect(96,6,24,10); g.fillStyle = '#0b1622'; g.fillRect(98,8,14,6);
+  g.fillStyle = '#e8f4ff'; g.font = 'bold 26px Arial'; g.fillText('02:47', 8, 50);
+  g.strokeStyle = '#3d6f96'; g.lineWidth = 2; g.strokeRect(90,26,30,30); g.strokeRect(6,58,76,14);
+  g.fillStyle = '#ffd24a'; g.fillRect(8,60,48,10); g.beginPath(); g.arc(105,41,4,0,7); g.fill();
+  const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return t;
+}
 function pilotRadio(){
   const g = new THREE.Group();
-  const dark = new THREE.MeshStandardMaterial({color:new THREE.Color(0x23262c).convertSRGBToLinear(), roughness:.55, metalness:.2});
-  const mid  = new THREE.MeshStandardMaterial({color:new THREE.Color(0x3b4049).convertSRGBToLinear(), roughness:.5, metalness:.3});
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.11, 0.048), dark); g.add(body);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.02, 0.04), mid); top.position.set(0, 0.062, -0.004); g.add(top);
-  [-1, 1].forEach(s=>{
-    const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.025, 0.09, 12), dark);
-    grip.position.set(s*0.082, -0.075, -0.01); grip.rotation.z = s*0.22; grip.rotation.x = 0.25; g.add(grip);
+  const C = h=>new THREE.Color(h).convertSRGBToLinear();
+  const shell  = new THREE.MeshStandardMaterial({color:C(0x2a2e36), roughness:.42, metalness:.25});
+  const rubber = new THREE.MeshStandardMaterial({color:C(0x121418), roughness:.92});
+  const plate  = new THREE.MeshStandardMaterial({color:C(0x3d434e), roughness:.35, metalness:.55});
+  const metal  = new THREE.MeshStandardMaterial({color:C(0xc9ced6), roughness:.25, metalness:.9});
+  // 機身輪廓（正面看）：上寬、下面兩支握把、中間內凹
+  const s = new THREE.Shape();
+  s.moveTo(-0.086, 0.060); s.quadraticCurveTo(-0.104, 0.058, -0.104, 0.036);
+  s.lineTo(-0.106, -0.070); s.quadraticCurveTo(-0.106, -0.118, -0.084, -0.118);
+  s.quadraticCurveTo(-0.060, -0.118, -0.056, -0.080); s.quadraticCurveTo(-0.050, -0.052, -0.028, -0.052);
+  s.lineTo(0.028, -0.052); s.quadraticCurveTo(0.050, -0.052, 0.056, -0.080);
+  s.quadraticCurveTo(0.060, -0.118, 0.084, -0.118); s.quadraticCurveTo(0.106, -0.118, 0.106, -0.070);
+  s.lineTo(0.104, 0.036); s.quadraticCurveTo(0.104, 0.058, 0.086, 0.060);
+  s.quadraticCurveTo(0, 0.070, -0.086, 0.060);
+  const bodyG = new THREE.ExtrudeGeometry(s, {depth:0.026, bevelEnabled:true, bevelThickness:0.010, bevelSize:0.008, bevelSegments:4, curveSegments:10});
+  bodyG.translate(0, 0, -0.013);
+  g.add(new THREE.Mesh(bodyG, shell));
+  [-1, 1].forEach(sd=>{   // 橡膠握把（背面鼓起）
+    const grip = new THREE.Mesh(new THREE.SphereGeometry(0.026, 14, 10), rubber);
+    grip.scale.set(0.95, 1.9, 0.9); grip.position.set(sd*0.082, -0.068, -0.014); grip.rotation.z = sd*0.10; g.add(grip);
   });
-  const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.009, 0.075, 8), mid);
-  ant.position.set(0.07, 0.09, -0.016); ant.rotation.z = -0.5; ant.rotation.x = -0.4; g.add(ant);
-  const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.03),
-    new THREE.MeshBasicMaterial({color:new THREE.Color(0x4aa3ff).convertSRGBToLinear()}));
-  scr.position.set(0, 0.025, 0.0231); g.add(scr);
+  // 面板
+  const fp = new THREE.Mesh(new THREE.BoxGeometry(0.168, 0.086, 0.004), plate); fp.position.set(0, 0.008, 0.0225); g.add(fp);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.046, 0.029),
+    new THREE.MeshBasicMaterial({map:pilotRadioScreen()}));
+  scr.position.set(0, 0.026, 0.0249); g.add(scr);
+  const bez = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.035, 0.003), rubber); bez.position.set(0, 0.026, 0.0228); g.add(bez);
+  const led = new THREE.Mesh(new THREE.CircleGeometry(0.0032, 10), new THREE.MeshBasicMaterial({color:C(0x49ff7a)}));
+  led.position.set(0, -0.004, 0.0249); g.add(led);
+  [-1, 1].forEach(sd=>{   // 微調鍵
+    const tr = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.004, 0.003), rubber); tr.position.set(sd*0.05, -0.036, 0.0245); g.add(tr);
+    const tr2 = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.018, 0.003), rubber); tr2.position.set(sd*0.022, -0.012, 0.0245); g.add(tr2);
+  });
+  // 肩部撥桿、提把、天線
+  [-0.074, -0.052, 0.052, 0.074].forEach((x, i)=>{
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.006, 8), metal);
+    base.position.set(x, 0.066, 0.006); g.add(base);
+    const sw = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.003, 0.016, 6), metal);
+    sw.position.set(x, 0.075, 0.006 + (i%2 ? 0.004 : -0.004)); sw.rotation.x = (i%2 ? 0.45 : -0.45); g.add(sw);
+  });
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.0045, 6, 14, Math.PI), shell);
+  handle.position.set(0, 0.064, -0.004); g.add(handle);
+  const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0055, 0.07, 8), rubber);
+  ant.position.set(0, 0.092, -0.016); ant.rotation.x = -0.55; g.add(ant);
+  // 搖桿
   const sticks = [];
-  [-1, 1].forEach(s=>{
-    const gim = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.006, 16), mid);
-    gim.rotation.x = Math.PI/2; gim.position.set(s*0.05, -0.012, 0.0245); g.add(gim);
-    const piv = new THREE.Group(); piv.position.set(s*0.05, -0.012, 0.025); g.add(piv);
-    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0028, 0.022, 6), mid);
+  [-1, 1].forEach(sd=>{
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0195, 0.0028, 6, 20), metal);
+    ring.position.set(sd*0.05, -0.012, 0.0245); g.add(ring);
+    const well = new THREE.Mesh(new THREE.SphereGeometry(0.0185, 14, 8, 0, Math.PI*2, 0, Math.PI/2), rubber);
+    well.rotation.x = Math.PI/2; well.scale.z = 0.35; well.position.set(sd*0.05, -0.012, 0.0235); g.add(well);
+    const piv = new THREE.Group(); piv.position.set(sd*0.05, -0.012, 0.025); g.add(piv);
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0026, 0.022, 6), metal);
     st.rotation.x = Math.PI/2; st.position.z = 0.011; piv.add(st);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.0065, 0.0065, 0.006, 10), dark);
-    cap.rotation.x = Math.PI/2; cap.position.z = 0.023; piv.add(cap);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.0058, 0.0048, 0.008, 10), metal);
+    cap.rotation.x = Math.PI/2; cap.position.z = 0.024; piv.add(cap);
     sticks.push(piv);
   });
   g.traverse(o=>{ if(o.isMesh) o.castShadow = true; });
@@ -7455,16 +7635,8 @@ function loop(){
     }
   }
   updateGoalBoards();
-  // 觀眾影格輪播（同一群人換姿勢）＋律動明暗＋手機閃光
-  crowdMats.forEach((c,i)=>{
-    c.ft -= dt;
-    if(c.ft<=0){
-      c.fi = (c.fi + 1 + (Math.random()<0.5?1:0)) % c.frames.length;
-      c.mat.map = c.frames[c.fi];
-      c.ft = 0.16 + Math.random()*0.3;
-    }
-    c.mat.color.setScalar(0.66 + Math.sin(t*2.1+i*1.7)*0.04);
-  });
+  // 觀眾：姿勢切換在 shader 裡；這裡更新時間、氣氛，並決定哪幾面看台要畫
+  crowdTick(dt, t, !!sceneById(curScene).stands && !raceHidden.length);
   for(const f of flashSprites){
     f.t -= dt;
     if(f.t<=0){ f.m.opacity = 0.9; f.t = 1.5 + Math.random()*5; }
@@ -7482,6 +7654,31 @@ function loop(){
                     state==='play' && sceneById(curScene).stands);   // 觀眾聲：只有比賽中＋有看台的場景   // 各機依與鏡頭的距離/方位即時調整音量與定位
   if(duoOn) duoRender(); else renderer.render(scene, camera);
 }
+
+// ---------- 離線使用（2026-11-05） ----------
+// sw.js（Service Worker）把網頁、lib/ 函式庫、assets/ 素材存在這台裝置上：有網路時打開過一次，之後沒網路或網路很慢
+//   也能直接打開、照常飛（練習、闖關、對 AI 比賽、選手訓練）。連線對戰／分享觀賽本來就要網路，不受影響。
+//   第一次存完會在畫面下方提示一次。改了 index.html 或素材之後要更新 sw.js 裡的 CACHE 版本號，裝置才會換新版。
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  navigator.serviceWorker.addEventListener('message', e=>{
+    if(!e.data || e.data.type !== 'offline-ready') return;
+    let seen = false; try{ seen = localStorage.getItem('offlineReadyShown') === e.data.cache; }catch(_){}
+    if(seen) return;
+    try{ localStorage.setItem('offlineReadyShown', e.data.cache); }catch(_){}
+    const t = document.createElement('div');
+    t.textContent = e.data.missing ? '⚠️ 部分素材還沒存好，下次有網路時會自動補齊'
+                                   : '✅ 已存到這台裝置：之後沒有網路也能打開、照常飛（連線對戰除外）';
+    t.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10000;max-width:90vw;'
+      + 'background:rgba(10,16,30,.92);color:#e8eefc;border:1px solid #3b82f6;border-radius:10px;padding:10px 16px;'
+      + 'font-size:14px;line-height:1.4;text-align:center;pointer-events:none;transition:opacity .6s';
+    document.body.appendChild(t);
+    setTimeout(()=>{ t.style.opacity = '0'; setTimeout(()=>t.remove(), 700); }, 5000);
+  });
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.info('[離線] Service Worker 註冊失敗', err));
+  });
+}
+
 loop();
 </script>
 </body>
