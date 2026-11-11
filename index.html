@@ -440,6 +440,7 @@
   #ladderModal .ldBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:22px 28px;
     width:min(560px,94vw);max-height:90vh;overflow:auto;color:#cdd8ee;text-align:center}
   #ladderModal h3{margin:0 0 10px;font-size:24px;letter-spacing:4px;color:#ffd75a}
+  #ladderToast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:72;display:none;background:rgba(12,16,32,.94);border:1px solid #ffd75a;color:#ffd75a;border-radius:999px;padding:8px 20px;font-size:14px;pointer-events:none;max-width:92vw;text-align:center}
   #badgeModal{position:fixed;inset:0;z-index:71;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.88)}
   #badgeModal .bgBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:18px 24px;width:min(760px,94vw);max-height:92vh;overflow:auto;text-align:center}
   #badgeModal h3{margin:0 0 6px;font-size:22px;letter-spacing:4px;color:#ffd75a}
@@ -930,6 +931,7 @@
     </div>
   </div>
 </div>
+<div id="ladderToast"></div>
 <div id="badgeModal"><div class="bgBox"><h3>成就徽章</h3><div id="bgCount"></div><div id="bgList"></div><div style="margin-top:12px"><button class="modeBtn" id="bgClose">關閉</button></div></div></div>
 <div id="certModal"><div class="ctBox"><h3>練習證書（示意）</h3>
   <div class="ctRow"><label>姓名 <input id="ctName" maxlength="12" placeholder="輸入姓名" autocomplete="off"></label>
@@ -939,7 +941,7 @@
   <canvas id="ctCanvas" width="1754" height="1240"></canvas>
   <div class="ctRow"><button class="modeBtn" id="ctDownload">下載圖片（PNG）</button><button class="modeBtn" id="ctClose">關閉</button></div>
   <div style="font-size:12px;color:#7c88a8">本證書為模擬器練習用示意證書，不是任何官方認證。</div></div></div>
-<div id="ladderModal"><div class="ldBox"><h3>天梯排行</h3><div class="ldSel" id="ldScope"></div><div class="ldSel" id="ldModes"></div><div class="ldSel" id="ldScenes"></div><div id="ldModalTbl"></div><div style="margin-top:12px"><button class="modeBtn" id="ldClose">關閉</button></div></div></div>
+<div id="ladderModal"><div class="ldBox"><h3>天梯排行</h3><div class="ldSel" id="ldScope"></div><div class="ldSel" id="ldModes"></div><div class="ldSel" id="ldAi"></div><div class="ldSel" id="ldScenes"></div><div style="margin:6px 0"><label style="font-size:13px;color:#9fb0d8">我的暱稱 <input id="ldNameView" maxlength="12" placeholder="輸入暱稱" autocomplete="off" style="background:#0c1224;color:#fff;border:1px solid rgba(120,160,255,.4);border-radius:8px;padding:4px 8px"></label></div><div id="ldModalTbl"></div><div style="margin-top:12px"><button class="modeBtn" id="ldClose">關閉</button></div></div></div>
 <div id="campResult">
   <div id="campResultBox">
     <h3 id="campResultTitle">關卡完成</h3>
@@ -4466,6 +4468,11 @@ function msFinish(){
     '<div class="cap">紅隊 Striker 飛行軌跡（紅線＝可得分，灰線＝回半場解鎖中，白圈＝進球）</div></div></div>' + cmp +
     '<button id="reportClose">關閉</button>';
   el.style.display = 'block';
+  if(mode==='player'){      // 天梯：只有贏球才上榜；每個 AI 等級一張榜，比淨勝球（同分比每球耗時）
+    const lad = document.createElement('div'); lad.className = 'cmp'; el.insertBefore(lad, document.getElementById('reportClose'));
+    if(rF > bF) ladderSubmitScore('match', 'ai' + AI_LV, R.avgAtk == null ? 0 : Math.min(900, R.avgAtk), Math.min(200, rF - bF), x=>{ lad.textContent = '對戰 ' + aiLabel() + ' 天梯：' + x; });
+    else lad.textContent = '贏下這場才會上對戰 ' + aiLabel() + ' 的天梯排行榜';
+  }
   // 軌跡圖（場地俯視，藍場在左）
   const cv = document.getElementById('reportMap'), g = cv.getContext('2d');
   const X = x => (x + FIELD.hx) / (FIELD.hx*2) * cv.width, Z = z => (z + FIELD.hz) / (FIELD.hz*2) * cv.height;
@@ -6153,7 +6160,7 @@ function campFinish(ok){
     stars = 1;                                                   // 1★＝完成
     if(campTime <= campPar()) stars = 2;                         // 2★＝再加上時間達標（門檻依場景縮放）
     if(stars === 2 && campHits <= campMaxHit()) stars = 3;       // 3★＝再加上碰撞達標
-    if(stars > campStars(campLevel.id)){ campSave[campSceneId][campLevel.id] = stars; campStore(); }
+    if(stars > campStars(campLevel.id)){ campSave[campSceneId][campLevel.id] = stars; campStore(); ladderSubmitScore(campSceneId, 'camp', 0, campSceneStars(campSceneId), x=>ladderToast('闖關星數榜　' + x)); }
     sfx.goal();
   }
   const ttl = document.getElementById('campResultTitle');
@@ -6941,11 +6948,21 @@ let ladderQ = []; try{ ladderQ = JSON.parse(localStorage.getItem(LADDER_Q_KEY)||
 let ladderCur = null;     // 這次完賽的那一筆 {k, ts, rid, sid, mid}
 const ladderStore = () => { try{ localStorage.setItem(LADDER_KEY, JSON.stringify(ladder)); }catch(e){} };
 const ladderQSave = () => { try{ localStorage.setItem(LADDER_Q_KEY, JSON.stringify(ladderQ.slice(-200))); }catch(e){} };
-const ladderCmp = mid => (a,b) => mid==='coins' ? ((b.c-a.c) || (a.t-b.t)) : (a.t-b.t);
+// 分數型榜（c 越大越前、同分比 t 越短）：收集賽 coins、闖關星數 camp、對戰 AI 淨勝球 ai1~ai5（2026-11-12 擴充；後端同步：天梯後端_AppsScript.gs 的 isScore_）
+const LADDER_SCORE = mid => mid==='coins' || mid==='camp' || /^ai[1-5]$/.test(mid);
+const ladderCmp = mid => (a,b) => LADDER_SCORE(mid) ? ((b.c-a.c) || (a.t-b.t)) : (a.t-b.t);
+const ladderVal = (mid, e) => mid==='coins' ? e.c + ' 枚　' + Number(e.t).toFixed(1) + ' s'
+  : mid==='camp' ? e.c + ' ★'
+  : /^ai/.test(mid) ? '淨勝 ' + e.c + ' 球' + (Number(e.t) > 0 ? '　每球 ' + Number(e.t).toFixed(1) + ' s' : '')
+  : Number(e.t).toFixed(1) + ' s';
 const ladderEsc = x => String(x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function ladderAdd(sid, mid, t, coins){
   const k = sid + '|' + mid, arr = ladder[k] = ladder[k] || [];
   const e = {n: ladderName || '無名飛手', t: +t.toFixed(2), c: coins|0, ts: Date.now()};
+  if(LADDER_SCORE(mid) && mid!=='coins'){      // 闖關／對戰榜：同名字只留最佳一筆
+    const i = arr.findIndex(x=>x.n===e.n);
+    if(i >= 0){ if(ladderCmp(mid)(e, arr[i]) < 0) arr.splice(i,1); else return i + 1; }
+  }
   arr.push(e); arr.sort(ladderCmp(mid));
   const rank = arr.indexOf(e) + 1;
   if(arr.length > LADDER_MAX) arr.length = LADDER_MAX;
@@ -6956,14 +6973,14 @@ function ladderTable(sid, mid, hlTs){
   const arr = ladder[sid + '|' + mid] || [];
   if(!arr.length) return '<div class="ldEmpty">這條賽道還沒有人上榜</div>';
   return '<table class="ldTbl">' + arr.map((e,i)=>'<tr' + (e.ts===hlTs ? ' class="me"' : '') + '><td class="no">' + (i+1) + '</td><td class="n">' + ladderEsc(e.n) + '</td><td>' +
-    (mid==='coins' ? e.c + ' 枚　' : '') + e.t.toFixed(1) + ' s</td></tr>').join('') + '</table>';
+    ladderVal(mid, e) + '</td></tr>').join('') + '</table>';
 }
 // ---- 全校榜（Apps Script）----
 function ladderRemoteTable(j, mid){
   if(!j || !j.top || !j.top.length) return '<div class="ldEmpty">這條賽道還沒有人上榜</div>';
   const me = j.me;
   const row = (e, i, isMe) => '<tr' + (isMe ? ' class="me"' : '') + '><td class="no">' + i + '</td><td class="n">' + ladderEsc(e.n) + '</td><td>' +
-    (mid==='coins' ? e.c + ' 枚　' : '') + Number(e.t).toFixed(1) + ' s</td></tr>';
+    ladderVal(mid, e) + '</td></tr>';
   let h = '<table class="ldTbl">' + j.top.map((e,i)=>row(e, i+1, me && e.n===me.n)).join('');
   if(me && me.rank > j.top.length) h += '<tr><td colspan="3" class="ldEmpty" style="padding:2px">…</td></tr>' + row(me, me.rank, true);
   return h + '</table>';
@@ -7015,6 +7032,26 @@ function ladderResult(ok, mid, total){
     ladderSync(cur);
   }
 }
+// 闖關／對戰 AI 的成績送出（沒有賽道那種完賽視窗，用 onText 回報文字）
+async function ladderSubmitScore(sid, mid, t, c, onText){
+  const prev = ladderCur, tt = +(+t || 0).toFixed(2), cc = Math.max(0, Math.min(1000, c|0));
+  const rank = ladderAdd(sid, mid, tt, cc); ladderCur = prev;
+  const rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 7), say = x => { try{ onText && onText(x); }catch(e){} };
+  const hint = ladderName ? '' : '（到「天梯排行」視窗設定暱稱）';
+  if(!LADDER_URL){ say((rank <= LADDER_MAX ? '天梯第 ' + rank + ' 名' : '未進前 ' + LADDER_MAX + ' 名') + hint); return; }
+  say('成績送出中…');
+  ladderQ.push({k: sid + '|' + mid, id: rid, n: ladderName || '無名飛手', t: tt, c: cc}); ladderQSave();
+  try{
+    if(!(await ladderFlush())){ say('離線：成績已存在這台裝置，連上網路後自動補送'); return; }
+    const j = await ladderFetchBoard(sid, mid, rid);
+    say(j && j.me ? '天梯排行榜第 ' + j.me.rank + ' 名（共 ' + j.total + ' 人）' + hint : '成績已送出');
+  }catch(e){ say('成績已送出（榜單暫時讀不到）'); }
+}
+let ladderToastT = null;
+function ladderToast(text){
+  const el = document.getElementById('ladderToast'); el.textContent = text; el.style.display = 'block';
+  clearTimeout(ladderToastT); ladderToastT = setTimeout(()=>{ el.style.display = 'none'; }, 7000);
+}
 let ladderRenT = null;
 document.getElementById('ladderName').addEventListener('input', e=>{
   ladderName = e.target.value.trim().slice(0, 12);
@@ -7031,31 +7068,40 @@ document.getElementById('ladderName').addEventListener('input', e=>{
   }
 });
 // ---- 選單：天梯排行查看視窗 ----
-const ldSel = {sid: null, mid: 'time', scope: 'local'};
+const ldSel = {sid: null, mid: 'time', scope: 'local', ai: 1};
 let ldSeq = 0;
 function ladderOpen(){
   ldSel.mid = RACE_MODES.some(m=>m.id===raceModeId && !m.duoOnly) ? raceModeId : 'time';
   if(!ldSel.sid) ldSel.sid = SCENES[0].id;
+  ldSel.ai = AI_LV;
   ldSel.scope = LADDER_URL ? 'all' : 'local';
+  document.getElementById('ldNameView').value = ladderName;
   ladderRender();
   document.getElementById('ladderModal').style.display = 'flex';
 }
 function ladderRender(){
   const mk = (list, cur, attr) => list.map(x=>'<button class="sceneBtn' + (x.id===cur ? ' on' : '') + '" ' + attr + '="' + x.id + '">' + x.name + '</button>').join('');
+  const isAi = ldSel.mid === 'ai';
+  const sid = isAi ? 'match' : ldSel.sid, mid = isAi ? 'ai' + ldSel.ai : ldSel.mid;      // 對戰 AI 榜不分場景；每個 AI 等級一張榜
   document.getElementById('ldScope').innerHTML = LADDER_URL ? mk([{id:'all', name:'天梯排行榜'}, {id:'local', name:'這台裝置'}], ldSel.scope, 'data-lc') : '';
-  document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly), ldSel.mid, 'data-lm');
-  document.getElementById('ldScenes').innerHTML = mk(SCENES, ldSel.sid, 'data-ls');
+  document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly).concat([{id:'camp', name:'闖關星數'}, {id:'ai', name:'對戰 AI'}]), ldSel.mid, 'data-lm');
+  document.getElementById('ldAi').innerHTML = isAi ? mk([1,2,3,4,5].map(i=>({id:String(i), name:AI_LEVELS[i].ic + ' ' + AI_LEVELS[i].name})), String(ldSel.ai), 'data-la') : '';
+  document.getElementById('ldScenes').innerHTML = isAi ? '' : mk(SCENES, ldSel.sid, 'data-ls');
   const tb = document.getElementById('ldModalTbl'), my = ++ldSeq;
   if(LADDER_URL && ldSel.scope === 'all'){
     tb.innerHTML = '<div class="ldEmpty">載入中…</div>';
-    const mid = ldSel.mid;
-    ladderFlush().then(()=>ladderFetchBoard(ldSel.sid, mid, '')).then(j=>{ if(my === ldSeq) tb.innerHTML = ladderRemoteTable(j, mid); })
+    ladderFlush().then(()=>ladderFetchBoard(sid, mid, '')).then(j=>{ if(my === ldSeq) tb.innerHTML = ladderRemoteTable(j, mid); })
       .catch(()=>{ if(my === ldSeq) tb.innerHTML = '<div class="ldEmpty">連不上天梯排行榜（沒有網路？）可切到「這台裝置」</div>'; });
-  }else tb.innerHTML = ladderTable(ldSel.sid, ldSel.mid, null);
+  }else tb.innerHTML = ladderTable(sid, mid, null);
   document.querySelectorAll('#ldScope [data-lc]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.scope = b.dataset.lc; ladderRender(); }));
   document.querySelectorAll('#ldModes [data-lm]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.mid = b.dataset.lm; ladderRender(); }));
+  document.querySelectorAll('#ldAi [data-la]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.ai = +b.dataset.la; ladderRender(); }));
   document.querySelectorAll('#ldScenes [data-ls]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.sid = b.dataset.ls; ladderRender(); }));
 }
+document.getElementById('ldNameView').addEventListener('input', e=>{       // 闖關／對戰成績沒有完賽視窗，暱稱在這裡設定
+  ladderName = e.target.value.trim().slice(0, 12);
+  try{ localStorage.setItem(LADDER_NAME_KEY, ladderName); }catch(err){}
+});
 document.getElementById('btnLadder').addEventListener('click', ladderOpen);
 document.getElementById('ldClose').addEventListener('click', ()=>{ document.getElementById('ladderModal').style.display = 'none'; });
 
@@ -8421,39 +8467,40 @@ function pilotFingers(P, s, curl, thumb){
 
 
 // ---------- 自動畫質調整（2026-11-12）----------
-// 量測實際幀率：連續偏低就自動降一級（只降不升，避免忽高忽低）；級別存 localStorage，網址 ?q=0~4 可強制指定（0＝最高）。
-//  0 全畫質｜1 陰影圖 1024｜2 像素比≤1.5、選手不投影｜3 像素比 1、關閉陰影｜4 像素比 0.75、場邊選手隱藏
-const AUTOQ = { tier:0, hidePilots:false, acc:0, frames:0, warm:0, cool:0, manual:false, KEY:'hsinchuDroneQualityV1', MAXT:4, FPS_MIN:38 };
+// 量測「比賽進行中」的實際幀率：連續兩次偏低才自動降一級（只降不升）；不記在瀏覽器裡（每次開啟重新量），網址 ?q=0~3 可強制指定（0＝最高）。
+// 2026-11-12 修正：原本最低級會隱藏場邊選手、又把級別存起來，高解析度螢幕載入時一時偏低就被永久降級、選手消失 → 現在選手一律保留、不存級別、載入與選單不計。
+//  0 全畫質｜1 陰影圖 1024｜2 像素比≤1.5、選手不投影｜3 像素比 1、關閉陰影
+const AUTOQ = { tier:0, hidePilots:false, acc:0, frames:0, warm:0, low:0, manual:false, KEY:'hsinchuDroneQualityV1', MAXT:3, FPS_MIN:30 };
+try{ localStorage.removeItem(AUTOQ.KEY); }catch(e){}      // 清掉舊版記下的級別
 function autoQApply(){
   const t = AUTOQ.tier, dpr = window.devicePixelRatio||1;
-  const pr = t>=4 ? 0.75 : t>=3 ? 1 : t>=2 ? Math.min(dpr,1.5) : Math.min(dpr,2);
+  const pr = t>=3 ? 1 : t>=2 ? Math.min(dpr,1.5) : Math.min(dpr,2);
   renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight);
   const ms = t>=1 ? 1024 : 2048;
   if(key.shadow.mapSize.x !== ms){ key.shadow.mapSize.set(ms,ms); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map = null; } }
   key.castShadow = t<3;
-  AUTOQ.hidePilots = t>=4;
+  AUTOQ.hidePilots = false;
   const pilotShadow = t<2 && !ENV_LOW;
   if(typeof PILOT!=='undefined' && PILOT.list) for(const P of PILOT.list) P.root.traverse(o=>{ if(o.isMesh && !/Cornea|Eyelash|Eyebrow|Teeth/.test(o.material.name)) o.castShadow = pilotShadow; });
 }
 function autoQInit(){
   let t = 0;
-  try{ t = parseInt(localStorage.getItem(AUTOQ.KEY)||'0',10)||0; }catch(e){}
   const m = /[?&]q=(\d)/.exec(location.search);
-  if(m){ t = +m[1]; AUTOQ.manual = true; try{ localStorage.setItem(AUTOQ.KEY, String(t)); }catch(e){} }   // ?q=0 也會把記住的級別改回最高
-  AUTOQ.tier = clamp(t,0,AUTOQ.MAXT); AUTOQ.warm = 6;
+  if(m){ t = +m[1]; AUTOQ.manual = true; }
+  AUTOQ.tier = clamp(t,0,AUTOQ.MAXT); AUTOQ.warm = 8;
   if(AUTOQ.tier>0) autoQApply();
 }
 function autoQTick(rawDt){
   if(AUTOQ.manual || AUTOQ.tier>=AUTOQ.MAXT) return;
-  if(document.hidden || rawDt>2){ AUTOQ.acc=0; AUTOQ.frames=0; return; }   // 切分頁／卡住不算
+  if(document.hidden || rawDt>2 || state!=='play'){ AUTOQ.acc=0; AUTOQ.frames=0; return; }   // 切分頁／卡住／不在比賽中（載入、選單、回放）不算
   if(AUTOQ.warm>0){ AUTOQ.warm -= rawDt; return; }                            // 剛載入、剛降級後先暖機
   AUTOQ.acc += rawDt; AUTOQ.frames++;
   if(AUTOQ.acc < 2.5) return;
   const fps = AUTOQ.frames/AUTOQ.acc;
   AUTOQ.acc = 0; AUTOQ.frames = 0;
-  if(fps < AUTOQ.FPS_MIN){
-    AUTOQ.tier++; AUTOQ.warm = 3; autoQApply();
-    try{ localStorage.setItem(AUTOQ.KEY, String(AUTOQ.tier)); }catch(e){}
+  if(fps >= AUTOQ.FPS_MIN){ AUTOQ.low = 0; return; }
+  if(++AUTOQ.low >= 2){
+    AUTOQ.low = 0; AUTOQ.tier++; AUTOQ.warm = 4; autoQApply();
     console.info('[畫質] 幀率 '+fps.toFixed(0)+' fps，降到第 '+AUTOQ.tier+' 級');
   }
 }
