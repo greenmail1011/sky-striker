@@ -6899,7 +6899,7 @@ const raceTotalTime = () => raceTime + raceAdj(raceSoloR);
 //   排名：每個名字只算最佳一筆；收集賽＝星幣多→時間短，其他＝總成績（含罰時、時間獎勵）越短越前面。
 //   送不出去（沒網路）的成績會排進佇列（localStorage），下次連上網路自動補送；網址留空＝只用本機榜。
 const LADDER_KEY = 'hsinchuDroneLadderV1', LADDER_NAME_KEY = 'hsinchuDronePlayerNameV1', LADDER_Q_KEY = 'hsinchuDroneLadderQueueV1', LADDER_MAX = 10;
-const LADDER_URL = '';    // 例：'https://script.google.com/macros/s/xxxxxxxx/exec'
+const LADDER_URL = 'https://script.google.com/macros/s/AKfycbw3BvTaELvazJfrd0iCmd1V4fBqSyZ0Z487dWski0rGtZEn0L-fYEvkSpOg5qNTEg0/exec';    // 全校榜後端（Apps Script）；空字串＝只用本機榜
 let ladder = {}; try{ ladder = JSON.parse(localStorage.getItem(LADDER_KEY)||'{}') || {}; }catch(e){}
 let ladderName = ''; try{ ladderName = localStorage.getItem(LADDER_NAME_KEY) || ''; }catch(e){}
 let ladderQ = []; try{ ladderQ = JSON.parse(localStorage.getItem(LADDER_Q_KEY)||'[]') || []; }catch(e){}
