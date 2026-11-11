@@ -86,7 +86,7 @@
     transition:all .15s;font-family:inherit}
   .modeBtn:hover{transform:scale(1.06);border-color:#7dffa9;color:#7dffa9;box-shadow:0 0 18px rgba(125,255,169,.25)}
   .modeBtn:disabled{opacity:.35;cursor:default;transform:none;box-shadow:none;border-color:rgba(120,160,255,.45);color:#e8ecf5}
-  /* 連線對戰按鈕：閃亮強調（跑馬燈漸層邊框＋呼吸光暈＋掃光），跟其餘模式按鈕做出區隔 */
+  /* 網路對戰按鈕：閃亮強調（跑馬燈漸層邊框＋呼吸光暈＋掃光），跟其餘模式按鈕做出區隔 */
   #btnNet{position:relative;overflow:hidden;border:2px solid transparent;
     background:linear-gradient(rgba(20,30,60,.85),rgba(20,30,60,.85)) padding-box,
       linear-gradient(90deg,#ffd75a,#7dffa9,#5aa0ff,#ffd75a) border-box;
@@ -292,6 +292,9 @@
   #mfDuoOpt{display:none;flex-direction:column;gap:8px;align-items:center;margin:-4px 0 14px;font-size:14px;color:#b9c6e4}
   #mfDuoOpt .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
   #mfDuoOpt small{color:#7c88a8;font-size:12px}
+  #mfDuoOpt .rVs{display:none}
+  #menuFlow.vsM #mfDuoOpt,#menuFlow.vsM .rVs{display:flex}
+  #menuFlow.pracSolo #mfScenes,#menuFlow.pracSolo #mfField{display:none!important}
   #menuFlow.duo #mfDuoOpt,#menuFlow.prac #mfDuoOpt{display:flex}
   #raceDuoOpt{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;margin:0 0 8px;font-size:13px;color:#b9c6e4}
   #raceDuoOpt .sceneBtn{padding:5px 12px;font-size:13px}
@@ -316,6 +319,8 @@
   /* ---- 選手訓練（2026-10-31）---- */
   .c-trainp{--c:120,220,255}
   #mfS2match .mfCard{width:218px}
+  #mfS1 .mfCard{width:196px;padding-left:12px;padding-right:12px}
+  #mfS1 .mfCard b{font-size:21px}
   #mfDuoOpt .rTrain,#mfDuoOpt .rTrainN{display:none}
   #menuFlow.trainM #mfDuoOpt,#menuFlow.trainM .rTrain{display:flex}
   #menuFlow.trainM.trainAtk .rTrainN{display:flex}
@@ -366,7 +371,7 @@
     .mfCards{gap:10px;flex-wrap:nowrap} .mfCard{width:31%;max-width:220px;min-height:0;padding:12px 8px 10px;border-radius:16px}
     .mfCard .ic{font-size:34px} .mfCard b{font-size:16px} .mfCard span{font-size:11px}
     .mfCard .tag{font-size:9px;top:7px;left:7px}
-    #mfS2match .mfCard{width:24%}
+    #mfS2match .mfCard{width:24%} #mfS1 .mfCard{width:19%;max-width:none}
     #aiLvDesc{font-size:11.5px;padding:5px 10px} #mfDuoOpt{gap:5px} #mfDuoOpt button{padding:5px 11px;font-size:12.5px}
     .mfCard.rec::before{font-size:9px;top:8px;right:-34px}
     .mfScene{width:118px;height:78px;padding:6px 8px;border-radius:13px} .mfScene .em{font-size:24px} .mfScene b{font-size:13px} .mfScene small{display:none}
@@ -826,13 +831,14 @@
     <div class="mfStage" id="mfS1">
       <div class="mfQ">今天想做什麼？</div>
       <div class="mfCards">
-        <button class="mfCard c-train rec" data-go="train"><div class="ic"></div><b>飛行訓練</b><span>從零開始學操控<br>練習・闖關・賽道</span></button>
+        <button class="mfCard c-train rec" data-go="train"><div class="ic"></div><b>基礎訓練</b><span>從零開始學操控<br>練習・闖關・賽道</span></button>
         <button class="mfCard c-match" data-go="match"><div class="ic"></div><b>足球比賽</b><span>跟 AI 或同學<br>來一場 3 分鐘對戰</span></button>
+        <button class="mfCard c-trainp" data-mode="train"><div class="ic"></div><b>選手訓練</b><span>選攻擊手或防守手<br>對 AI 專項練習</span></button>
         <button class="mfCard c-watch" data-go="watch"><div class="ic"></div><b>觀看示範</b><span>看 AI 怎麼踢<br>學走位與戰術</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS2train">
-      <div class="mfQ">飛行訓練：照順序一步一步來</div>
+      <div class="mfQ">基礎訓練：照順序一步一步來</div>
       <div class="mfCards">
         <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic"></div><b>圓環練習</b><span>自由飛行穿越圓環<br>先熟悉搖桿・可雙人</span></button>
         <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 2</span><div class="ic"></div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
@@ -842,15 +848,14 @@
     <div class="mfStage" id="mfS2match">
       <div class="mfQ">要跟誰比？</div>
       <div class="mfCards">
-        <button class="mfCard c-match" data-mode="player"><div class="ic"></div><b>對戰 AI</b><span>你是紅隊 Striker<br>隊友和對手都是 AI</span></button>
-        <button class="mfCard c-net" data-mode="net"><div class="ic"></div><b>連線對戰</b><span>開房間給同學房號<br>1v1・2v2・3v3</span></button>
-        <button class="mfCard c-duo" data-mode="duo"><div class="ic"></div><b>雙人對戰</b><span>同一台電腦左右分割畫面<br>兩支搖桿・藍 vs 紅</span></button>
-        <button class="mfCard c-trainp" data-mode="train"><div class="ic"></div><b>選手訓練</b><span>選攻擊手或防守手<br>對 AI 專項練習</span></button>
+        <button class="mfCard c-match" data-mode="player"><div class="ic"></div><b>單機對戰</b><span>同一台電腦<br>對 AI 或兩人左右分割</span></button>
+        <button class="mfCard c-net" data-mode="net"><div class="ic"></div><b>網路對戰</b><span>開房間給同學房號<br>1v1・2v2・3v3</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS3">
       <div class="mfQ">選一個場地</div>
       <div id="mfDuoOpt">
+        <div class="row rVs">對手：<button data-vs="player">對戰 AI</button><button data-vs="duo">同機雙人（左右分割）</button></div>
         <div class="row rPlayers">人數：<button data-pd="0">單人</button><button data-pd="1">雙人（左右分割畫面）</button></div>
         <div class="row rTeam">隊伍：<button data-v="0">只有兩人（1v1）</button><button data-v="1">加 AI 隊友（3v3）</button></div>
         <div class="row rTrain">我要練：<button data-tr="atk">攻擊手（Striker）</button><button data-tr="def">防守手（Defender）</button></div>
@@ -889,8 +894,8 @@
     <button class="modeBtn" id="btnCampaign">闖關模式</button>
     <button class="modeBtn" id="btnRace">飛行賽道</button>
     <button class="modeBtn" id="btnDemo">AI vs AI 示範賽</button>
-    <button class="modeBtn" id="btnNet">連線對戰</button>
-    <button class="modeBtn" id="btnDuo">左右雙人對戰</button>
+    <button class="modeBtn" id="btnNet">網路對戰</button>
+    <button class="modeBtn" id="btnDuo">單機雙人對戰</button>
     <button class="modeBtn" id="btnTrain">選手訓練</button>
   </div>
   <div id="fsTip">想要全螢幕飛行？iPhone 請點網址列左邊的 <b>≡</b> →「<b>隱藏工具列</b>」，或 <a id="fsTipMore">加入主畫面（看作法）</a></div>
@@ -1009,7 +1014,7 @@
    真實世界導向：四軸飛行動力學 + 剛體碰撞 + FIDA 規則
    ============================================================ */
 
-// ---------- 連線對戰：Trystero (Nostr 配對訊號策略，僅用於 WebRTC 配對，
+// ---------- 網路對戰：Trystero (Nostr 配對訊號策略，僅用於 WebRTC 配對，
 //            比賽資料為瀏覽器對瀏覽器直連、端對端加密，不經過任何中繼) ----------
 // 2026-07-22 改用 Nostr 策略，勿改回 Firebase 策略——除錯過程：
 //   1. jsdelivr 的 /+esm 打包 @trystero-p2p/firebase 時，會把 @firebase/app、
@@ -1027,8 +1032,8 @@
 // 2026-10-09：鎖定版本。原本寫 trystero/nostr（不帶版本），esm.sh 會自動換成最新版，
 //   上游一改版就可能整個壞掉；0.26.0 已實測（兩分頁 2 秒內互連）。要升級請先實測再改版本號。
 // 2026-10-30：改成「用到才載入」（業主反映打開網頁會頓一下）。原本寫在最上面的 import 會讓整個程式
-//   等 esm.sh 下載完才開始跑；學校網路慢或擋掉 esm.sh 時，連單機都打不開。現在只有連線對戰需要它：
-//   開網頁後閒置時先在背景預載，按「建立／加入房間」時若還沒好就等它；載入失敗只影響連線對戰。
+//   等 esm.sh 下載完才開始跑；學校網路慢或擋掉 esm.sh 時，連單機都打不開。現在只有網路對戰需要它：
+//   開網頁後閒置時先在背景預載，按「建立／加入房間」時若還沒好就等它；載入失敗只影響網路對戰。
 let joinRoom = null, selfId = null, trysteroP = null;
 function loadTrystero(){
   if(!trysteroP) trysteroP = import('https://esm.sh/trystero@0.26.0/nostr')
@@ -1267,8 +1272,8 @@ function ico(k){ const d = ICO_PATHS[k]; return d ? '<svg viewBox="0 0 24 24" fi
 // ---------- 鋼管網籠場地（2026-11-11 業主：現場除了充氣管框，也有「鋼管＋網籠」場地，系統要能選） ----------
 // 尺寸、球門、物理、規則都跟充氣版完全一樣，只換外觀：黑色細鋼管框＋紅／藍／白網（網格比充氣版大塊）＋兩端「B」字旗。
 // 選擇存 localStorage（FIELD_STYLE_KEY）；整組是 scene 的頂層物件，賽道模式 raceHideArena 會一併藏起來。
-const FIELD_STYLE_KEY = 'hsinchuDroneFieldStyleV1';
-let fieldStyle = 'inflatable';
+const FIELD_STYLE_KEY = 'hsinchuDroneFieldStyleV2';   // V2：預設改鋼管網籠（V1 會把舊預設自動存起來，無法分辨是不是使用者選的）
+let fieldStyle = 'cage';
 const cageObjs = [];
 function cageNetTex(rgb, cell){
   const cv = document.createElement('canvas'); cv.width = cv.height = 64;
@@ -1326,7 +1331,7 @@ function cageFlag(x, z, letter, hex){
   cageFlag( xo+0.45, -zo-0.2, 'B', '#e3342c');
 }
 function setFieldStyle(st){
-  fieldStyle = (st === 'cage') ? 'cage' : 'inflatable';
+  fieldStyle = (st === 'inflatable') ? 'inflatable' : 'cage';
   const cg = fieldStyle === 'cage';
   inflObjs.forEach(o=>o.visible = !cg); netObjs.forEach(o=>o.visible = !cg);
   cageObjs.forEach(o=>o.visible = cg);
@@ -1679,7 +1684,7 @@ function bootTick(){   // 每幀呼叫：素材到齊（或等太久）後再畫
   if(++BOOT.frames < 3) return;
   BOOT.done = true;
   if(el){ el.classList.add('out'); setTimeout(()=>el.remove(), 600); }
-  // 閒置時在背景預載連線模組（失敗沒關係，按連線對戰時會再試）
+  // 閒置時在背景預載連線模組（失敗沒關係，按網路對戰時會再試）
   setTimeout(()=>{ loadTrystero().catch(()=>{}); }, 2500);
   setTimeout(pilotsLoad, 900);                  // 場邊虛擬選手模型（3.6MB）也在背景載入，失敗就不顯示
 }
@@ -2364,7 +2369,7 @@ addGoalBoard(ringEast); addGoalBoard(ringWest);
 // 球門用織帶吊在場地頂部 → 當成單擺：支點在頂部（擺長 L＝場高−球門高），被撞時依動量守恆取得水平速度，
 // 之後以 ω²＝g/L 來回擺盪並逐漸衰減；撞到偏離中心的位置還會繞垂直軸扭轉一點。
 // 球門位置/角度改變後，ring.x/y/z 跟著更新（進球判定、AI 瞄準都用它），collideRing 也改在球門自己的座標系計算。
-// 連線對戰：只有房主模擬，擺動狀態放進快照（rg）給其他人。
+// 網路對戰：只有房主模擬，擺動狀態放進快照（rg）給其他人。
 const RING_SWING = { m: 1.5, L: FIELD.h - RING.y, damp: 0.55, wT: 3.4, dampT: 1.1,
   I: 1.5*(RING.R*RING.R + RING.Ro*RING.Ro)/4, twist: 0.25, maxP: 0.4, maxT: 0.5 };
 function ringSwingInit(ring){ ring.x0 = ring.x; ring.y0 = ring.y; ring.z0 = ring.z; ring.sw = {px:0, pz:0, vx:0, vz:0, a:0, w:0}; }
@@ -2940,7 +2945,7 @@ const blueStriker = drones[3];
 function collideDrones(){
   for(let i=0;i<drones.length;i++)for(let j=i+1;j<drones.length;j++){
     const a=drones[i], b=drones[j];
-    if(a.benched || b.benched) continue;          // 不上場的機（連線對戰空位）
+    if(a.benched || b.benched) continue;          // 不上場的機（網路對戰空位）
     const d = b.pos.clone().sub(a.pos);
     const dist = d.length();
     if(dist<1e-5 || dist >= DRONE_R*2) continue;
@@ -3024,7 +3029,7 @@ const FOUL_ZONE = 1.0;     // 己方球門禁區半徑 m
 const FOUL_TIME = 3.0;     // 逗留逾此秒數 → 防守違規（守門）
 
 // 廣播/播放比賽事件（進球、違規、開賽…）：本地立即播放視覺/音效，
-// 連線對戰時房主同步 fxAct 廣播給其他人（target 省略＝全體，指定則只給該玩家）
+// 網路對戰時房主同步 fxAct 廣播給其他人（target 省略＝全體，指定則只給該玩家）
 function netBroadcastFx(data, target){
   if(mode!=='net' || !NET.isHost) return;
   if(target===selfId) return;   // 目標就是房主自己，已在本地播放過，不需再送一次
@@ -3163,7 +3168,7 @@ function updateScore(pop, team){
 }
 let ringPulse = null;
 
-// ---------- 練習模式：獨立於比賽／AI對戰／連線對戰，只有玩家機在場上，
+// ---------- 練習模式：獨立於比賽／AI對戰／網路對戰，只有玩家機在場上，
 //            無比分／時間／AI 對手，穿越任一球門環即計數，方便一開始先熟悉操作 ----------
 let practiceCount = 0;
 let practiceCooldown = [0,0,0,0];
@@ -3385,7 +3390,7 @@ function aiMatchLabel(){   // 開賽訊息用
     : '藍 ' + aiLabel(AI_DEMO.blue) + ' vs 紅 ' + aiLabel(AI_DEMO.red);
   return aiLabel();
 }
-function aiApplyLevels(){   // 每次開賽套用；連線對戰的 AI 代打維持 Lv1（大廳沒有難度選項）
+function aiApplyLevels(){   // 每次開賽套用；網路對戰的 AI 代打維持 Lv1（大廳沒有難度選項）
   drones.forEach(d=>{ d.lv = mode==='net' ? 1 : mode==='demo' ? AI_DEMO[d.team] : AI_LV; d.zoneCool = 0; d.plugging = false;
     d.read = null; d.readT = 0; d.lane = null; d.laneT = 0; d.feint = 0; d.dashV = null; d.detour = null; d.clearing = false;
     aiRollPersonality(d); });
@@ -3870,7 +3875,7 @@ function aiThinkClassic(d, dt, P){   // Lv1（P=null）＝原本的 AI 一字不
 // 自動偵測：主要指標是觸控（pointer: coarse）→ 觸控模式；螢幕短邊 < 600px 算手機，否則平板。
 // 有觸控螢幕的筆電通常主要指標仍是滑鼠（pointer: fine），不會誤判；左上角「觸控」可手動切換並記住。
 // 搖桿採 Mode 2（左：油門＋旋轉；右：前後＋側飛），放開自動回中（油門回中＝定高懸停），
-// 數值直接疊進 readInputInto()，所以單機、練習、闖關、賽道、連線對戰全部通用。
+// 數值直接疊進 readInputInto()，所以單機、練習、闖關、賽道、網路對戰全部通用。
 let fsUiHook = null;            // 全螢幕提示的更新函式（定義在下方「全螢幕」區塊）
 const TOUCH = {on:false, kind:'desktop', lx:0, ly:0, rx:0, ry:0};
 const TOUCH_KEY = 'hsinchuDroneTouchV1';
@@ -3924,7 +3929,7 @@ document.querySelectorAll('#touchBtns button[data-k]').forEach(b=>{
   b.addEventListener('click', e=>{
     e.preventDefault();
     const code = b.dataset.k;
-    dispatchEvent(new KeyboardEvent('keydown', {code}));     // 走既有的鍵盤流程（含連線對戰的房主限制）
+    dispatchEvent(new KeyboardEvent('keydown', {code}));     // 走既有的鍵盤流程（含網路對戰的房主限制）
     dispatchEvent(new KeyboardEvent('keyup', {code}));
   });
 });
@@ -3939,7 +3944,7 @@ touchDetect();
 
 // ---------- 全螢幕（2026-10-09 新增，業主：「手機上方被網址列擋住，飛行時能自動全螢幕嗎」） ----------
 // 觸控模式下「開始飛」（setState('play')）時自動請求全螢幕；手機順便鎖橫向。
-// 瀏覽器規定全螢幕只能由使用者點擊觸發：從按鈕開始的都可以，若是連線對戰由房主開賽（沒有點擊），
+// 瀏覽器規定全螢幕只能由使用者點擊觸發：從按鈕開始的都可以，若是網路對戰由房主開賽（沒有點擊），
 // 就在玩家第一次按搖桿時補請求一次。玩家自己退出全螢幕後，同一局不會再一直把他切回去。
 // iPhone Safari 沒有網頁全螢幕 API（只有 iPad/Android 有）→ 選單顯示「隱藏工具列／加入主畫面」提示，⛶ 按鈕開說明卡。
 // 從主畫面打開（standalone）本來就沒有網址列，不用處理。manifest.webmanifest＋assets/icon-*.png 是給「加入主畫面」用的。
@@ -3999,7 +4004,7 @@ addEventListener('keydown', e=>{
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
   if(e.code==='KeyC') camMode=(camMode+1)%3;
   if(mode==='net'){
-    // 連線對戰：比賽流程只能由房主操作（P/R），避免雙方狀態互相搶權；
+    // 網路對戰：比賽流程只能由房主操作（P/R），避免雙方狀態互相搶權；
     // M 一律代表「離開房間」返回選單（房主離開時其他人也會收到斷線通知）
     if(NET.isHost){
       if(e.code==='KeyP' && state==='play') setState('pause');
@@ -4082,7 +4087,7 @@ function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
     const v = !!(gp.buttons[n] && gp.buttons[n].pressed);
     const fired = v && !padPrev[n]; padPrev[n] = v; return fired;
   };
-  if(mode==='net' && !NET.isHost){                      // 連線對戰非房主：只能切視角
+  if(mode==='net' && !NET.isHost){                      // 網路對戰非房主：只能切視角
     if(btn(3)) camMode = (camMode+1)%3;
     return;
   }
@@ -4095,7 +4100,7 @@ function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
     else restart();
   }
 }
-function readInputInto(i){    // i：任一 drone 的 .input（本地玩家操控用，連線對戰時也用同一套讀法）
+function readInputInto(i){    // i：任一 drone 的 .input（本地玩家操控用，網路對戰時也用同一套讀法）
   // 2026-10-09 改成「美國手」Mode 2（業主要求）：左手 WASD＝左搖桿（W/S 油門、A/D 旋轉），
   // 右手方向鍵＝右搖桿（↑/↓ 前後、←/→ 側飛），與實體搖桿、觸控搖桿、實機遙控器一致
   i.pitch    = (keys['ArrowUp']?1:0) + (keys['ArrowDown']?-1:0);
@@ -4121,7 +4126,7 @@ function readPlayerInput(){ readInputInto(player.input); }
 // ---------- 音效（WebAudio 合成） ----------
 // ---------- 撞擊震動（2026-11-11）：撞到對手／網／球門框／地板／柱子，依撞擊速度分輕重 ----------
 //   手機：navigator.vibrate（Android；iPhone Safari 不支援）。搖桿：gamepad 雙馬達 rumble（Chrome/Edge）。
-//   連線對戰：房主算物理，撞到「別人操控的機」時用 fx 訊息通知那位玩家的裝置震動。
+//   網路對戰：房主算物理，撞到「別人操控的機」時用 fx 訊息通知那位玩家的裝置震動。
 const HAPTIC = {on: (()=>{ try{ return localStorage.getItem('hapticOn') !== '0'; }catch(e){ return true; } })()};
 function hapticStrength(v){ return Math.max(0, Math.min(1, (v - 0.7)/5.5)); }   // 0.7 m/s 以下不震；約 6 m/s 以上滿震
 function hapticPulse(v, pad){
@@ -4369,7 +4374,7 @@ function updateHUD(){
     tp.textContent = '未偵測（請按搖桿任意鍵）';
     tp.style.color = '#fbbf24';
   }
-  // 連線對戰狀態徽章
+  // 網路對戰狀態徽章
   if(mode==='net'){
     const nb = document.getElementById('netBadge');
     nb.style.display = 'block';
@@ -4383,7 +4388,7 @@ function updateHUD(){
 // ---------- 攝影機 ----------
 let camMode = 0;  // 0 追視 1 機載 2 全場
 const camPos = V3(0,3.5,6.5), camLook = V3(0,1,0);
-// 連線對戰時鏡頭跟拍「我方配對到的機」；未配位（觀戰）則退回全場鏡頭
+// 網路對戰時鏡頭跟拍「我方配對到的機」；未配位（觀戰）則退回全場鏡頭
 function camDrone(){
   if(mode==='net') return NET.mySlot>=0 ? drones[NET.mySlot] : null;
   if(mode==='train') return trainHuman();
@@ -4686,7 +4691,7 @@ document.getElementById('btnDemo').addEventListener('click', ()=>startGame('demo
 //   - 同一台電腦、畫面左右分割：左＝P1 藍隊 Striker（藍半場在左，跟計分板「藍左紅右」一致），右＝P2 紅隊 Striker
 //   - 搖桿：依瀏覽器的搖桿編號，第 1 支→P1（左）、第 2 支→P2（右）；只有一支時給 P1，P2 用鍵盤
 //   - 鍵盤：P1＝W/S 升降、A/D 旋轉、T/G 前後、F/H 側飛；P2＝I/K 升降、J/L 旋轉、方向鍵 前後／側飛（都是 Mode 2 左手油門）
-//   - 隊友：「只有兩人 1v1」（其餘 4 台用 benched 退場，同連線對戰的「不上場」）或「加 AI 隊友 3v3」
+//   - 隊友：「只有兩人 1v1」（其餘 4 台用 benched 退場，同網路對戰的「不上場」）或「加 AI 隊友 3v3」
 //   - 物理／計分／違規完全走原本的比賽流程（loop 的 state==='play' 分支），只是多讀一個人的輸入、畫兩次
 // ============================================================
 const DUO_KEY = 'hsinchuDroneDuoV1';
@@ -4842,8 +4847,10 @@ function aiLvRenderDesc(st){
     : '你是紅隊 Defender，AI 前鋒（藍隊 Striker）會一直攻紅框。練習卡射門線、預判、擋下衝刺；別在球門區逗留超過 3 秒（防守違規）。';
 }
 function duoSyncOpt(){
+  let st0 = null; try{ st0 = MF; }catch(e){}
   document.querySelectorAll('#mfDuoOpt button[data-v]').forEach(b=>b.classList.toggle('sel', (b.dataset.v==='1') === DUO.ai));
   document.querySelectorAll('#mfDuoOpt button[data-pad]').forEach(b=>b.classList.toggle('sel', +b.dataset.pad === DUO.padSide));
+  document.querySelectorAll('#mfDuoOpt button[data-vs]').forEach(b=>b.classList.toggle('sel', !!st0 && st0.mode === b.dataset.vs));
   document.querySelectorAll('#mfDuoOpt button[data-pd]').forEach(b=>b.classList.toggle('sel', (b.dataset.pd==='1') === DUO.pracDuo));
   const mf = document.getElementById('menuFlow');
   mf.classList.toggle('pracDuo', mf.classList.contains('prac') && DUO.pracDuo);
@@ -4872,6 +4879,7 @@ document.querySelectorAll('#mfDuoOpt button').forEach(b=>b.addEventListener('cli
   if(b.dataset.v !== undefined) DUO.ai = b.dataset.v === '1';
   if(b.dataset.pad !== undefined) DUO.padSide = +b.dataset.pad;
   if(b.dataset.pd !== undefined) DUO.pracDuo = b.dataset.pd === '1';
+  if(b.dataset.vs !== undefined){ MF.lastVs = b.dataset.vs; MF.mode = b.dataset.vs; mfShow('3'); }   // 單機對戰：對 AI ⇄ 同機雙人
   if(b.dataset.lv !== undefined) aiSetLevel(+b.dataset.lv);
   if(b.dataset.tr !== undefined){ TRAIN.role = b.dataset.tr; trainSaveOpt(); }
   if(b.dataset.tn !== undefined){ TRAIN.nDef = +b.dataset.tn; trainSaveOpt(); }
@@ -4926,7 +4934,7 @@ function duoStart(){
   document.body.classList.add('duo');
   document.body.classList.remove('duoPrac');
   DUO.kind = 'match'; DUO.on = true;
-  document.querySelector('#telemetry b').textContent = '雙人對戰';
+  document.querySelector('#telemetry b').textContent = '單機雙人對戰';
   DUO.snap = true; DUO.msgT = [0,0];
 }
 document.getElementById('btnDuo').addEventListener('click', duoStart);
@@ -5050,7 +5058,7 @@ function duoRender(){
 }
 
 // ============================================================
-// 連線對戰（Host 權威模擬 + Trystero P2P）
+// 網路對戰（Host 權威模擬 + Trystero P2P）
 //   - 房主：跑完整物理／AI（如同單機），並定時廣播 snapshot 給所有人
 //   - 其他人：只送自己的操作給房主，畫面完全用收到的 snapshot 內插顯示
 //   - 這樣不需要讓每台瀏覽器的物理／AI 隨機數保持一致，最不容易兜不起來
@@ -5083,9 +5091,9 @@ async function netJoin(code, asHost){
     await NET_TURN_READY;
     await loadTrystero();
   }catch(err){
-    console.warn('連線對戰：連線模組載入失敗', err);
+    console.warn('網路對戰：連線模組載入失敗', err);
     document.getElementById('netMsg').textContent = navigator.onLine === false
-      ? '目前沒有網路：連線對戰需要網路。單機練習、闖關、對 AI 比賽不需要網路，可以照常飛'
+      ? '目前沒有網路：網路對戰需要網路。單機練習、闖關、對 AI 比賽不需要網路，可以照常飛'
       : '連線模組載入失敗，請確認網路可以連到 esm.sh 後再試一次';
     return;
   }finally{ NET.joining = false; }
@@ -5099,7 +5107,7 @@ async function netJoin(code, asHost){
   NET.room = joinRoom(cfg, 'drone-soccer-hsinchu-' + code, {
     // 找到對方、交換過連線資訊卻無法打通時會呼叫這裡；以前沒接，學生只會看到大廳一直只有自己
     onJoinError: err=>{
-      console.warn('連線對戰：無法與對方建立連線', err);
+      console.warn('網路對戰：無法與對方建立連線', err);
       NET.joinErr++;
       refreshLobbyUI();
     },
@@ -5137,7 +5145,7 @@ async function netJoin(code, asHost){
       if(changed) slotAct.send(NET.slotOwners);
     }
     if(peerId===NET.hostId && !NET.isHost){
-      flashMsg('房主已離線，連線對戰中止', '#f87171', 4);
+      flashMsg('房主已離線，網路對戰中止', '#f87171', 4);
       netLeave();
       return;
     }
@@ -5450,12 +5458,12 @@ document.getElementById('btnFillNone').addEventListener('click', ()=>netSetFillA
 
 // ============================================================
 // 觀賽直播（2026-10-31，業主：「有辦法一鍵複製網址，讓人觀賽嗎？例如現在的 AI 對戰」）
-//   - 比賽中右上角「分享觀賽」：開一個觀賽房（跟連線對戰同一套 Trystero/Nostr，不需要任何帳號），
+//   - 比賽中右上角「分享觀賽」：開一個觀賽房（跟網路對戰同一套 Trystero/Nostr，不需要任何帳號），
 //     網址 ?watch=房號 自動複製到剪貼簿，另外顯示 QR Code（教室投影給學生用手機掃）。
-//   - 直播主（按分享的人）：不管是 AI 示範賽、自己打 AI、左右雙人或連線對戰，都把畫面狀態（各機位置／姿態／
+//   - 直播主（按分享的人）：不管是 AI 示範賽、自己打 AI、左右雙人或網路對戰，都把畫面狀態（各機位置／姿態／
 //     比分／時間／搖桿）約 15 次／秒送給每位觀眾，比賽事件（進球、違規、開賽…）照樣同步。
 //     直播主回選單、換模式都不用重新分享，觀眾會看到「等待下一場」，開新的一場就自動接上。
-//   - 觀眾（打開 ?watch= 網址）：直接進入觀賽（不出選單），走跟連線對戰非房主一樣的「只套快照、不跑物理」流程，
+//   - 觀眾（打開 ?watch= 網址）：直接進入觀賽（不出選單），走跟網路對戰非房主一樣的「只套快照、不跑物理」流程，
 //     預設全場視角（C 切換），進球自動回放；M 或右上角離開。只能看，不能操作。
 //   - 每位觀眾都由直播主自己的網路送畫面：建議 20 人以內；人很多時直播主電腦最好用有線網路。
 // ============================================================
@@ -5469,7 +5477,7 @@ async function watchOpenRoom(code){
   const cfg = {appId: NET_APP_ID};
   if(NET_TURN.length) cfg.turnConfig = NET_TURN;
   const room = joinRoom(cfg, 'drone-soccer-watch-' + code);
-  // trystero 0.26：makeAction 回傳 {send, onMessage}；room.onPeerJoin／onPeerLeave 用屬性指定（跟連線對戰同寫法）
+  // trystero 0.26：makeAction 回傳 {send, onMessage}；room.onPeerJoin／onPeerLeave 用屬性指定（跟網路對戰同寫法）
   WATCH.room = room; WATCH.code = code;
   WATCH.act = {snap: room.makeAction('wsnap'), fx: room.makeAction('wfx'), hi: room.makeAction('whi')};
   return room;
@@ -5572,7 +5580,7 @@ function watchViewerStatus(){
 }
 async function watchViewerStart(code){
   WATCH.viewer = true; WATCH.code = code;
-  // 走「連線對戰・非房主・沒有位置」的流程：loop 只套快照、不跑物理／AI
+  // 走「網路對戰・非房主・沒有位置」的流程：loop 只套快照、不跑物理／AI
   mode = 'net'; NET.isHost = false; NET.mySlot = -1; NET.roomId = code; NET.connected = false;
   camMode = 2;
   document.getElementById('overlay').style.display = 'none';
@@ -5623,7 +5631,7 @@ function watchLeave(){ location.href = location.href.split('#')[0].split('?')[0]
 // 實際開始各模式仍是「點舊的隱藏按鈕」（btnPlayer、btnCampaign…），所以各模式原本的流程（闖關選關、
 // 賽道選玩法、連線大廳）都不用改。舊程式回選單時會把 #modesRow 設回顯示 → 這裡用 MutationObserver
 // 偵測到後把引導畫面重置回第 1 步；進入闖關／賽道／連線面板時舊程式會把 #modesRow 藏起來 → 引導畫面跟著藏。
-const MF = {stage:'1', mode:null, from:null, resume:null};
+const MF = {stage:'1', mode:null, from:null, resume:null, lastVs:null};
 const MF_SCENE_BG = {
   sky:'linear-gradient(180deg,#3a8ee6 0%,#9fd3ff 55%,#ffffff 100%)',
   arena:'radial-gradient(ellipse at 50% 80%,#2a3a8a,#070a14 70%),linear-gradient(90deg,#3d6bff,#ff4d5a)',
@@ -5642,7 +5650,7 @@ function mfShow(stage){
   document.querySelectorAll('#menuFlow .mfStage').forEach(s=>s.classList.toggle('on', s.id === 'mfS' + stage));
   const n = stage[0];                                   // '1' | '2' | '3'
   const steps = document.getElementById('mfSteps');
-  steps.classList.toggle('noS2', MF.mode === 'demo');   // 觀看示範沒有第 2 步
+  steps.classList.toggle('noS2', MF.mode === 'demo' || MF.mode === 'train');   // 觀看示範、選手訓練（主選單直接進）沒有第 2 步
   steps.querySelectorAll('span').forEach(sp=>{
     sp.classList.toggle('on', sp.dataset.s === n);
     sp.classList.toggle('done', sp.dataset.s < n);
@@ -5651,7 +5659,13 @@ function mfShow(stage){
   document.getElementById('menuFlow').classList.toggle('duo', n === '3' && MF.mode === 'duo');   // 雙人對戰：第 3 步多一列「1v1／3v3」
   document.getElementById('menuFlow').classList.toggle('prac', n === '3' && MF.mode === 'practice');   // 圓環練習：第 3 步多一列「單人／雙人」
   duoSyncOpt();
-  if(n === '3') mfBuildScenes();
+  // 圓環練習（腳架式穿越環）只在「天空之城」、不用球場 → 不顯示選場地／場地類型，場景固定天空之城（業主 2026-11-12）
+  document.getElementById('menuFlow').classList.toggle('vsM', n === '3' && (MF.mode === 'player' || MF.mode === 'duo'));   // 單機對戰：多一列「對手：AI／同機雙人」
+  const prac = n === '3' && MF.mode === 'practice';
+  document.getElementById('menuFlow').classList.toggle('pracSolo', prac);
+  document.querySelector('#mfS3 .mfQ').textContent = prac ? '圓環練習（天空之城）' : '選一個場地';
+  if(prac){ if(curScene !== 'sky') setScene('sky'); }
+  else if(n === '3') mfBuildScenes();
 }
 function mfBuildScenes(){
   const host = document.getElementById('mfScenes');
@@ -5666,6 +5680,7 @@ function mfBuildScenes(){
 document.querySelectorAll('#mfField button').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); setFieldStyle(b.dataset.fs); }));
 setFieldStyle(fieldStyle);
 function mfPickMode(m){
+  if(m === 'player') m = MF.lastVs || 'player';          // 單機對戰：沿用上次選的對手（AI／同機雙人）
   MF.mode = m;
   if(m === 'campaign' || m === 'race' || m === 'net'){   // 這三個有自己的下一步畫面（選關／選玩法／連線大廳）
     document.getElementById(MF_MODE_BTN[m]).click();
@@ -5681,17 +5696,20 @@ document.querySelectorAll('#menuFlow [data-go]').forEach(b=>b.addEventListener('
   else { MF.mode = null; mfShow('2' + g); }
 }));
 document.querySelectorAll('#menuFlow [data-mode]').forEach(b=>b.addEventListener('click', e=>{
-  e.stopPropagation(); mfPickMode(b.dataset.mode);
+  e.stopPropagation();
+  if(b.closest('#mfS1')) MF.from = null;                 // 從主選單直接進入的項目（選手訓練）：上一步回主選單
+  mfPickMode(b.dataset.mode);
 }));
 document.getElementById('mfGo').addEventListener('click', e=>{
   e.stopPropagation();
+  if(MF.mode === 'practice' && curScene !== 'sky') setScene('sky');          // 圓環練習固定天空之城
   if(MF.mode === 'practice' && DUO.pracDuo){ duoStartPractice(); return; }   // 雙人圓環練習
   const id = MF_MODE_BTN[MF.mode];
   if(id) document.getElementById(id).click();
 });
 document.getElementById('mfBack').addEventListener('click', e=>{
   e.stopPropagation();
-  if(MF.stage === '3' && MF.mode !== 'demo') mfShow('2' + MF.from);
+  if(MF.stage === '3' && MF.mode !== 'demo' && MF.from) mfShow('2' + MF.from);
   else mfShow('1');
 });
 (function(){
@@ -7881,7 +7899,7 @@ document.getElementById('btnRaceList').addEventListener('click', raceBackToPanel
 //   - 錄影：比賽中每 1/30 秒記一格「全部機體的物理狀態＋兩個球門的擺盪姿態」，保留最近 12 秒（環形緩衝）。
 //   - 進球：切出「進球前 6 秒～進球後 1.6 秒」成為一段片段，這場比賽的每一球都留著（重賽/回選單才清掉）。
 //   - 有人在玩（對戰 AI／雙人／連線）：只出現「關鍵回放」按鈕（或按 V），按了才看；
-//     單機／雙人按下去會暫停比賽、看完回到原狀態；連線對戰不能暫停別人，所以回放時比賽照常進行（畫面有提示）。
+//     單機／雙人按下去會暫停比賽、看完回到原狀態；網路對戰不能暫停別人，所以回放時比賽照常進行（畫面有提示）。
 //   - AI vs AI 示範賽：進球 1.6 秒後自動播一次（導播鏡頭＋進球瞬間慢動作），播完自動回到比賽；
 //     中途碰任何控制鍵就變成手動、不自動關。
 //   - 播放器：播放/暫停、逐格、拖時間軸、速度（慢動作特寫/0.25×/0.5×/1×）、六種鏡頭（導播/追射手/球門/全場/第一人稱/環繞，
@@ -8122,7 +8140,7 @@ function rpSyncUI(){
   document.getElementById('rpTitle').textContent = '第 ' + c.n + ' 球｜' + who + ' Striker 進球！';
   document.getElementById('rpTitle').style.color = c.team==='red' ? '#ff7a7a' : '#7ab4ff';
   document.getElementById('rpSub').textContent = '比分 藍 ' + c.sb + ' : ' + c.sr + ' 紅　·　剩 ' + mm + ':' + String(ss).padStart(2,'0')
-    + (mode==='net' ? '　·　連線比賽仍在進行中' : '') + (REPLAY.auto ? '　·　自動回放中（點任何按鈕接手）' : '');
+    + (mode==='net' ? '　·　網路比賽仍在進行中' : '') + (REPLAY.auto ? '　·　自動回放中（點任何按鈕接手）' : '');
   document.getElementById('rpMark').style.left = (c.goalAt / Math.max(0.01, c.dur) * 100) + '%';
   document.getElementById('rpClipN').textContent = (REPLAY.idx+1) + ' / ' + REPLAY.clips.length;
   document.getElementById('rpPlay').textContent = REPLAY.playing ? '❚❚' : '▶';
@@ -8236,7 +8254,7 @@ function rpKey(e){   // 回放中的鍵盤（比賽的按鍵這時都不作用�
 //     6 人臉型／胖瘦／髮型／膚色都不同；會眨眼、眼球盯著自己的機（模型保留 blink、look_* morph）。
 //     授權說明 assets/pilot_LICENSE.txt；烘焙腳本在專案資料夾 _tools/pilot_bake.mjs。
 //   - 選手站在兩端的選手區（藍隊在藍場 −x 那端、紅隊在紅場 +x 那端，面向場內）；每位對應 drones[i]。
-//   - 只讀各機的「畫面狀態」（mesh 位置、input、crash），不碰物理 → 回放／示範賽／連線對戰都相容。
+//   - 只讀各機的「畫面狀態」（mesh 位置、input、crash），不碰物理 → 回放／示範賽／網路對戰都相容。
 //   - 載入失敗（或沒網路抓不到 GLTFLoader）就不顯示選手，比賽完全不受影響。
 //   - 會動：在選手區裡跟著自己的機左右挪步、偶爾蹲低或往前靠、頭與上身追著自己的機轉；雙手一直握著遙控器（手肘夾在身體兩側），
 //     搖桿跟實際輸入動；進球得分隊原地小跳一下、失分隊低頭搖頭；自己的機墜機：身體前傾蹲低盯著看。
@@ -8782,7 +8800,7 @@ function loop(){
   const isNetClient = mode==='net' && !NET.isHost;
 
   if(isNetClient){
-    // ---- 連線對戰・非房主：不跑本地物理／AI，只送輸入、鏡射房主的權威快照 ----
+    // ---- 網路對戰・非房主：不跑本地物理／AI，只送輸入、鏡射房主的權威快照 ----
     if(NET.mySlot>=0) readInputInto(drones[NET.mySlot].input);
     sendMyInputToHost();
     applyNetSnapshotInterp();
@@ -8833,7 +8851,7 @@ function loop(){
     acc += dt;
     while(acc >= H){ raceStep(H, t); acc -= H; }
   }else if(state==='play'){
-    // ---- 單機／示範賽／連線對戰房主：完整權威物理 ----
+    // ---- 單機／示範賽／網路對戰房主：完整權威物理 ----
     timeLeft -= dt;
     if(timeLeft<=0){ timeLeft=0; endMatch(); }
     const mm = Math.floor(timeLeft/60), ss = Math.floor(timeLeft%60);
@@ -8882,7 +8900,7 @@ function loop(){
   if(mode==='net' && NET.isHost) netMaybeBroadcastSnapshot();   // 房主：無論何種 state 都持續廣播（暫停/賽後也同步）
   watchTick();                                  // 觀賽直播：直播主送畫面、觀眾套用（見 WATCH）
 
-  if(!isNetClient && state!=='pause' && state!=='replay') updateRingSwing(dt);   // 球門擺盪（連線對戰的其他人用房主快照）
+  if(!isNetClient && state!=='pause' && state!=='replay') updateRingSwing(dt);   // 球門擺盪（網路對戰的其他人用房主快照）
   // 視覺
   drones.forEach(d=>d.syncMesh(t));
   rpTick(dt, t);                                // 進球回放：錄影；回放中把模型擺到回放畫面
@@ -8930,7 +8948,7 @@ function loop(){
 
 // ---------- 離線使用（2026-11-05） ----------
 // sw.js（Service Worker）把網頁、lib/ 函式庫、assets/ 素材存在這台裝置上：有網路時打開過一次，之後沒網路或網路很慢
-//   也能直接打開、照常飛（練習、闖關、對 AI 比賽、選手訓練）。連線對戰／分享觀賽本來就要網路，不受影響。
+//   也能直接打開、照常飛（練習、闖關、對 AI 比賽、選手訓練）。網路對戰／分享觀賽本來就要網路，不受影響。
 //   第一次存完會在畫面下方提示一次。改了 index.html 或素材之後要更新 sw.js 裡的 CACHE 版本號，裝置才會換新版。
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   navigator.serviceWorker.addEventListener('message', e=>{
@@ -8940,7 +8958,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
     try{ localStorage.setItem('offlineReadyShown', e.data.cache); }catch(_){}
     const t = document.createElement('div');
     t.textContent = e.data.missing ? '部分素材還沒存好，下次有網路時會自動補齊'
-                                   : '已存到這台裝置：之後沒有網路也能打開、照常飛（連線對戰除外）';
+                                   : '已存到這台裝置：之後沒有網路也能打開、照常飛（網路對戰除外）';
     t.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10000;max-width:90vw;'
       + 'background:rgba(10,16,30,.92);color:#e8eefc;border:1px solid #3b82f6;border-radius:10px;padding:10px 16px;'
       + 'font-size:14px;line-height:1.4;text-align:center;pointer-events:none;transition:opacity .6s';
