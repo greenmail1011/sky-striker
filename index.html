@@ -140,7 +140,10 @@
     box-shadow:0 16px 40px rgba(0,0,0,.45),0 0 30px rgba(var(--c),.45);outline:none}
   .mfCard:active{transform:scale(.97)}
   .mfCard .ic:empty,#rotateHint .ic:empty,#watchGate .wgIc:empty{display:none}
-  .mfCard .ic{font-size:56px;line-height:1.1;filter:drop-shadow(0 6px 14px rgba(var(--c),.55));animation:mfFloat 4s ease-in-out infinite}
+  .ico svg{width:1em;height:1em;display:block;margin:0 auto}
+  .sceneBtn i{display:inline-flex;vertical-align:-.15em;margin-right:4px;font-style:normal}
+  .mfCard .ic svg,.mfScene .em svg,.sceneBtn i svg,#rotateHint .ic svg{width:1em;height:1em;display:block}
+  .mfCard .ic{color:rgb(var(--c));font-size:56px;line-height:1.1;filter:drop-shadow(0 6px 14px rgba(var(--c),.55));animation:mfFloat 4s ease-in-out infinite}
   .mfCard b{font-size:23px;letter-spacing:2px;margin-top:4px;position:relative;z-index:1}
   .mfCard span{font-size:13.5px;color:#b9c6e4;line-height:1.5;position:relative;z-index:1}
   .mfCard .tag{position:absolute;top:12px;left:12px;font-size:11px;font-weight:800;letter-spacing:1px;padding:3px 9px;border-radius:999px;
@@ -1102,6 +1105,30 @@ function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
   [-zo, zo].forEach(z=> airTube(0, yb, z, 0, yt, z, VINYL.blue));
   airTube(0, yt, -zo, 0, yt, zo, VINYL.blue);
 }
+
+// ---------- 選單圖示（2026-11-12：去 emoji 後按鈕難以辨認 → 改用單色線條 SVG，顏色跟著卡片主色，保持專業感） ----------
+const ICO_PATHS = {
+  go_train:'<rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 9.5L6.5 6.5M14.5 9.5l3-3M9.5 14.5l-3 3M14.5 14.5l3 3"/><circle cx="5" cy="5" r="2.6"/><circle cx="19" cy="5" r="2.6"/><circle cx="5" cy="19" r="2.6"/><circle cx="19" cy="19" r="2.6"/>',
+  go_match:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5l3.8 2.8-1.4 4.4H9.6l-1.4-4.4z"/><path d="M12 7.5V3M15.8 10.3l4.2-1.4M14.4 14.7l2.6 3.6M9.6 14.7L7 18.3M8.2 10.3L4 8.9"/>',
+  go_watch:'<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  mode_practice:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/>',
+  mode_campaign:'<path d="M12 3l2.7 5.8 6.3.8-4.6 4.4 1.2 6.3L12 17.2 6.4 20.3l1.2-6.3L3 9.6l6.3-.8z"/>',
+  mode_race:'<path d="M5 21V4"/><path d="M5 4h13l-2.5 4 2.5 4H5"/>',
+  mode_player:'<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4.5"/><circle cx="12" cy="3.6" r="1"/><circle cx="9" cy="14" r="1.3"/><circle cx="15" cy="14" r="1.3"/><path d="M2 13v3M22 13v3"/>',
+  mode_net:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  mode_duo:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M12 5v14"/><circle cx="7.5" cy="12" r="1.6"/><circle cx="16.5" cy="12" r="1.6"/>',
+  mode_train:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+  scene_sky:'<path d="M7 18a4 4 0 010-8 5.5 5.5 0 0110.6 1.5A3.3 3.3 0 0117 18z"/>',
+  scene_arena:'<path d="M3 20V9l9-5 9 5v11"/><path d="M3 20h18M8 20v-6h8v6"/>',
+  scene_meadow:'<path d="M2 20l6-10 4 6 3-4 7 8z"/><circle cx="17" cy="6" r="2"/>',
+  scene_neon:'<path d="M3 20v-8h4v8M9 20V5h5v15M16 20v-9h5v9M2 20h20"/>',
+  scene_orbit:'<circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(-20 12 12)"/>',
+  race_time:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/>',
+  race_coins:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M9.5 9.5h4a1.7 1.7 0 010 3.5h-3a1.7 1.7 0 000 3.5h4.5"/>',
+  race_nohit:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5L16 9.5"/>',
+  phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+};
+function ico(k){ const d = ICO_PATHS[k]; return d ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>' : ''; }
 
 // ---------- 鋼管網籠場地（2026-11-11 業主：現場除了充氣管框，也有「鋼管＋網籠」場地，系統要能選） ----------
 // 尺寸、球門、物理、規則都跟充氣版完全一樣，只換外觀：黑色細鋼管框＋紅／藍／白網（網格比充氣版大塊）＋兩端「B」字旗。
@@ -2070,7 +2097,7 @@ function envAnimate(dt){
 function buildSceneBar(){
   const host = document.getElementById('sceneBtns');
   host.innerHTML = SCENES.map(S=>
-    '<button class="sceneBtn" data-id="'+S.id+'"><i>'+S.emoji+'</i>'+S.name+'</button>').join('');
+    '<button class="sceneBtn" data-id="'+S.id+'"><i>'+ico('scene_'+S.id)+'</i>'+S.name+'</button>').join('');
   host.querySelectorAll('.sceneBtn').forEach(b=>
     b.addEventListener('click', ()=>setScene(b.dataset.id)));
 }
@@ -5299,6 +5326,11 @@ const MF_SCENE_BG = {
   neon:'linear-gradient(180deg,#0b0d2a 0%,#3a1060 55%,#ff3db4 100%)',
   orbit:'radial-gradient(circle at 75% 85%,#3f7fd8 0 22%,#0a1a3a 23%,#000 70%)',
 };
+document.querySelectorAll('#menuFlow .mfCard').forEach(b=>{
+  const k = b.dataset.go ? 'go_' + b.dataset.go : 'mode_' + b.dataset.mode, ic = b.querySelector('.ic');
+  if(ic) ic.innerHTML = ico(k);
+});
+{ const rh = document.querySelector('#rotateHint .ic'); if(rh) rh.innerHTML = ico('phone'); }
 const MF_MODE_BTN = {train:'btnTrain', player:'btnPlayer', practice:'btnPractice', demo:'btnDemo', campaign:'btnCampaign', race:'btnRace', net:'btnNet', duo:'btnDuo'};
 function mfShow(stage){
   MF.stage = stage;
@@ -5319,7 +5351,7 @@ function mfShow(stage){
 function mfBuildScenes(){
   const host = document.getElementById('mfScenes');
   host.innerHTML = SCENES.map(S=>'<button class="mfScene' + (S.id===curScene?' sel':'') + '" data-id="' + S.id + '" style="--bg:'
-    + (MF_SCENE_BG[S.id] || '#223') + '"><span class="em">' + S.emoji + '</span><b>' + S.name + '</b><small>' + S.sub + '</small></button>').join('');
+    + (MF_SCENE_BG[S.id] || '#223') + '"><span class="em">' + ico('scene_' + S.id) + '</span><b>' + S.name + '</b><small>' + S.sub + '</small></button>').join('');
   host.querySelectorAll('.mfScene').forEach(b=>b.addEventListener('click', e=>{
     e.stopPropagation();
     setScene(b.dataset.id);                             // 背景立刻換成該場景（選單後面就看得到）
@@ -5986,7 +6018,7 @@ function campBuildMaps(){
   host.innerHTML = SCENES.map(S=>{
     const st = campSceneStars(S.id), mx = campSceneMax(S.id), pct = Math.round(st/mx*100);
     return '<div class="campMapCard' + (S.id===campSceneId ? ' cur' : '') + '" data-id="' + S.id + '">' +
-           '<div class="ico">' + S.emoji + '</div><div class="nm">' + S.name + '</div>' +
+           '<div class="ico">' + ico('scene_' + S.id) + '</div><div class="nm">' + S.name + '</div>' +
            '<div class="sb">' + S.sub + '</div>' +
            '<div class="fly">' + ((S.fly && S.fly.note) || '無風') + '</div>' +
            '<div class="pg">★ ' + st + ' / ' + mx + '</div>' +
@@ -6658,7 +6690,7 @@ function raceBackToPanel(){
 function raceBuildPanel(){
   const M = RACE_MODES.find(m=>m.id===raceModeId);
   document.getElementById('raceModes').innerHTML = RACE_MODES.map(m=>
-    '<button class="sceneBtn' + (m.id===raceModeId ? ' on' : '') + '" data-id="' + m.id + '"><i>' + m.emoji + '</i>' + m.name + '</button>').join('');
+    '<button class="sceneBtn' + (m.id===raceModeId ? ' on' : '') + '" data-id="' + m.id + '"><i>' + ico('race_' + m.id) + '</i>' + m.name + '</button>').join('');
   document.querySelectorAll('#raceModes .sceneBtn').forEach(b=>b.addEventListener('click', ()=>{
     raceModeId = b.dataset.id;
     try{ localStorage.setItem(RACE_SAVE_KEY + '-mode', raceModeId); }catch(e){}
@@ -6669,7 +6701,7 @@ function raceBuildPanel(){
     const I = raceInfo(S.id), R = raceRec(S.id, raceModeId), st = raceStarsOf(S.id, raceModeId);
     const best = !R ? '尚未完賽' : raceModeId === 'coins' ? ('最佳 ' + R.coins + '/' + R.of + ' 枚') : ('最佳 ' + R.best.toFixed(1) + ' s');
     return '<div class="campMapCard raceCard" data-id="' + S.id + '">' +
-      '<div class="ico">' + S.emoji + '</div><div class="nm">' + I.T.name + '</div>' +
+      '<div class="ico">' + ico('scene_' + S.id) + '</div><div class="nm">' + I.T.name + '</div>' +
       '<div class="sb">' + S.name + '・' + I.gates.length + ' 道門・' + Math.round(I.len) + ' m</div>' +
       '<div class="fly">' + ((S.fly && S.fly.note) || '無風') + '</div>' +
       '<div class="pg">' + [0,1,2].map(i=> i < st ? '<b>★</b>' : '★').join('') + '</div>' +
