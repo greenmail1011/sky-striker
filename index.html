@@ -290,6 +290,8 @@
   /* ---- 左右雙人對戰（2026-10-21）---- */
   .c-duo{--c:255,190,90}
   .c-ref{--c:255,170,60}
+  .mfCard.soon{opacity:.6;border-style:dashed;filter:saturate(.6)}
+  #mfSoon{position:fixed;left:50%;bottom:9%;transform:translateX(-50%);z-index:80;padding:10px 22px;border-radius:999px;background:rgba(12,16,32,.95);border:1px solid #ffb44a;color:#ffd9a0;font-size:15px;font-weight:700;display:none;pointer-events:none}
   #mfDuoOpt{display:none;flex-direction:column;gap:8px;align-items:center;margin:-4px 0 14px;font-size:14px;color:#b9c6e4}
   #mfDuoOpt .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
   #mfDuoOpt small{color:#7c88a8;font-size:12px}
@@ -343,7 +345,20 @@
   #trainHUD b{color:#7dffa9;font-size:17px;margin:0 2px} #trainHUD .bad{color:#f87171}
   body.inMenu #trainHUD{visibility:hidden!important}
   body.touch.phone #trainHUD{transform:translateX(-50%) scale(.72);transform-origin:top center}
-  #menuFlow.duo .rTeam,#menuFlow.prac .rPlayers,#menuFlow.duo .rPad,#menuFlow.pracDuo .rPad{display:flex}
+  @media (max-height:760px){
+    #overlay.stage3 #mfLogo,#overlay.stage3 h2,#overlay.stage3 .credit{display:none}
+    #overlay.stage3 h1{font-size:22px!important;margin:0 0 4px}
+    #overlay.stage3 .mfQ{margin-bottom:6px;font-size:16px}
+    #overlay.stage3 #mfDuoOpt .row{gap:6px;margin:0 0 4px}
+    #overlay.stage3 #mfDuoOpt button{padding:5px 12px;font-size:13px}
+    #overlay.stage3 .mfGo{margin-top:8px;padding:9px 40px;font-size:16px}
+    #overlay.stage3 .mfBack{margin-top:6px}
+    #overlay.stage3 #aiLvDesc{font-size:11.5px;padding:4px 10px}
+    #overlay.stage3 #aiLvCmp{font-size:12px}
+    @media (max-height:620px){ #overlay.stage3 h1{display:none} #overlay.stage3 #mfDuoOpt .row{margin:0 0 2px} #overlay.stage3 #mfDuoOpt button{padding:3px 10px;font-size:12.5px} #overlay.stage3 .mfGo{margin-top:4px;padding:7px 36px} #overlay.stage3 .mfBack{margin-top:2px;padding:4px 14px} }
+  }
+  #mfDuoOpt .rPracTime{display:none}
+  #menuFlow.duo .rTeam,#menuFlow.prac .rPracTime,#menuFlow.duo .rPad,#menuFlow.pracDuo .rPad{display:flex}
   .duoP .prac{display:none} body.duoPrac .duoP .prac{display:inline} body.duoPrac .duoP .arm{display:none}
   #mfDuoOpt button{padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#dfe7f7;font-size:14px;cursor:pointer;font-family:inherit}
   #mfDuoOpt button.sel{background:rgba(255,190,90,.22);border-color:#ffbe5a;color:#fff;font-weight:800}
@@ -363,8 +378,8 @@
   .duoMsg{position:fixed;top:34%;transform:translateX(-50%);font-size:24px;font-weight:900;letter-spacing:1px;text-shadow:0 0 10px rgba(0,0,0,.95);z-index:10;pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap}
   #duoM0{left:25%} #duoM1{left:75%}
   body.inMenu .hud,body.inMenu #touchUI,body.inMenu #scoreboard,body.inMenu #campHUD,body.inMenu #raceHUD,body.inMenu #practiceHUD{visibility:hidden!important}
-  /* 手機橫拿：卡片縮小、一排放得下 */
-  @media (max-height:520px){
+  /* 矮螢幕（手機橫拿、一般筆電瀏覽器視窗）：卡片縮小、一排放得下，不用往下拉才看得到「開始」 */
+  @media (max-height:760px){
     #mfLogo{width:62px;height:62px;margin-bottom:2px} #overlay h1{font-size:26px!important;letter-spacing:2px}
     #overlay h2{font-size:10px;margin-bottom:8px;letter-spacing:4px}
     .mfSteps{margin-bottom:8px;font-size:11px} .mfSteps span{padding:3px 10px}
@@ -381,7 +396,7 @@
   }
   /* 手機橫拿＋Safari 工具列：選單高度跟著「看得到的範圍」(dvh)，內容太高時可往下捲、不再被截掉；
      用 ::before/::after 的 margin:auto 置中，內容超出時不會把上方推出畫面外 */
-  @media (max-height:520px){
+  @media (max-height:760px){
     #overlay{bottom:auto;height:100vh;height:100dvh;justify-content:flex-start!important;box-sizing:border-box;
       padding:10px 0 calc(16px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
     #overlay::before,#overlay::after{content:"";margin:auto;flex:0 0 0}
@@ -432,6 +447,20 @@
     background:rgba(7,7,26,.86);border:1px solid #1e1e40;border-radius:14px;padding:9px 18px;
     backdrop-filter:blur(6px);text-align:center}
   #campHUD .ttl,#raceHUD .ttl{font-size:15px;font-weight:900;color:#ffd75a;letter-spacing:1px}
+  #campGoal{top:132px;left:50%;transform:translateX(-50%);max-width:min(92vw,900px);padding:10px 26px;border-radius:16px;text-align:center;
+    background:rgba(20,14,0,.88);border:2px solid #ffb800;color:#fff;font-size:clamp(17px,2.6vw,26px);font-weight:900;letter-spacing:1px;
+    box-shadow:0 0 24px rgba(255,184,0,.45);animation:cgPulse 1.6s ease-in-out infinite;pointer-events:none;z-index:12}
+  #campGoal b{color:#ffd75a}
+  @keyframes cgPulse{0%,100%{box-shadow:0 0 14px rgba(255,184,0,.35)}50%{box-shadow:0 0 34px rgba(255,184,0,.8)}}
+  #campBig{left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:12}
+  #cbLbl{font-size:clamp(20px,3.4vw,34px);font-weight:900;color:#fff;text-shadow:0 0 12px #000,0 0 28px #000;letter-spacing:3px}
+  #cbNum{font-size:clamp(90px,19vw,190px);font-weight:900;line-height:1;color:#ffe066;font-variant-numeric:tabular-nums;
+    text-shadow:0 0 6px #000,0 0 26px rgba(255,184,0,.95),0 6px 28px #000}
+  #campBig.warn #cbNum{color:#ff6a5a;text-shadow:0 0 6px #000,0 0 26px rgba(255,70,50,.95),0 6px 28px #000}
+  #campBig.warn #cbLbl{color:#ffb0a8}
+  body.touch.phone #campGoal{top:70px;font-size:14px;padding:6px 14px}
+  body.touch.phone #cbNum{font-size:96px}
+  body.inMenu #campGoal,body.inMenu #campBig{visibility:hidden!important}
   #campHUD .brf,#raceHUD .brf{font-size:12.5px;color:#cdd8ee;margin-top:3px;line-height:1.5}
   #campHUD .env,#raceHUD .env{font-size:11.5px;color:#7dc4ff;margin-top:3px;letter-spacing:.5px}
   #campHUD .row,#raceHUD .row{display:flex;gap:16px;justify-content:center;align-items:center;margin-top:7px;
@@ -465,6 +494,12 @@
   #dyBody .big{font-size:20px;font-weight:700;color:#fff;margin:4px 0}
   #dyBody .st{margin-top:8px;font-size:14px}
   #dailyModal .dyRow{margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  #pracResult{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.72)}
+  #pracResult .prBox{background:rgba(12,16,32,.97);border:1px solid rgba(125,255,169,.5);border-radius:18px;padding:20px 34px;text-align:center;color:#e8ecf5;min-width:260px}
+  #pracResult h3{margin:0 0 6px;font-size:24px;letter-spacing:4px;color:#7dffa9}
+  #prBig{font-size:46px;font-weight:900;color:#ffd75a;line-height:1.2} #prBig small{font-size:18px;color:#cdd8ee;margin-left:4px}
+  #prSub{font-size:14px;color:#9fb0d8;margin:6px 0 12px;min-height:20px}
+  #pracResult .prRow{display:flex;gap:12px;justify-content:center}
   #refModal{position:fixed;inset:0;z-index:72;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.9)}
   #refModal .rfBox{background:rgba(12,16,32,.97);border:1px solid rgba(255,170,60,.4);border-radius:18px;padding:16px 22px;width:min(720px,94vw);max-height:94vh;overflow:auto;text-align:center}
   #refModal h3{margin:0 0 4px;font-size:22px;letter-spacing:4px;color:#ffb44a}
@@ -746,8 +781,12 @@
 <div class="hud" id="practiceHUD" style="display:none;top:12px;left:50%;transform:translateX(-50%);
   background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:14px;padding:10px 26px;
   text-align:center;font-size:14px;color:#cdd8ee;letter-spacing:1px">
-  靶場練習（由西往東 → 穿越）　次數<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
+  圓環練習（由西往東 → 穿越）　<span id="pracTimeLbl">剩餘</span><b id="pracTimeEl" style="color:#ffd75a;font-size:22px;margin:0 14px 0 6px">2:00</b>穿環<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
 </div>
+<div id="pracResult"><div class="prBox"><h3>時間到！</h3><div id="prBig"></div><div id="prSub"></div>
+  <div class="prRow"><button class="modeBtn" id="prAgain">再來一次</button><button class="modeBtn" id="prMenu">回選單</button></div></div></div>
+<div class="hud" id="campGoal" style="display:none"></div>
+<div class="hud" id="campBig" style="display:none"><div id="cbLbl"></div><div id="cbNum"></div></div>
 <div class="hud" id="campHUD" style="display:none">
   <div class="ttl" id="campTitle">—</div>
   <div class="brf" id="campBrief">—</div>
@@ -850,16 +889,16 @@
         <button class="mfCard c-train rec" data-go="train"><div class="ic"></div><b>基礎訓練</b><span>從零開始學操控<br>練習・闖關・賽道</span></button>
         <button class="mfCard c-match" data-go="match"><div class="ic"></div><b>足球比賽</b><span>跟 AI 或同學<br>來一場 3 分鐘對戰</span></button>
         <button class="mfCard c-trainp" data-mode="train"><div class="ic"></div><b>選手訓練</b><span>選攻擊手或防守手<br>對 AI 專項練習</span></button>
-        <button class="mfCard c-ref" data-go="referee"><div class="ic"></div><b>裁判訓練</b><span>看圖判決得分與違規<br>學會比賽規則</span></button>
+        <button class="mfCard c-ref soon" data-go="referee"><span class="tag">建置中</span><div class="ic"></div><b>裁判訓練</b><span>建置中・尚未開放</span></button>
         <button class="mfCard c-watch" data-go="watch"><div class="ic"></div><b>觀看示範</b><span>看 AI 怎麼踢<br>學走位與戰術</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS2train">
       <div class="mfQ">基礎訓練：照順序一步一步來</div>
       <div class="mfCards">
-        <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic"></div><b>圓環練習</b><span>自由飛行穿越圓環<br>先熟悉搖桿・可雙人</span></button>
-        <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 2</span><div class="ic"></div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
-        <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 3</span><div class="ic"></div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄・可雙人</span></button>
+        <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic"></div><b>圓環練習</b><span>穿越電子圓環<br>限時計次・先熟悉搖桿</span></button>
+        <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 2</span><div class="ic"></div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄・可雙人</span></button>
+        <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 3</span><div class="ic"></div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS2match">
@@ -873,7 +912,7 @@
       <div class="mfQ">選一個場地</div>
       <div id="mfDuoOpt">
         <div class="row rVs">對手：<button data-vs="player">對戰 AI</button><button data-vs="duo">同機雙人（左右分割）</button></div>
-        <div class="row rPlayers">人數：<button data-pd="0">單人</button><button data-pd="1">雙人（左右分割畫面）</button></div>
+        <div class="row rPracTime">練習時間：<button data-pt="30">30 秒</button><button data-pt="60">1 分鐘</button><button data-pt="120">2 分鐘</button><button data-pt="180">3 分鐘</button><button data-pt="300">5 分鐘</button><button data-pt="0">不限時</button></div>
         <div class="row rTeam">隊伍：<button data-v="0">只有兩人（1v1）</button><button data-v="1">加 AI 隊友（3v3）</button></div>
         <div class="row rTrain">我要練：<button data-tr="atk">攻擊手（Striker）</button><button data-tr="def">防守手（Defender）</button></div>
         <div class="row rTrainN">AI 防守：<button data-tn="1">1 個（Defender 卡位）</button><button data-tn="2">2 個（＋Harasser 衝撞）</button></div>
@@ -2459,8 +2498,9 @@ function drawGoalBoard(ring, num, color){
 }
 function updateGoalBoards(){
   const show = mode!=='campaign' && mode!=='race';
-  [ringEast, ringWest].forEach(ring=>{
-    const b = ring.board;
+  const isPrac = mode==='practice' || (mode==='duo' && DUO.kind==='practice');
+  (isPrac ? pracRings : [ringEast, ringWest]).forEach(ring=>{
+    const b = ring.board; if(!b) return;
     b.grp.visible = show;
     if(!show) return;
     // 每個球門顯示「穿過這個框」的次數：西框(紅)＝紅隊進球、東框(藍)＝藍隊進球；練習模式＝這個框的穿越次數
@@ -3190,12 +3230,17 @@ let ringPulse = null;
 
 // ---------- 練習模式：獨立於比賽／AI對戰／網路對戰，只有玩家機在場上，
 //            無比分／時間／AI 對手，穿越任一球門環即計數，方便一開始先熟悉操作 ----------
+const PRAC_TIME_KEY = 'hsinchuDronePracTimeV1', PRAC_BEST_KEY = 'hsinchuDronePracBestV1';
+let PRAC_TIME = 120;   // 圓環練習時間（秒），0＝不限時
+try{ const v = localStorage.getItem(PRAC_TIME_KEY); if(v !== null && [0,30,60,120,180,300].includes(+v)) PRAC_TIME = +v; }catch(e){}
+let pracTimeLeft = 0, pracElapsed = 0, pracEnded = false;
+const pracFmt = t => { t = Math.max(0, Math.ceil(t)); return Math.floor(t/60) + ':' + String(t%60).padStart(2,'0'); };
 let practiceCount = 0;
 let practiceCooldown = [0,0,0,0];
 // ---- 靶場（2026-11-12 業主：「圓環練習不用在網子競賽場裡面，就像打靶一樣，相同方向就可以了」）----
 // 圓環練習不再放在比賽場（網籠／充氣管框）裡：藏起比賽場、場地放大，改在開闊場地排一列圓環，全部朝同一方向（+x）；
 // 沿同一個方向（→）穿越才計數，逆向穿越只提示不計。單人／雙人練習共用。
-const PRAC_RINGS_SPEC = [[-3.5,1.7,0],[-1,2.3,0.7],[1.5,1.9,-0.7],[4,2.4,0]];   // [x, 高度 y, 側偏 z]
+const PRAC_RINGS_SPEC = [[0,1.9,0]];   // 一個電子環（業主 2026-11-12：「只需要一個人一個環」）   // [x, 高度 y, 側偏 z]
 let pracRings = [];
 // 圓環腳架：中央立桿（接在圓環正下方）＋三支向外張開的支腳，腳尖落地（群組原點在圓環中心，地面在 -ringY）
 function pracStand(ringY){
@@ -3253,6 +3298,26 @@ function setDroneVisible(d, vis){    // 機身 group 之外，Striker 的緞帶�
 function updatePracticeHUD(){
   const el = document.getElementById('practiceCountEl');
   if(el) el.textContent = practiceCount;
+  const te = document.getElementById('pracTimeEl'), tl = document.getElementById('pracTimeLbl');
+  if(te){
+    if(PRAC_TIME > 0){ tl.textContent = '剩餘'; te.textContent = pracFmt(pracTimeLeft); te.style.color = pracTimeLeft <= 10 ? '#ff6a6a' : '#ffd75a'; }
+    else { tl.textContent = '不限時・已用'; te.textContent = pracFmt(pracElapsed); te.style.color = '#ffd75a'; }
+  }
+}
+function practiceTick(dt){        // 每幀呼叫一次：倒數（或不限時的計時），時間到就結束
+  if(pracEnded) return;
+  if(PRAC_TIME > 0){ pracTimeLeft -= dt; if(pracTimeLeft <= 0){ pracTimeLeft = 0; updatePracticeHUD(); pracFinish(); return; } }
+  else pracElapsed += dt;
+  updatePracticeHUD();
+}
+function pracFinish(){
+  pracEnded = true; setState('over');
+  let best = 0, rec = false; const k = String(PRAC_TIME);
+  try{ const o = JSON.parse(localStorage.getItem(PRAC_BEST_KEY) || '{}') || {}; best = o[k] | 0; if(practiceCount > best){ best = practiceCount; rec = true; o[k] = best; localStorage.setItem(PRAC_BEST_KEY, JSON.stringify(o)); } }catch(e){}
+  document.getElementById('prBig').innerHTML = practiceCount + '<small>顆</small>';
+  document.getElementById('prSub').textContent = '練習時間 ' + pracFmt(PRAC_TIME) + '　' + (rec && practiceCount > 0 ? '新紀錄！' : '最佳 ' + best + ' 顆');
+  sfx.goal();
+  document.getElementById('pracResult').style.display = 'flex';
 }
 function checkPracticePass(dt){
   const d = player;
@@ -3277,6 +3342,8 @@ function restartPractice(){
   pracPlace(player, 0);
   practiceCount = 0; practiceCooldown = [0,0,0,0];
   pracRings.forEach(r=>r.passes = 0);
+  pracTimeLeft = PRAC_TIME; pracElapsed = 0; pracEnded = false;
+  document.getElementById('pracResult').style.display = 'none';
   updatePracticeHUD();
   setState('play');
 }
@@ -3297,6 +3364,8 @@ function startPractice(){
   restartPractice();
 }
 document.getElementById('btnPractice').addEventListener('click', startPractice);
+document.getElementById('prAgain').addEventListener('click', restartPractice);
+document.getElementById('prMenu').addEventListener('click', ()=>dispatchEvent(new KeyboardEvent('keydown', {code:'KeyM'})));
 
 // ---------- AI 飛手 ----------
 function angDiff(a,b){ let d=a-b; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; return d; }
@@ -4055,6 +4124,7 @@ addEventListener('keydown', e=>{
     drones.forEach(d=>setDroneVisible(d,true));      // 若剛才在練習模式，恢復其餘 5 台機顯示
     document.getElementById('scoreboard').style.display='flex';
     document.getElementById('practiceHUD').style.display='none';
+    document.getElementById('pracResult').style.display='none';
     document.getElementById('campPanel').style.display='none';
     document.getElementById('campMapPanel').style.display='none';
     document.getElementById('racePanel').style.display='none';
@@ -4871,6 +4941,7 @@ function duoSyncOpt(){
   document.querySelectorAll('#mfDuoOpt button[data-v]').forEach(b=>b.classList.toggle('sel', (b.dataset.v==='1') === DUO.ai));
   document.querySelectorAll('#mfDuoOpt button[data-pad]').forEach(b=>b.classList.toggle('sel', +b.dataset.pad === DUO.padSide));
   document.querySelectorAll('#mfDuoOpt button[data-vs]').forEach(b=>b.classList.toggle('sel', !!st0 && st0.mode === b.dataset.vs));
+  document.querySelectorAll('#mfDuoOpt button[data-pt]').forEach(b=>b.classList.toggle('sel', +b.dataset.pt === PRAC_TIME));
   document.querySelectorAll('#mfDuoOpt button[data-pd]').forEach(b=>b.classList.toggle('sel', (b.dataset.pd==='1') === DUO.pracDuo));
   const mf = document.getElementById('menuFlow');
   mf.classList.toggle('pracDuo', mf.classList.contains('prac') && DUO.pracDuo);
@@ -4899,6 +4970,7 @@ document.querySelectorAll('#mfDuoOpt button').forEach(b=>b.addEventListener('cli
   if(b.dataset.v !== undefined) DUO.ai = b.dataset.v === '1';
   if(b.dataset.pad !== undefined) DUO.padSide = +b.dataset.pad;
   if(b.dataset.pd !== undefined) DUO.pracDuo = b.dataset.pd === '1';
+  if(b.dataset.pt !== undefined){ PRAC_TIME = +b.dataset.pt; try{ localStorage.setItem(PRAC_TIME_KEY, String(PRAC_TIME)); }catch(err){} }
   if(b.dataset.vs !== undefined){ MF.lastVs = b.dataset.vs; MF.mode = b.dataset.vs; mfShow('3'); }   // 單機對戰：對 AI ⇄ 同機雙人
   if(b.dataset.lv !== undefined) aiSetLevel(+b.dataset.lv);
   if(b.dataset.tr !== undefined){ TRAIN.role = b.dataset.tr; trainSaveOpt(); }
@@ -5680,10 +5752,11 @@ function mfShow(stage){
   document.getElementById('menuFlow').classList.toggle('prac', n === '3' && MF.mode === 'practice');   // 圓環練習：第 3 步多一列「單人／雙人」
   duoSyncOpt();
   // 圓環練習（腳架式穿越環）只在「天空之城」、不用球場 → 不顯示選場地／場地類型，場景固定天空之城（業主 2026-11-12）
+  document.getElementById('overlay').classList.toggle('stage3', n === '3');   // 第 3 步內容最多：矮螢幕時收掉 logo／副標／版權
   document.getElementById('menuFlow').classList.toggle('vsM', n === '3' && (MF.mode === 'player' || MF.mode === 'duo'));   // 單機對戰：多一列「對手：AI／同機雙人」
   const prac = n === '3' && MF.mode === 'practice';
   document.getElementById('menuFlow').classList.toggle('pracSolo', prac);
-  document.querySelector('#mfS3 .mfQ').textContent = prac ? '圓環練習（天空之城）' : '選一個場地';
+  document.querySelector('#mfS3 .mfQ').textContent = prac ? '圓環練習：設定練習時間' : '選一個場地';
   if(prac){ if(curScene !== 'sky') setScene('sky'); }
   else if(n === '3') mfBuildScenes();
 }
@@ -5699,9 +5772,17 @@ function mfBuildScenes(){
 }
 document.querySelectorAll('#mfField button').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); setFieldStyle(b.dataset.fs); }));
 setFieldStyle(fieldStyle);
+let mfSoonTmr = null;
+function mfSoon(msg){
+  let el = document.getElementById('mfSoon');
+  if(!el){ el = document.createElement('div'); el.id = 'mfSoon'; document.body.appendChild(el); }
+  el.textContent = msg; el.style.display = 'block';
+  clearTimeout(mfSoonTmr); mfSoonTmr = setTimeout(()=>{ el.style.display = 'none'; }, 2200);
+}
 function mfPickMode(m){
   if(m === 'player') m = MF.lastVs || 'player';          // 單機對戰：沿用上次選的對手（AI／同機雙人）
   MF.mode = m;
+  if(m === 'practice'){ DUO.pracDuo = false; duoSaveOpt(); }   // 圓環練習只有單人
   if(m === 'campaign' || m === 'race' || m === 'net'){   // 這三個有自己的下一步畫面（選關／選玩法／連線大廳）
     document.getElementById(MF_MODE_BTN[m]).click();
     return;
@@ -5711,7 +5792,7 @@ function mfPickMode(m){
 document.querySelectorAll('#menuFlow [data-go]').forEach(b=>b.addEventListener('click', e=>{
   e.stopPropagation();
   const g = b.dataset.go;
-  if(g === 'referee'){ refOpen(); return; }          // 裁判訓練：看圖判決的情境題（不進比賽）
+  if(g === 'referee'){ mfSoon('裁判訓練建置中，尚未開放'); return; }   // 裁判訓練先不開放（情境題程式 refOpen 保留，之後把這行改回 refOpen() 即可）
   MF.from = g;
   if(g === 'watch'){ MF.mode = 'demo'; mfShow('3'); }
   else { MF.mode = null; mfShow('2' + g); }
@@ -5861,7 +5942,7 @@ const CAMP_BASE = [
 CAMP_BASE.forEach((L,i)=>{ L.id = i+1; L.no = L.ch + '-' + (i+1 - CAMP_BASE.findIndex(x=>x.ch===L.ch)); });
 
 // ---------- 闖關：場景物件（光環／航點／停機坪／信標／柱子） ----------
-const CAMP_COL = { pend:0x46557f, act:0x7dffa9, done:0xffd75a };
+const CAMP_COL = { pend:0x46557f, act:0xffb800, done:0x5dff8f };   // 目前目標＝醒目的琥珀黃（原本青綠色在草地／天空上不明顯）、完成＝綠
 const POLE_R = 0.07;
 const campGroup = new THREE.Group();
 scene.add(campGroup);
@@ -5874,7 +5955,7 @@ function campMat(hex, op){
 }
 // 由地面往上的細光柱：幫助判斷航點的水平位置（3D 空間中純球體很難目測遠近）
 function campBeam(x, y, z, hex){
-  const g = new THREE.CylinderGeometry(0.012, 0.012, Math.max(0.02,y), 6, 1, true);
+  const g = new THREE.CylinderGeometry(0.03, 0.03, Math.max(0.02,y), 8, 1, true);
   const m = new THREE.Mesh(g, campMat(hex, 0.25));
   m.position.set(x, y/2, z);
   return m;
@@ -5938,7 +6019,7 @@ function campBuildMarker(task){
 function campSetMarker(g, st){
   if(!g) return;
   const hex = CAMP_COL[st];
-  const k = st==='done' ? 0.40 : st==='act' ? 1.45 : 0.70;   // 現正進行的目標要明顯最亮
+  const k = st==='done' ? 0.40 : st==='act' ? 2.6 : 0.70;   // 現正進行的目標要明顯最亮（業主：提示太不明顯）
   g.userData.parts.forEach(m=>{
     m.color.set(campSRGB(hex));
     m.opacity = Math.min(1, (m.userData.op0!==undefined ? m.userData.op0 : m.opacity) * k);
@@ -6164,6 +6245,7 @@ function campExitCleanup(){
   campClearScene();
   campLevel = null; campTasks = []; campMarkers = []; campPoles = [];
   document.getElementById('campHUD').style.display = 'none';
+  document.getElementById('campGoal').style.display = 'none'; document.getElementById('campBig').style.display = 'none';
   document.getElementById('campResult').style.display = 'none';
   drones.forEach(d=>setDroneVisible(d, true));
 }
@@ -6283,8 +6365,29 @@ function campStep(h, t){
 }
 
 // ---------- 闖關：HUD、結算、關卡列表 ----------
+const CAMP_GOAL_TXT = {
+  hover: t=>'飛進發光圓圈內，<b>停留 ' + t.hold + ' 秒</b>', wp: ()=>'飛進發光的圓圈（碰到就算）', gate: ()=>'<b>穿過</b>發光的拱門',
+  land: ()=>'<b>降落</b>在發光圓圈內並停穩', face: t=>'機頭<b>對準</b>發光標記，保持 <b>' + t.hold + ' 秒</b>', goal: ()=>'<b>穿過</b>發光的電子球門',
+};
+let campPrevHold = 0;
+function campUpdateBig(){
+  const gEl = document.getElementById('campGoal'), bEl = document.getElementById('campBig');
+  const task = campLevel && !campDone ? campTasks[campIdx] : null;
+  if(!task){ gEl.style.display = 'none'; bEl.style.display = 'none'; return; }
+  gEl.style.display = 'block';
+  gEl.innerHTML = '目標 ' + (campIdx + 1) + ' / ' + campTasks.length + '　' + (CAMP_GOAL_TXT[task.t] ? CAMP_GOAL_TXT[task.t](task) : '完成發光的目標');
+  const need = task.t === 'land' ? 0.8 : task.hold;      // 要「停留」的關卡：在區域內大倒數
+  if(need && campHold > 0.03){
+    const losing = campHold < campPrevHold - 1e-4;
+    bEl.style.display = 'block'; bEl.classList.toggle('warn', losing);
+    document.getElementById('cbLbl').textContent = losing ? '回到區域內！' : (task.t === 'land' ? '停穩！' : task.t === 'face' ? '保持對準！' : '留在區域內！');
+    document.getElementById('cbNum').textContent = Math.max(0, need - campHold).toFixed(1);
+  }else bEl.style.display = 'none';
+  campPrevHold = campHold;
+}
 function campUpdateHUD(){
   if(!campLevel) return;
+  campUpdateBig();
   document.getElementById('campTitle').textContent = campLevel.no + '　' + campLevel.name;
   document.getElementById('campBrief').textContent = campLevel.brief;
   const SC = sceneById(campSceneId);
@@ -8914,7 +9017,8 @@ function loop(){
       acc -= H;
     }
   }else if(mode==='practice' && state==='play'){
-    // ---- 練習模式：只有玩家機在場上，無比分／時間／AI 對手，專心練習穿框操作 ----
+    // ---- 圓環練習：只有玩家機和一個電子環；可設定倒數時間 ----
+    practiceTick(dt);
     readPlayerInput();
     acc += dt;
     while(acc >= H){
