@@ -7851,7 +7851,7 @@ function pilotBuild(d, i){
     if(o.isBone){ o.name = PILOT.boneNames[bi++]; B[o.name] = o; }
     if(o.isMesh){
       o.frustumCulled = false;
-      o.castShadow = !ENV_LOW && !/Cornea|Eyelash|Eyebrow|Teeth/.test(o.material.name);
+      o.castShadow = !ENV_LOW && AUTOQ.tier<2 && !/Cornea|Eyelash|Eyebrow|Teeth/.test(o.material.name);
       if(o.material.name === 'Vest'){ o.material = o.material.clone(); o.material.map = pilotVestTex(d.team, d.role); o.material.needsUpdate = true; }
       else if(o.material.name === 'Tshirt'){ o.material = o.material.clone(); o.material.color.set(look.shirt).convertSRGBToLinear(); }
       else if(o.material.name === 'Hair'){ o.material = o.material.clone(); o.material.color.set(look.hair).convertSRGBToLinear(); pilotHairNormals(o); o.material.roughness = 0.46; o.material.alphaToCoverage = true; }
@@ -7902,7 +7902,7 @@ function pilotBuild(d, i){
 // 每幀：在 syncMesh／回放擺完模型之後呼叫
 function pilotsTick(dt, t){
   if(PILOT.state !== 'ready') return;
-  const show = rpMatchMode() || (state==='menu' && mode!=='race');
+  const show = !AUTOQ.hidePilots && (rpMatchMode() || (state==='menu' && mode!=='race'));
   const live = state === 'play';                                 // 比賽進行中才走動（暫停／回放時站著）
   for(const P of PILOT.list){
     const d = P.d, vis = show && !d.benched && d.mesh.grp.visible;
@@ -8248,9 +8248,49 @@ function pilotFingers(P, s, curl, thumb){
 }
 
 
+// ---------- 自動畫質調整（2026-11-12）----------
+// 量測實際幀率：連續偏低就自動降一級（只降不升，避免忽高忽低）；級別存 localStorage，網址 ?q=0~4 可強制指定（0＝最高）。
+//  0 全畫質｜1 陰影圖 1024｜2 像素比≤1.5、選手不投影｜3 像素比 1、關閉陰影｜4 像素比 0.75、場邊選手隱藏
+const AUTOQ = { tier:0, hidePilots:false, acc:0, frames:0, warm:0, cool:0, manual:false, KEY:'hsinchuDroneQualityV1', MAXT:4, FPS_MIN:38 };
+function autoQApply(){
+  const t = AUTOQ.tier, dpr = window.devicePixelRatio||1;
+  const pr = t>=4 ? 0.75 : t>=3 ? 1 : t>=2 ? Math.min(dpr,1.5) : Math.min(dpr,2);
+  renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight);
+  const ms = t>=1 ? 1024 : 2048;
+  if(key.shadow.mapSize.x !== ms){ key.shadow.mapSize.set(ms,ms); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map = null; } }
+  key.castShadow = t<3;
+  AUTOQ.hidePilots = t>=4;
+  const pilotShadow = t<2 && !ENV_LOW;
+  if(typeof PILOT!=='undefined' && PILOT.list) for(const P of PILOT.list) P.root.traverse(o=>{ if(o.isMesh && !/Cornea|Eyelash|Eyebrow|Teeth/.test(o.material.name)) o.castShadow = pilotShadow; });
+}
+function autoQInit(){
+  let t = 0;
+  try{ t = parseInt(localStorage.getItem(AUTOQ.KEY)||'0',10)||0; }catch(e){}
+  const m = /[?&]q=(\d)/.exec(location.search);
+  if(m){ t = +m[1]; AUTOQ.manual = true; try{ localStorage.setItem(AUTOQ.KEY, String(t)); }catch(e){} }   // ?q=0 也會把記住的級別改回最高
+  AUTOQ.tier = clamp(t,0,AUTOQ.MAXT); AUTOQ.warm = 6;
+  if(AUTOQ.tier>0) autoQApply();
+}
+function autoQTick(rawDt){
+  if(AUTOQ.manual || AUTOQ.tier>=AUTOQ.MAXT) return;
+  if(document.hidden || rawDt>2){ AUTOQ.acc=0; AUTOQ.frames=0; return; }   // 切分頁／卡住不算
+  if(AUTOQ.warm>0){ AUTOQ.warm -= rawDt; return; }                            // 剛載入、剛降級後先暖機
+  AUTOQ.acc += rawDt; AUTOQ.frames++;
+  if(AUTOQ.acc < 2.5) return;
+  const fps = AUTOQ.frames/AUTOQ.acc;
+  AUTOQ.acc = 0; AUTOQ.frames = 0;
+  if(fps < AUTOQ.FPS_MIN){
+    AUTOQ.tier++; AUTOQ.warm = 3; autoQApply();
+    try{ localStorage.setItem(AUTOQ.KEY, String(AUTOQ.tier)); }catch(e){}
+    console.info('[畫質] 幀率 '+fps.toFixed(0)+' fps，降到第 '+AUTOQ.tier+' 級');
+  }
+}
+autoQInit();
+let _aqLast = performance.now();
 function loop(){
   requestAnimationFrame(loop);
   bootTick();
+  { const n = performance.now(); autoQTick((n-_aqLast)/1000); _aqLast = n; }
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
   pollPadButtons();   // 搖桿按鍵（含暫停中可恢復）
