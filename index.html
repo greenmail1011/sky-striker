@@ -16,19 +16,20 @@
   html,body{margin:0;padding:0;overflow:hidden;background:#06080f;font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif;user-select:none}
   #c{display:block}
   .hud{position:fixed;color:#e8ecf5;text-shadow:0 0 6px rgba(0,0,0,.8);z-index:10;pointer-events:none}
-  #scoreboard{top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:stretch;gap:10px;
-    background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:14px;padding:8px 12px;backdrop-filter:blur(6px)}
-  .sb-panel{display:flex;flex-direction:column;align-items:center;border-radius:10px;padding:6px 12px;min-width:182px}
+  #scoreboard{top:6px;left:50%;transform:translateX(-50%);display:flex;align-items:stretch;gap:10px;
+    background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:12px;padding:5px 10px;backdrop-filter:blur(6px);transition:background .3s}
+  .sb-panel{display:flex;flex-direction:column;align-items:center;border-radius:10px;padding:3px 12px;min-width:118px}
   .sb-blue{background:rgba(29,78,216,.18)}
   .sb-red{background:rgba(185,28,28,.18)}
-  .sb-name{font-size:13px;font-weight:900;letter-spacing:3px}
+  .sb-name{font-size:11px;font-weight:900;letter-spacing:3px}
   .sb-blue .sb-name{color:#60a5fa}.sb-red .sb-name{color:#f87171}
-  .sb-big{font-size:42px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;transition:transform .12s}
+  .sb-big{font-size:38px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;transition:transform .12s}
   .sb-blue .sb-big{color:#60a5fa;text-shadow:0 0 30px rgba(96,165,250,.55)}
   .sb-red .sb-big{color:#f87171;text-shadow:0 0 30px rgba(248,113,113,.55)}
   .sb-big.pop{transform:scale(1.25)}
   .calc{display:flex;align-items:stretch;gap:3px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);
-    border-radius:8px;padding:3px;margin-top:6px}
+    border-radius:8px;padding:0 3px;margin-top:0;max-height:0;opacity:0;overflow:hidden;border-width:0;transition:max-height .35s ease,opacity .3s,margin .3s,padding .3s}
+  #scoreboard.sbx .calc{max-height:60px;opacity:1;padding:3px;margin-top:4px;border-width:1px}
   .cc{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;padding:2px 6px;min-width:34px}
   .cc b{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;color:#fff;line-height:1.1}
   .cc span{font-size:8px;color:#f1f5f9;white-space:nowrap;margin-top:1px}
@@ -441,6 +442,14 @@
     width:min(560px,94vw);max-height:90vh;overflow:auto;color:#cdd8ee;text-align:center}
   #ladderModal h3{margin:0 0 10px;font-size:24px;letter-spacing:4px;color:#ffd75a}
   #ladderToast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:72;display:none;background:rgba(12,16,32,.94);border:1px solid #ffd75a;color:#ffd75a;border-radius:999px;padding:8px 20px;font-size:14px;pointer-events:none;max-width:92vw;text-align:center}
+  #dailyModal{position:fixed;inset:0;z-index:71;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.88)}
+  #dailyModal .dyBox{background:rgba(12,16,32,.97);border:1px solid rgba(255,215,90,.45);border-radius:18px;padding:20px 28px;width:min(460px,92vw);text-align:center}
+  #dailyModal h3{margin:0 0 4px;font-size:24px;letter-spacing:4px;color:#ffd75a}
+  #dyDate{font-size:13px;color:#8e9bbd;margin-bottom:10px}
+  #dyBody{font-size:15px;color:#e8ecf5;line-height:1.8}
+  #dyBody .big{font-size:20px;font-weight:700;color:#fff;margin:4px 0}
+  #dyBody .st{margin-top:8px;font-size:14px}
+  #dailyModal .dyRow{margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
   #badgeModal{position:fixed;inset:0;z-index:71;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.88)}
   #badgeModal .bgBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:18px 24px;width:min(760px,94vw);max-height:92vh;overflow:auto;text-align:center}
   #badgeModal h3{margin:0 0 6px;font-size:22px;letter-spacing:4px;color:#ffd75a}
@@ -894,6 +903,7 @@
       <div id="raceHeadTtl">飛行賽道</div>
       <button class="netBtnSmall" id="btnLadder">天梯排行</button>
       <button class="netBtnSmall" id="btnCert">練習證書（示意）</button>
+      <button class="netBtnSmall" id="btnDaily">今日挑戰</button>
       <button class="netBtnSmall" id="btnBadge">成就徽章</button>
       <div id="raceTotal">★ 0 / 45</div>
     </div>
@@ -932,6 +942,8 @@
   </div>
 </div>
 <div id="ladderToast"></div>
+<div id="dailyModal"><div class="dyBox"><h3>今日挑戰</h3><div id="dyDate"></div><div id="dyBody"></div>
+  <div class="dyRow"><button class="modeBtn" id="dyStart">開始挑戰</button><button class="modeBtn" id="dyBoard">今日天梯</button><button class="modeBtn" id="dyClose">關閉</button></div></div></div>
 <div id="badgeModal"><div class="bgBox"><h3>成就徽章</h3><div id="bgCount"></div><div id="bgList"></div><div style="margin-top:12px"><button class="modeBtn" id="bgClose">關閉</button></div></div></div>
 <div id="certModal"><div class="ctBox"><h3>練習證書（示意）</h3>
   <div class="ctRow"><label>姓名 <input id="ctName" maxlength="12" placeholder="輸入姓名" autocomplete="off"></label>
@@ -3091,8 +3103,21 @@ function updateFouls(dt){
   });
 }
 
+let sbSnap = '', sbTimer = 0;
+function sbExpand(ms){      // 計分板預設只顯示比分與倒數；得分／違規變動時才短暫展開計算明細
+  const sb = document.getElementById('scoreboard'); if(!sb) return;
+  sb.classList.add('sbx'); clearTimeout(sbTimer);
+  if(ms > 0) sbTimer = setTimeout(()=>sb.classList.remove('sbx'), ms);
+}
 function updateScore(pop, team){
   const $ = id => document.getElementById(id);
+  const snap = [score.blue.g,score.blue.o,score.blue.d,score.red.g,score.red.o,score.red.d].join(',');
+  if(snap !== sbSnap){
+    const first = snap === '0,0,0,0,0,0';
+    sbSnap = snap;
+    if(first){ clearTimeout(sbTimer); document.getElementById('scoreboard').classList.remove('sbx'); }
+    else sbExpand(4500);
+  }
   $('blueScore').textContent = score.blue.g;
   $('redScore').textContent  = score.red.g;
   $('bG').textContent = score.blue.g; $('bO').textContent = score.blue.o;
@@ -6959,7 +6984,7 @@ const ladderEsc = x => String(x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;',
 function ladderAdd(sid, mid, t, coins){
   const k = sid + '|' + mid, arr = ladder[k] = ladder[k] || [];
   const e = {n: ladderName || '無名飛手', t: +t.toFixed(2), c: coins|0, ts: Date.now()};
-  if(LADDER_SCORE(mid) && mid!=='coins'){      // 闖關／對戰榜：同名字只留最佳一筆
+  if((LADDER_SCORE(mid) && mid!=='coins') || /^d\d{8}$/.test(mid)){      // 闖關／對戰／每日榜：同名字只留最佳一筆
     const i = arr.findIndex(x=>x.n===e.n);
     if(i >= 0){ if(ladderCmp(mid)(e, arr[i]) < 0) arr.splice(i,1); else return i + 1; }
   }
@@ -7081,12 +7106,12 @@ function ladderOpen(){
 }
 function ladderRender(){
   const mk = (list, cur, attr) => list.map(x=>'<button class="sceneBtn' + (x.id===cur ? ' on' : '') + '" ' + attr + '="' + x.id + '">' + x.name + '</button>').join('');
-  const isAi = ldSel.mid === 'ai';
-  const sid = isAi ? 'match' : ldSel.sid, mid = isAi ? 'ai' + ldSel.ai : ldSel.mid;      // 對戰 AI 榜不分場景；每個 AI 等級一張榜
+  const isAi = ldSel.mid === 'ai', isDaily = ldSel.mid === 'daily';
+  const sid = isAi ? 'match' : isDaily ? 'daily' : ldSel.sid, mid = isAi ? 'ai' + ldSel.ai : isDaily ? 'd' + dailyYmd() : ldSel.mid;      // 對戰 AI 榜不分場景；每個 AI 等級一張榜
   document.getElementById('ldScope').innerHTML = LADDER_URL ? mk([{id:'all', name:'天梯排行榜'}, {id:'local', name:'這台裝置'}], ldSel.scope, 'data-lc') : '';
-  document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly).concat([{id:'camp', name:'闖關星數'}, {id:'ai', name:'對戰 AI'}]), ldSel.mid, 'data-lm');
+  document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly).concat([{id:'camp', name:'闖關星數'}, {id:'ai', name:'對戰 AI'}, {id:'daily', name:'今日挑戰'}]), ldSel.mid, 'data-lm');
   document.getElementById('ldAi').innerHTML = isAi ? mk([1,2,3,4,5].map(i=>({id:String(i), name:AI_LEVELS[i].ic + ' ' + AI_LEVELS[i].name})), String(ldSel.ai), 'data-la') : '';
-  document.getElementById('ldScenes').innerHTML = isAi ? '' : mk(SCENES, ldSel.sid, 'data-ls');
+  document.getElementById('ldScenes').innerHTML = (isAi || isDaily) ? '' : mk(SCENES, ldSel.sid, 'data-ls');
   const tb = document.getElementById('ldModalTbl'), my = ++ldSeq;
   if(LADDER_URL && ldSel.scope === 'all'){
     tb.innerHTML = '<div class="ldEmpty">載入中…</div>';
@@ -7104,6 +7129,68 @@ document.getElementById('ldNameView').addEventListener('input', e=>{       // �
 });
 document.getElementById('btnLadder').addEventListener('click', ladderOpen);
 document.getElementById('ldClose').addEventListener('click', ()=>{ document.getElementById('ladderModal').style.display = 'none'; });
+
+// ---------- 每日挑戰（2026-11-12）----------
+// 每天依日期固定挑一個「場景＋玩法」（同一天所有人相同），單人完賽就算完成；成績上當天的專屬天梯（key＝daily|d＋日期）。
+// 完成紀錄存 localStorage（DAILY_KEY：days[日期]＝當天最佳成績），連續天數、徽章都由它算。從主選單或其他入口玩同場景同玩法也算。
+const DAILY_KEY = 'hsinchuDroneDailyV1', DAILY_MODES = ['time', 'nohit', 'items', 'laps'];
+let dailyData = {}; try{ dailyData = JSON.parse(localStorage.getItem(DAILY_KEY)||'{}') || {}; }catch(e){}
+const dailyYmd = (d) => { d = d || new Date(); return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0'); };
+function dailyPick(ymd){
+  ymd = ymd || dailyYmd();
+  let h = 2166136261; for(const ch of 'daily' + ymd){ h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return {ymd, sid: SCENES[h % SCENES.length].id, mid: DAILY_MODES[(h >>> 8) % DAILY_MODES.length]};
+}
+const dailyDone = ymd => !!(dailyData.days && dailyData.days[ymd]);
+function dailyStreak(){      // 目前連續天數：今天已完成就從今天往回數，否則從昨天（今天還有機會）
+  let n = 0; const d = new Date();
+  if(!dailyDone(dailyYmd(d))) d.setDate(d.getDate() - 1);
+  while(dailyDone(dailyYmd(d))){ n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function dailyBestStreak(){
+  const ks = Object.keys(dailyData.days || {}).sort(); let best = 0, run = 0, prev = null;
+  for(const k of ks){
+    const d = new Date(+k.slice(0,4), +k.slice(4,6)-1, +k.slice(6,8));
+    if(prev && Math.round((d - prev) / 86400000) === 1) run++; else run = 1;
+    prev = d; if(run > best) best = run;
+  }
+  return best;
+}
+function dailyOnFinish(ok, mid, total){      // raceFinish 呼叫：是今天的挑戰（同場景、同玩法、單人）且完賽才算
+  const P = dailyPick();
+  if(!ok || raceDuo || raceSceneId !== P.sid || mid !== P.mid) return;
+  const days = dailyData.days = dailyData.days || {}, prev = days[P.ymd];
+  if(!prev || total < prev) days[P.ymd] = +total.toFixed(2);
+  const keys = Object.keys(days).sort(); while(keys.length > 400) delete days[keys.shift()];
+  try{ localStorage.setItem(DAILY_KEY, JSON.stringify(dailyData)); }catch(e){}
+  ladderSubmitScore('daily', 'd' + P.ymd, total, 0, x=>ladderToast('今日挑戰　' + x + '　連續 ' + dailyStreak() + ' 天'));
+}
+function dailyOpen(){
+  const P = dailyPick(), S = SCENES.find(x=>x.id===P.sid), M = RACE_MODES.find(x=>x.id===P.mid), I = raceInfo(P.sid);
+  const best = dailyData.days && dailyData.days[P.ymd], st = dailyStreak();
+  document.getElementById('dyDate').textContent = P.ymd.slice(0,4) + '.' + P.ymd.slice(4,6) + '.' + P.ymd.slice(6,8) + '　每天 0 點換新題目';
+  document.getElementById('dyBody').innerHTML =
+    '<div class="big">' + S.name + '　×　' + M.name + '</div>' + '<div>' + I.T.name + '・' + I.gates.length + ' 道門・' + Math.round(I.len) + ' m</div>' +
+    '<div style="font-size:13px;color:#9fb0d8">' + M.desc + '</div>' +
+    '<div class="st">' + (best ? '<b style="color:#7dffa0">今日已完成　最佳 ' + best.toFixed(1) + ' s</b>' : '<b style="color:#ffd75a">今天還沒完成</b>') + '</div>' +
+    '<div class="st">連續 <b style="color:#ffd75a">' + st + '</b> 天　・　累計完成 <b style="color:#ffd75a">' + Object.keys(dailyData.days || {}).length + '</b> 天（最長連續 ' + dailyBestStreak() + ' 天）</div>';
+  document.getElementById('dailyModal').style.display = 'flex';
+}
+function dailyStart(){
+  const P = dailyPick();
+  raceModeId = P.mid; DUO.raceDuo = false;           // 每日挑戰一律單人
+  try{ localStorage.setItem(RACE_SAVE_KEY + '-mode', raceModeId); }catch(e){}
+  document.getElementById('dailyModal').style.display = 'none';
+  raceStart(P.sid);
+}
+document.getElementById('btnDaily').addEventListener('click', dailyOpen);
+document.getElementById('dyClose').addEventListener('click', ()=>{ document.getElementById('dailyModal').style.display = 'none'; });
+document.getElementById('dyStart').addEventListener('click', dailyStart);
+document.getElementById('dyBoard').addEventListener('click', ()=>{
+  document.getElementById('dailyModal').style.display = 'none';
+  ladderOpen(); ldSel.mid = 'daily'; ladderRender();
+});
 
 // ---------- 成就徽章（2026-11-12）----------
 // 全部由既有存檔（飛行賽道 raceSave、闖關 campSave、證書條件）即時算出，沒有另外記錄；想加徽章就在 BADGES 加一列。
@@ -7123,11 +7210,15 @@ const BADGES = (()=>{
     {n:'闖關好手',   d:'闖關模式累積達總星數的一半',             ok:()=>campTotal()*2>=campMax(), p:()=>[campTotal(), Math.ceil(campMax()/2)]},
     {n:'場景征服者', d:'任一場景的闖關關卡全部拿滿星',           ok:()=>SCENES.some(sc=>campListFor(sc.id).length && campSceneStars(sc.id)>=campListFor(sc.id).length*3)},
     {n:'滿星傳說',   d:'闖關模式全部拿滿星',                     ok:()=>campTotal()>=campMax(), p:()=>[campTotal(), campMax()]},
+    {n:'每日挑戰',   d:'完成一次「今日挑戰」',                   ok:()=>dailyTotalDaysSafe()>=1},
+    {n:'三日連勝',   d:'「今日挑戰」連續 3 天完成',               ok:()=>dailyBestStreak()>=3, p:()=>[dailyBestStreak(), 3]},
+    {n:'七日全勤',   d:'「今日挑戰」連續 7 天完成',               ok:()=>dailyBestStreak()>=7, p:()=>[dailyBestStreak(), 7]},
     {n:'初級證書',   d:'達成練習證書「初級」條件',               ok:()=>certUnlocked(0)},
     {n:'中級證書',   d:'達成練習證書「中級」條件',               ok:()=>certUnlocked(1), p:()=>[CERT_RULES[1].done(), CERT_RULES[1].total]},
     {n:'高級證書',   d:'達成練習證書「高級」條件',               ok:()=>certUnlocked(2), p:()=>[CERT_RULES[2].done(), CERT_RULES[2].total]},
   ];
 })();
+const dailyTotalDaysSafe = () => Object.keys((dailyData && dailyData.days) || {}).length;
 function badgeOpen(){
   let got = 0;
   const html = BADGES.map(b=>{
@@ -7317,6 +7408,7 @@ function raceFinish(ok, reason){
   if(!ok) st += '<br>' + g + '通過 ' + raceIdx + ' / ' + D.gates.length + ' 道拱門' + e;
   document.getElementById('raceStats').innerHTML = st;
   ladderResult(ok, mid, total);
+  dailyOnFinish(ok, mid, total);
   document.getElementById('raceResult').style.display = 'flex';
   raceArrow && (raceArrow.visible = false);
 }
