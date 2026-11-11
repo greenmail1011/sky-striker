@@ -139,6 +139,7 @@
   .mfCard:hover,.mfCard:focus-visible{transform:translateY(-7px) scale(1.03);border-color:rgb(var(--c));
     box-shadow:0 16px 40px rgba(0,0,0,.45),0 0 30px rgba(var(--c),.45);outline:none}
   .mfCard:active{transform:scale(.97)}
+  .mfCard .ic:empty,#rotateHint .ic:empty,#watchGate .wgIc:empty{display:none}
   .mfCard .ic{font-size:56px;line-height:1.1;filter:drop-shadow(0 6px 14px rgba(var(--c),.55));animation:mfFloat 4s ease-in-out infinite}
   .mfCard b{font-size:23px;letter-spacing:2px;margin-top:4px;position:relative;z-index:1}
   .mfCard span{font-size:13.5px;color:#b9c6e4;line-height:1.5;position:relative;z-index:1}
@@ -148,6 +149,9 @@
     font-size:11px;font-weight:900;padding:3px 34px;z-index:2}
   .c-train{--c:125,255,169}.c-match{--c:255,120,120}.c-watch{--c:120,180,255}.c-camp{--c:255,215,90}.c-race{--c:90,210,255}.c-net{--c:190,140,255}
   .mfScenes{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;width:100%}
+  .mfField{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:14px;font-size:13px;color:#9fb3d9}
+  .mfField button{padding:7px 18px;border-radius:999px;border:1px solid rgba(120,150,220,.35);background:rgba(20,30,60,.6);color:#dfe8ff;font-family:inherit;font-size:13px;cursor:pointer}
+  .mfField button.sel{background:linear-gradient(90deg,#7dffa9,#5ad1ff);color:#06210f;font-weight:800;border-color:transparent}
   .mfScene{width:168px;height:116px;border-radius:18px;cursor:pointer;position:relative;overflow:hidden;font-family:inherit;color:#fff;
     border:2px solid rgba(255,255,255,.18);background:var(--bg);display:flex;flex-direction:column;justify-content:flex-end;
     align-items:flex-start;padding:10px 12px;text-align:left;transition:transform .2s,box-shadow .2s,border-color .2s;
@@ -444,6 +448,12 @@
   #fsCard h3{margin:0 0 8px;font-size:17px;color:#ffd75a} #fsCard ol{margin:6px 0 10px;padding-left:22px}
   #fsCard .note{font-size:12px;color:#8a94ad} #fsCard button{margin-top:6px;padding:7px 22px;border-radius:10px;
     border:1px solid rgba(125,255,169,.5);background:rgba(125,255,169,.15);color:#e8ecf5;font-size:14px;font-family:inherit}
+  #audioCtl{position:fixed;left:84px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:70;display:flex;align-items:center;gap:6px;padding:4px 8px;
+    border-radius:9px;border:1px solid rgba(160,190,255,.4);background:rgba(12,18,36,.75);color:#aab8d8;font-size:12px}
+  #audioCtl button{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:2px 4px;touch-action:manipulation}
+  #audioCtl button.off{color:#fb923c;text-decoration:line-through}
+  #audioCtl input{width:84px;accent-color:#7dffa9;cursor:pointer} #audioCtl span{min-width:30px;text-align:right}
+  body.replaying #audioCtl{display:none}
   #touchToggle{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:70;padding:6px 10px;
     border-radius:9px;border:1px solid rgba(160,190,255,.4);background:rgba(12,18,36,.75);color:#aab8d8;font-size:12px;
     cursor:pointer;font-family:inherit;touch-action:manipulation}
@@ -561,14 +571,14 @@
   </div>
 </div>
 <div class="hud" id="msg"></div>
-<button class="hud" id="rpBtn" style="display:none">🎬 回放</button>
+<button class="hud" id="rpBtn" style="display:none">回放</button>
 <div id="hudTgl" style="display:none">
-  <button id="rpToggle" title="關掉後：進球不切回放片段、不出現回放按鈕、示範賽也不自動回放">🎬 回放：開</button>
-  <button id="demoLoop" style="display:none" title="打開後，每場結束會自動開始下一場">🔁 連續對戰：關</button>
-  <button id="watchShare" style="display:none" title="複製觀賽網址：朋友打開就能即時看這場比賽">📡 分享觀賽</button>
+  <button id="rpToggle" title="關掉後：進球不切回放片段、不出現回放按鈕、示範賽也不自動回放">回放：開</button>
+  <button id="demoLoop" style="display:none" title="打開後，每場結束會自動開始下一場">連續對戰：關</button>
+  <button id="watchShare" style="display:none" title="複製觀賽網址：朋友打開就能即時看這場比賽">分享觀賽</button>
 </div>
 <div id="watchPop">
-  <div class="wpTitle">📡 觀賽直播中</div>
+  <div class="wpTitle">觀賽直播中</div>
   <div class="wpMsg" id="wpMsg">網址已複製！貼到 LINE／群組，朋友打開就能即時看。</div>
   <div class="wpUrl"><input id="wpUrl" readonly><button id="wpCopy">複製</button></div>
   <div id="wpQR"></div>
@@ -576,7 +586,7 @@
 </div>
 <div id="watchGate">
   <div class="wgBox">
-    <div class="wgIc">📺</div>
+    <div class="wgIc"></div>
     <div class="wgT">即時觀賽</div>
     <div class="wgS">房號 <b id="wgCode"></b>　<span id="wgStat">連線中…</span></div>
     <button id="wgGo">▶ 開始觀看（有聲音）</button>
@@ -592,9 +602,9 @@
     <div class="rpSeekRow"><div class="rpSeekWrap"><input type="range" id="rpSeek" min="0" max="1000" step="1" value="0"><i id="rpMark" title="進球瞬間"></i></div><span id="rpTime"></span></div>
     <div class="rpRow">
       <span class="rpGrp"><button data-a="prevClip" title="上一球">◀</button><span id="rpClipN"></span><button data-a="nextClip" title="下一球">▶</button></span>
-      <span class="rpGrp"><button data-a="start" title="從頭（Home）">⏮</button><button data-a="back" title="退一格（←）">◀▌</button><button data-a="play" id="rpPlay" class="big" title="播放／暫停（空白鍵）">⏸</button><button data-a="fwd" title="進一格（→）">▐▶</button><button data-a="goal" title="跳到進球瞬間（G）">⚽</button><button data-a="loop" id="rpLoop" title="重複播放">🔁</button></span>
-      <span class="rpGrp"><button data-sp="auto" title="進球瞬間自動慢動作">🎬 特寫</button><button data-sp="0.25">0.25×</button><button data-sp="0.5">0.5×</button><button data-sp="1">1×</button></span>
-      <span class="rpGrp"><button data-cam="dir" title="1">🎬 導播</button><button data-cam="chase" title="2">🎥 追射手</button><button data-cam="goal" title="3">🥅 球門</button><button data-cam="wide" title="4">🛰 全場</button><button data-cam="fpv" title="5">👁 FPV</button><button data-cam="orbit" title="6：拖曳畫面環繞、滾輪縮放">🔄 環繞</button></span>
+      <span class="rpGrp"><button data-a="start" title="從頭（Home）">|◀</button><button data-a="back" title="退一格（←）">◀▌</button><button data-a="play" id="rpPlay" class="big" title="播放／暫停（空白鍵）"></button><button data-a="fwd" title="進一格（→）">▐▶</button><button data-a="goal" title="跳到進球瞬間（G）"></button><button data-a="loop" id="rpLoop" title="重複播放"></button></span>
+      <span class="rpGrp"><button data-sp="auto" title="進球瞬間自動慢動作">特寫</button><button data-sp="0.25">0.25×</button><button data-sp="0.5">0.5×</button><button data-sp="1">1×</button></span>
+      <span class="rpGrp"><button data-cam="dir" title="1">導播</button><button data-cam="chase" title="2">追射手</button><button data-cam="goal" title="3">球門</button><button data-cam="wide" title="4">全場</button><button data-cam="fpv" title="5">FPV</button><button data-cam="orbit" title="6：拖曳畫面環繞、滾輪縮放">環繞</button></span>
       <button data-a="close" class="rpClose">✕ 回到比賽</button>
     </div>
     <div id="rpHint">拖曳畫面＝環繞觀看・滾輪縮放・空白鍵 播放/暫停・← → 逐格・↑ ↓ 速度・1~6 換鏡頭・G 進球瞬間・V/Esc 離開</div>
@@ -604,7 +614,7 @@
 <div class="hud" id="practiceHUD" style="display:none;top:12px;left:50%;transform:translateX(-50%);
   background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:14px;padding:10px 26px;
   text-align:center;font-size:14px;color:#cdd8ee;letter-spacing:1px">
-  🎯 練習模式　穿越次數<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
+  練習模式　穿越次數<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
 </div>
 <div class="hud" id="campHUD" style="display:none">
   <div class="ttl" id="campTitle">—</div>
@@ -632,12 +642,12 @@
   <div id="duoDiv"></div>
   <div class="duoP" id="duoP0"><span class="who">P1 藍隊 Striker</span>
     <span>速度 <span class="v" id="duoSpd0">0.0</span> m/s</span><span>高度 <span class="v" id="duoAlt0">0.0</span> m</span>
-    <span>推力 <span class="v" id="duoThr0">0</span>%</span><span class="arm">得分權 <span id="duoArm0" class="armed">已解鎖</span></span><span class="prac">🎯 穿越 <span class="v" id="duoCnt0">0</span> 次</span><span class="racei" id="duoRace0"></span>
+    <span>推力 <span class="v" id="duoThr0">0</span>%</span><span class="arm">得分權 <span id="duoArm0" class="armed">已解鎖</span></span><span class="prac">穿越 <span class="v" id="duoCnt0">0</span> 次</span><span class="racei" id="duoRace0"></span>
     <span class="pad" id="duoPad0">—</span>
     <span class="kb" id="duoKb0"></span></div>
   <div class="duoP" id="duoP1"><span class="who">P2 紅隊 Striker</span>
     <span>速度 <span class="v" id="duoSpd1">0.0</span> m/s</span><span>高度 <span class="v" id="duoAlt1">0.0</span> m</span>
-    <span>推力 <span class="v" id="duoThr1">0</span>%</span><span class="arm">得分權 <span id="duoArm1" class="armed">已解鎖</span></span><span class="prac">🎯 穿越 <span class="v" id="duoCnt1">0</span> 次</span><span class="racei" id="duoRace1"></span>
+    <span>推力 <span class="v" id="duoThr1">0</span>%</span><span class="arm">得分權 <span id="duoArm1" class="armed">已解鎖</span></span><span class="prac">穿越 <span class="v" id="duoCnt1">0</span> 次</span><span class="racei" id="duoRace1"></span>
     <span class="pad" id="duoPad1">—</span>
     <span class="kb" id="duoKb1"></span></div>
   <div class="duoMsg" id="duoM0"></div><div class="duoMsg" id="duoM1"></div>
@@ -646,16 +656,17 @@
   <div class="joy" id="joyL"><span class="joyLbl">油門／旋轉</span><div class="joyBase"></div><div class="joyKnob"></div></div>
   <div class="joy" id="joyR"><span class="joyLbl">前後／側飛</span><div class="joyBase"></div><div class="joyKnob"></div></div>
   <div id="touchBtns">
-    <button data-k="KeyC" title="切換視角">🎥</button>
-    <button data-k="KeyP" title="暫停">⏸</button>
+    <button data-k="KeyC" title="切換視角">視角</button>
+    <button data-k="KeyP" title="暫停">❚❚</button>
     <button data-k="KeyR" title="重來">↻</button>
     <button data-k="KeyM" title="回選單">☰</button>
     <button id="fsBtn" title="全螢幕">⛶</button>
   </div>
 </div>
-<button id="touchToggle">🎮 觸控</button>
+<button id="touchToggle">觸控</button>
+<div id="audioCtl"><button id="audioMute" title="靜音／取消靜音">音效</button><input type="range" id="audioVol" min="0" max="100" step="5" title="音量"><span id="audioPct"></span></div>
 <div id="fsCard"><div class="box">
-  <h3>📱 iPhone 怎麼全螢幕飛行</h3>
+  <h3>iPhone 怎麼全螢幕飛行</h3>
   iPhone 的 Safari 不讓網頁自己切成全螢幕，有兩個辦法：
   <ol>
     <li><b>馬上用：</b>點網址列左邊的 <b>≡</b>（或「大小」圖示）→ 選「<b>隱藏工具列</b>」。要叫回來時點畫面最上方。</li>
@@ -665,13 +676,13 @@
   加入主畫面的版本，闖關星星和賽道紀錄跟 Safari 裡的是分開記的。</div>
   <div style="text-align:center"><button id="fsCardOk">知道了</button></div>
 </div></div>
-<div id="rotateHint"><div class="ic">📱</div><div>請把手機轉成<b>橫向</b>操作</div>
+<div id="rotateHint"><div class="ic"></div><div>請把手機轉成<b>橫向</b>操作</div>
   <div style="font-size:13px;color:#7c88a8">左搖桿＝油門／旋轉　右搖桿＝前後／側飛（Mode 2，跟實機遙控器一樣）</div></div>
 <div class="hud" id="credit">新竹市無人機創新科技協會©</div>
 <div class="hud" id="netBadge" style="display:none;top:12px;right:16px;background:rgba(8,12,24,.7);
   border:1px solid rgba(120,160,255,.25);border-radius:10px;padding:6px 12px;font-size:12px;color:#9fc1ff"></div>
 <div class="hud mini" id="telemetry">
-  <div class="pTitle" data-k="tele">📊 飛行數據 <span class="pHint">（滑鼠移過來展開・點標題固定）</span></div>
+  <div class="pTitle" data-k="tele">飛行數據 <span class="pHint">（滑鼠移過來展開・點標題固定）</span></div>
   <b>你的 Striker（紅）</b><br>
   速度 <span id="tSpd">0.0</span> m/s<br>
   高度 <span id="tAlt">0.0</span> m<br>
@@ -680,15 +691,15 @@
   搖桿 <span id="tPad" style="color:#fbbf24">未偵測</span>
 </div>
 <div class="hud mini" id="help">
-  <div class="pTitle" data-k="help">⌨️ 操作說明・美國手 <span class="pHint">（滑鼠移過來展開・點標題固定）</span></div>
+  <div class="pTitle" data-k="help">操作說明・美國手 <span class="pHint">（滑鼠移過來展開・點標題固定）</span></div>
   <b>W / S</b> 上升 / 下降（油門）<br>
   <b>A / D</b> 機頭左轉 / 右轉<br>
   <b>↑ / ↓</b> 前進 / 後退<br>
   <b>← / →</b> 左 / 右側飛<br>
   <b>C</b> 視角（追視/機載/全場）<br>
-  <b>🖱 拖曳畫面</b> 轉視角・<b>滾輪</b> 遠近・<b>雙擊</b> 回預設<br>
+  <b>拖曳畫面</b> 轉視角・<b>滾輪</b> 遠近・<b>雙擊</b> 回預設<br>
   <b>P</b> 暫停&nbsp;<b>R</b> 重來&nbsp;<b>M</b> 模式選單<br>
-  <b>🎮 搖桿</b> 左桿=油門/旋轉、右桿=前後/側飛<br>
+  <b>搖桿</b> 左桿=油門/旋轉、右桿=前後/側飛<br>
   <b>&nbsp;</b> △視角&nbsp;OPTIONS暫停&nbsp;SHARE重賽
 </div>
 
@@ -701,45 +712,46 @@
     <div class="mfStage" id="mfS1">
       <div class="mfQ">今天想做什麼？</div>
       <div class="mfCards">
-        <button class="mfCard c-train rec" data-go="train"><div class="ic">🛫</div><b>飛行訓練</b><span>從零開始學操控<br>練習・闖關・賽道</span></button>
-        <button class="mfCard c-match" data-go="match"><div class="ic">⚽</div><b>足球比賽</b><span>跟 AI 或同學<br>來一場 3 分鐘對戰</span></button>
-        <button class="mfCard c-watch" data-go="watch"><div class="ic">👀</div><b>觀看示範</b><span>看 AI 怎麼踢<br>學走位與戰術</span></button>
+        <button class="mfCard c-train rec" data-go="train"><div class="ic"></div><b>飛行訓練</b><span>從零開始學操控<br>練習・闖關・賽道</span></button>
+        <button class="mfCard c-match" data-go="match"><div class="ic"></div><b>足球比賽</b><span>跟 AI 或同學<br>來一場 3 分鐘對戰</span></button>
+        <button class="mfCard c-watch" data-go="watch"><div class="ic"></div><b>觀看示範</b><span>看 AI 怎麼踢<br>學走位與戰術</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS2train">
       <div class="mfQ">飛行訓練：照順序一步一步來</div>
       <div class="mfCards">
-        <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic">🎯</div><b>圓環練習</b><span>自由飛行穿越圓環<br>先熟悉搖桿・可雙人</span></button>
-        <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 2</span><div class="ic">🏆</div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
-        <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 3</span><div class="ic">🏁</div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄・可雙人</span></button>
+        <button class="mfCard c-train rec" data-mode="practice"><span class="tag">STEP 1</span><div class="ic"></div><b>圓環練習</b><span>自由飛行穿越圓環<br>先熟悉搖桿・可雙人</span></button>
+        <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 2</span><div class="ic"></div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
+        <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 3</span><div class="ic"></div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄・可雙人</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS2match">
       <div class="mfQ">要跟誰比？</div>
       <div class="mfCards">
-        <button class="mfCard c-match" data-mode="player"><div class="ic">🤖</div><b>對戰 AI</b><span>你是紅隊 Striker<br>隊友和對手都是 AI</span></button>
-        <button class="mfCard c-net" data-mode="net"><div class="ic">🌐</div><b>連線對戰</b><span>開房間給同學房號<br>1v1・2v2・3v3</span></button>
-        <button class="mfCard c-duo" data-mode="duo"><div class="ic">👥</div><b>雙人對戰</b><span>同一台電腦左右分割畫面<br>兩支搖桿・藍 vs 紅</span></button>
-        <button class="mfCard c-trainp" data-mode="train"><div class="ic">🏋️</div><b>選手訓練</b><span>選攻擊手或防守手<br>對 AI 專項練習</span></button>
+        <button class="mfCard c-match" data-mode="player"><div class="ic"></div><b>對戰 AI</b><span>你是紅隊 Striker<br>隊友和對手都是 AI</span></button>
+        <button class="mfCard c-net" data-mode="net"><div class="ic"></div><b>連線對戰</b><span>開房間給同學房號<br>1v1・2v2・3v3</span></button>
+        <button class="mfCard c-duo" data-mode="duo"><div class="ic"></div><b>雙人對戰</b><span>同一台電腦左右分割畫面<br>兩支搖桿・藍 vs 紅</span></button>
+        <button class="mfCard c-trainp" data-mode="train"><div class="ic"></div><b>選手訓練</b><span>選攻擊手或防守手<br>對 AI 專項練習</span></button>
       </div>
     </div>
     <div class="mfStage" id="mfS3">
       <div class="mfQ">選一個場地</div>
       <div id="mfDuoOpt">
-        <div class="row rPlayers">人數：<button data-pd="0">👤 單人</button><button data-pd="1">👥 雙人（左右分割畫面）</button></div>
-        <div class="row rTeam">隊伍：<button data-v="0">⬜ 只有兩人（1v1）</button><button data-v="1">🤖 加 AI 隊友（3v3）</button></div>
-        <div class="row rTrain">我要練：<button data-tr="atk">⚔️ 攻擊手（Striker）</button><button data-tr="def">🛡️ 防守手（Defender）</button></div>
-        <div class="row rTrainN">AI 防守：<button data-tn="1">🛡️ 1 個（Defender 卡位）</button><button data-tn="2">🛡️🛡️ 2 個（＋Harasser 衝撞）</button></div>
+        <div class="row rPlayers">人數：<button data-pd="0">單人</button><button data-pd="1">雙人（左右分割畫面）</button></div>
+        <div class="row rTeam">隊伍：<button data-v="0">只有兩人（1v1）</button><button data-v="1">加 AI 隊友（3v3）</button></div>
+        <div class="row rTrain">我要練：<button data-tr="atk">攻擊手（Striker）</button><button data-tr="def">防守手（Defender）</button></div>
+        <div class="row rTrainN">AI 防守：<button data-tn="1">1 個（Defender 卡位）</button><button data-tn="2">2 個（＋Harasser 衝撞）</button></div>
         <div class="row rTrain"><small id="trainDesc" style="color:#bcd3f5"></small></div>
-        <div class="row rAi">AI 難度：<button data-lv="1">🐣 新手</button><button data-lv="2">🙂 入門</button><button data-lv="3">💪 進階</button><button data-lv="4">🔥 高手</button><button data-lv="5">👑 大師</button></div>
+        <div class="row rAi">AI 難度：<button data-lv="1">新手</button><button data-lv="2">入門</button><button data-lv="3">進階</button><button data-lv="4">高手</button><button data-lv="5">大師</button></div>
         <div class="row rAi"><div id="aiLvDesc"></div></div>
-        <div class="row rAi"><details id="aiLvCmp"><summary>📋 五個難度差在哪？（點開比較）</summary><div id="aiLvTable"></div></details></div>
-        <div class="row rAiDemo blue"><span class="tm">🔵 藍隊 AI</span><button data-dlv="blue:1">🐣 新手</button><button data-dlv="blue:2">🙂 入門</button><button data-dlv="blue:3">💪 進階</button><button data-dlv="blue:4">🔥 高手</button><button data-dlv="blue:5">👑 大師</button></div>
-        <div class="row rAiDemo red"><span class="tm">🔴 紅隊 AI</span><button data-dlv="red:1">🐣 新手</button><button data-dlv="red:2">🙂 入門</button><button data-dlv="red:3">💪 進階</button><button data-dlv="red:4">🔥 高手</button><button data-dlv="red:5">👑 大師</button></div>
+        <div class="row rAi"><details id="aiLvCmp"><summary>五個難度差在哪？（點開比較）</summary><div id="aiLvTable"></div></details></div>
+        <div class="row rAiDemo blue"><span class="tm">藍隊 AI</span><button data-dlv="blue:1">新手</button><button data-dlv="blue:2">入門</button><button data-dlv="blue:3">進階</button><button data-dlv="blue:4">高手</button><button data-dlv="blue:5">大師</button></div>
+        <div class="row rAiDemo red"><span class="tm">紅隊 AI</span><button data-dlv="red:1">新手</button><button data-dlv="red:2">入門</button><button data-dlv="red:3">進階</button><button data-dlv="red:4">高手</button><button data-dlv="red:5">大師</button></div>
         <div class="row rAiDemo"><small id="aiDemoDesc" style="color:#bcd3f5"></small></div>
         <div class="row rPad">只有一支搖桿時，搖桿給：<button data-pad="0">◀ 左邊 P1 藍</button><button data-pad="1">右邊 P2 紅 ▶</button><small>另一人用鍵盤</small></div>
       </div>
       <div class="mfScenes" id="mfScenes"></div>
+      <div class="mfField" id="mfField"><span>場地類型</span><button data-fs="inflatable">充氣管框</button><button data-fs="cage">鋼管網籠</button></div>
       <button class="mfGo" id="mfGo">開始 ▶</button>
     </div>
     <button class="mfBack" id="mfBack">‹ 上一步</button>
@@ -758,16 +770,16 @@
     <div id="sceneBtns"></div>
   </div>
   <div class="modes" id="modesRow">
-    <button class="modeBtn" id="btnPlayer">🎮 玩家 vs AI</button>
-    <button class="modeBtn" id="btnPractice">🎯 穿越圓環練習</button>
-    <button class="modeBtn" id="btnCampaign">🏆 闖關模式</button>
-    <button class="modeBtn" id="btnRace">🏁 飛行賽道</button>
-    <button class="modeBtn" id="btnDemo">🤖 AI vs AI 示範賽</button>
-    <button class="modeBtn" id="btnNet">🌐 連線對戰</button>
-    <button class="modeBtn" id="btnDuo">👥 左右雙人對戰</button>
-    <button class="modeBtn" id="btnTrain">🏋️ 選手訓練</button>
+    <button class="modeBtn" id="btnPlayer">玩家 vs AI</button>
+    <button class="modeBtn" id="btnPractice">穿越圓環練習</button>
+    <button class="modeBtn" id="btnCampaign">闖關模式</button>
+    <button class="modeBtn" id="btnRace">飛行賽道</button>
+    <button class="modeBtn" id="btnDemo">AI vs AI 示範賽</button>
+    <button class="modeBtn" id="btnNet">連線對戰</button>
+    <button class="modeBtn" id="btnDuo">左右雙人對戰</button>
+    <button class="modeBtn" id="btnTrain">選手訓練</button>
   </div>
-  <div id="fsTip">📱 想要全螢幕飛行？iPhone 請點網址列左邊的 <b>≡</b> →「<b>隱藏工具列</b>」，或 <a id="fsTipMore">加入主畫面（看作法）</a></div>
+  <div id="fsTip">想要全螢幕飛行？iPhone 請點網址列左邊的 <b>≡</b> →「<b>隱藏工具列</b>」，或 <a id="fsTipMore">加入主畫面（看作法）</a></div>
   <div id="netPanel" style="display:none">
     <div style="text-align:center;margin-bottom:12px">
       <button class="netBtnSmall" id="btnNetBack">‹ 返回選單</button>
@@ -781,8 +793,8 @@
     <div id="netLobby" style="display:none">
       <div id="netLobbyHead">房號 <b id="netRoomCodeShow"></b>　<span id="netStatus"></span></div>
       <div id="netCfgRow">空位：
-        <button class="netBtnSmall" id="btnFillAI" data-v="1">🤖 AI 代打</button>
-        <button class="netBtnSmall" id="btnFillNone" data-v="0">⬜ 不上場（只有真人）</button>
+        <button class="netBtnSmall" id="btnFillAI" data-v="1">AI 代打</button>
+        <button class="netBtnSmall" id="btnFillNone" data-v="0">不上場（只有真人）</button>
       </div>
       <div id="netSlots"></div>
       <div id="netFormat"></div>
@@ -796,7 +808,7 @@
   <div id="campMapPanel" style="display:none">
     <div id="campHead">
       <button class="netBtnSmall" id="btnCampMapBack">‹ 返回選單</button>
-      <div id="campMapTotal">⭐ 0 / 360</div>
+      <div id="campMapTotal">★ 0 / 360</div>
     </div>
     <div id="campMaps"></div>
     <div style="text-align:center;margin-top:12px;font-size:12px;color:#7c88a8">
@@ -806,10 +818,10 @@
   <div id="racePanel" style="display:none">
     <div id="raceHead">
       <button class="netBtnSmall" id="btnRaceBack">‹ 返回選單</button>
-      <div id="raceHeadTtl">🏁 飛行賽道</div>
-      <div id="raceTotal">⭐ 0 / 45</div>
+      <div id="raceHeadTtl">飛行賽道</div>
+      <div id="raceTotal">★ 0 / 45</div>
     </div>
-    <div id="raceDuoOpt">人數：<button class="sceneBtn" data-rd="0">👤 單人</button><button class="sceneBtn" data-rd="1">👥 雙人（左右分割）</button>
+    <div id="raceDuoOpt">人數：<button class="sceneBtn" data-rd="0">單人</button><button class="sceneBtn" data-rd="1">雙人（左右分割）</button>
       <span id="raceDuoPad">　只有一支搖桿時給：<button class="sceneBtn" data-rpad="0">◀ 左 P1 藍</button><button class="sceneBtn" data-rpad="1">右 P2 紅 ▶</button></span></div>
     <div id="raceModes"></div>
     <div id="raceModeDesc"></div>
@@ -820,7 +832,7 @@
     <div id="campHead">
       <button class="netBtnSmall" id="btnCampBack">‹ 場景選擇</button>
       <div id="campSceneName">—</div>
-      <div id="campStarTotal">⭐ 0 / 72</div>
+      <div id="campStarTotal">★ 0 / 72</div>
     </div>
     <div id="campList"></div>
     <div style="text-align:center;margin-top:10px">
@@ -1032,13 +1044,14 @@ function makeNetTexture(){
   return t;
 }
 const netTex = makeNetTexture();
+const netObjs = [];   // 充氣管框場地用的黑色網牆（切到鋼管網籠時整組隱藏）
 function netWall(w,h,rx,ry,px,py,pz,repX,repY,op=0.6){
   const tex = netTex.clone(); tex.needsUpdate=true;
   tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(repX,repY);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h),
     new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:op, side:THREE.DoubleSide, depthWrite:false}));
   m.rotation.x = rx; m.rotation.y = ry; m.position.set(px,py,pz);
-  scene.add(m);
+  scene.add(m); netObjs.push(m);
 }
 netWall(FIELD.hx*2, FIELD.h, 0, 0,          0, FIELD.h/2, -FIELD.hz, FIELD.hx*4, FIELD.h*2); // 後牆
 netWall(FIELD.hx*2, FIELD.h, 0, 0,          0, FIELD.h/2,  FIELD.hz, FIELD.hx*4, FIELD.h*2, 0.16); // 前牆＝觀眾面：半透明，方便觀賞
@@ -1055,6 +1068,7 @@ function vinylCapMat(hex){
     color:new THREE.Color(hex).convertSRGBToLinear(), roughness:.42, metalness:0});  // sRGB 輸出下保持飽和
   return capMats[hex];
 }
+const inflObjs = [];   // 充氣管框的管子／接頭（切到鋼管網籠時隱藏）
 const occluders = [];   // 會遮擋視線的場地元件（材質各自獨立，可單獨淡出）
 function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
   // 平滑 PVC 充氣管（業主指定：不要一節一節的縫線感）
@@ -1062,11 +1076,11 @@ function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),18,1), vinylCapMat(hex).clone());
   m.position.copy(a).add(d.clone().multiplyScalar(.5));
   m.quaternion.setFromUnitVectors(UP, d.clone().normalize());
-  m.castShadow = true; scene.add(m); occluders.push(m);
+  m.castShadow = true; scene.add(m); occluders.push(m); inflObjs.push(m);
   // 球形充氣接頭（轉角圓潤）
   [a,b].forEach(p=>{
     const cap = new THREE.Mesh(new THREE.SphereGeometry(r,14,10), vinylCapMat(hex).clone());
-    cap.position.copy(p); cap.castShadow = true; scene.add(cap); occluders.push(cap);
+    cap.position.copy(p); cap.castShadow = true; scene.add(cap); occluders.push(cap); inflObjs.push(cap);
   });
 }
 {
@@ -1089,6 +1103,76 @@ function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
   airTube(0, yt, -zo, 0, yt, zo, VINYL.blue);
 }
 
+// ---------- 鋼管網籠場地（2026-11-11 業主：現場除了充氣管框，也有「鋼管＋網籠」場地，系統要能選） ----------
+// 尺寸、球門、物理、規則都跟充氣版完全一樣，只換外觀：黑色細鋼管框＋紅／藍／白網（網格比充氣版大塊）＋兩端「B」字旗。
+// 選擇存 localStorage（FIELD_STYLE_KEY）；整組是 scene 的頂層物件，賽道模式 raceHideArena 會一併藏起來。
+const FIELD_STYLE_KEY = 'hsinchuDroneFieldStyleV1';
+let fieldStyle = 'inflatable';
+const cageObjs = [];
+function cageNetTex(rgb, cell){
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const g = cv.getContext('2d'); g.strokeStyle = rgb; g.lineWidth = 3.2;
+  g.beginPath(); g.moveTo(0,0); g.lineTo(0,64); g.moveTo(0,0); g.lineTo(64,0); g.stroke();
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+function cageNet(w,h, ry,rx, px,py,pz, rgb, op=0.62){
+  const CELL = 0.12;                                   // 網格約 12cm（充氣版約 6cm）
+  const tex = cageNetTex(rgb); tex.repeat.set(w/CELL, h/CELL);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+    new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:op, side:THREE.DoubleSide, depthWrite:false}));
+  m.rotation.x = rx; m.rotation.y = ry; m.position.set(px,py,pz);
+  scene.add(m); cageObjs.push(m); return m;
+}
+const CAGE_STEEL = new THREE.MeshStandardMaterial({color:0x15181d, roughness:.45, metalness:.75});
+function cageTube(x1,y1,z1,x2,y2,z2,r=0.032){
+  const a=V3(x1,y1,z1), b=V3(x2,y2,z2), d=b.clone().sub(a);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),10,1), CAGE_STEEL);
+  m.position.copy(a).add(d.clone().multiplyScalar(.5));
+  m.quaternion.setFromUnitVectors(UP, d.clone().normalize());
+  m.castShadow = true; scene.add(m); cageObjs.push(m);
+}
+function cageFlag(x, z, letter, hex){
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+  const g = cv.getContext('2d'); g.fillStyle = hex; g.fillRect(0,0,128,128);
+  g.fillStyle = '#fff'; g.font = '900 96px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(letter, 64, 70);
+  const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+  const H = 1.7;
+  cageTube(x, 0, z, x, H, z, 0.012);
+  const f = new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.34), new THREE.MeshBasicMaterial({map:tex, side:THREE.DoubleSide}));
+  f.position.set(x, H-0.2, z+0.18); scene.add(f); cageObjs.push(f);
+}
+{
+  const xo = FIELD.hx + 0.04, zo = FIELD.hz + 0.04, yb = 0.03, yt = FIELD.h;
+  const RED = 'rgba(214,52,48,.95)', BLU = 'rgba(40,104,222,.95)', WHT = 'rgba(236,236,230,.95)';
+  // 鋼管框：四角＋中線的直柱、地面一圈、頂部一圈＋中線橫管＋兩個球門正上方的橫管（球門吊在這裡）
+  [-xo, 0, xo].forEach(x=> [-zo, zo].forEach(z=> cageTube(x, yb, z, x, yt, z)));
+  [yb, yt].forEach(y=>{
+    [-zo, zo].forEach(z=> cageTube(-xo, y, z, xo, y, z));
+    [-xo, xo].forEach(x=> cageTube(x, y, -zo, x, y, zo));
+  });
+  cageTube(0, yt, -zo, 0, yt, zo);
+  [-1,1].forEach(sx=> cageTube(sx*RING.x, yt, -zo, sx*RING.x, yt, zo));
+  // 網：長邊側網依半場分紅／藍，端線網白色，頂網依半場分紅／藍（前牆＝觀眾面維持半透明）
+  const hx = FIELD.hx, hz = FIELD.hz, h = FIELD.h;
+  [[-1,BLU],[1,RED]].forEach(([sx,c])=>{
+    cageNet(hx, h, 0,0, sx*hx/2, h/2, -hz, c);              // 後側網
+    cageNet(hx, h, 0,0, sx*hx/2, h/2,  hz, c, 0.18);        // 前側網（觀眾面）
+    cageNet(hx, hz*2, 0,Math.PI/2, sx*hx/2, h, 0, c, 0.5);  // 頂網
+    cageNet(hz*2, h, Math.PI/2,0, sx*hx, h/2, 0, WHT);      // 端線網
+  });
+  // 兩端「B」字旗（紅／藍），立在端線外側角落
+  cageFlag(-xo-0.45, -zo-0.2, 'B', '#2459d8');
+  cageFlag( xo+0.45, -zo-0.2, 'B', '#e3342c');
+}
+function setFieldStyle(st){
+  fieldStyle = (st === 'cage') ? 'cage' : 'inflatable';
+  const cg = fieldStyle === 'cage';
+  inflObjs.forEach(o=>o.visible = !cg); netObjs.forEach(o=>o.visible = !cg);
+  cageObjs.forEach(o=>o.visible = cg);
+  document.querySelectorAll('#mfField button').forEach(b=> b.classList.toggle('sel', b.dataset.fs === fieldStyle));
+  try{ localStorage.setItem(FIELD_STYLE_KEY, fieldStyle); }catch(e){}
+}
+
 // ---------- 觀眾席與廣告板（氛圍） ----------
 // 2026-11-11 重做（業主：「人像選手和觀眾要更逼真、更精緻」）：
 //   - 看台：真實尺寸的階梯看台（每排高 0.36、深 0.78）＋塑膠座椅＋前排欄杆，中間留走道。
@@ -1100,6 +1184,7 @@ function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
 //   - 圖集載不到（沒上傳 assets/crowd.webp）就只有空看台，不影響比賽。烘焙工具：_tools/crowdbake.html。
 const standGroups = [];    // 四面看台的 group：室內場景才顯示（見場景系統 setScene；每幀由 crowdTick 決定顯示）
 const flashSprites = [];   // 觀眾手機閃光燈
+const SHOW_CROWD = false;   // 2026-11-11 業主：觀眾會干擾視線，先不要有觀眾（看台＋人像＋觀眾聲）；要恢復改成 true
 const CROWD = { NP:12, NF:6, excite:0.1, mats:[], stands:[], tex:null, light:[0.80,0.82,0.92], flash:true };
 const STAND = { rows: 5, rise:0.36, tread:0.78, base:0.45, seatW:0.5 };
 function crowdMaterial(){
@@ -1926,27 +2011,27 @@ function buildOrbit(){
 //     這樣 arena 場景的外觀與加入場景系統前完全相同。
 const SCENE_SAVE_KEY = 'hsinchuDroneSoccerSceneV1';
 const SCENES = [
-  {id:'sky',    emoji:'☁️', name:'天空之城', sub:'雲海 · 浮空島 · 懸浮看台',
+  {id:'sky',    emoji:'', name:'天空之城', sub:'雲海 · 浮空島',
    bg:0xd6ecff, fog:[0xdcefff,26,150], stands:true,  apron:false,
    fly:{wind:{x:0,z:0},       gust:0.12, updraft:0.20, dragMul:1,    note:'微弱上升氣流'},
    diff:{parMul:1.20, hitAdd:1},
    hemi:[0xffffff,0xbcd8f5,1.05], key:[0xfff4dc,1.35], fill:[0xcfe4f7,0.55], build:buildSkyCity},
-  {id:'arena',  emoji:'🏟️', name:'室內競技場', sub:'實際場地 · 觀眾看台',
+  {id:'arena',  emoji:'', name:'室內競技場', sub:'實際場地 · 標準室內',
    bg:0x070a14, fog:[0x070a14,12,40],  stands:true,
    fly:{wind:{x:0,z:0},       gust:0,    updraft:0,    dragMul:1,    note:'無風（標準室內場地）'},
    diff:{parMul:1.00, hitAdd:0},
    hemi:[0x9db2ff,0x1e3320,0.65], key:[0xffffff,1.15], fill:[0xaac4ff,0.50], build:null},
-  {id:'meadow', emoji:'🌿', name:'草原湖畔', sub:'遠山 · 湖面反光 · 樹林',
+  {id:'meadow', emoji:'', name:'草原湖畔', sub:'遠山 · 湖面反光 · 樹林',
    bg:0xd3e7f0, fog:[0xd8e9f0,32,170], stands:true,  apron:false,
    fly:{wind:{x:-0.25,z:0.42},gust:0.15, updraft:0,    dragMul:1,    note:'穩定側風'},
    diff:{parMul:0.92, hitAdd:0},
    hemi:[0xeaf6ff,0x4d9040,0.95], key:[0xfff2d6,1.50], fill:[0xbfe0f0,0.45], build:buildMeadow},
-  {id:'neon',   emoji:'🌃', name:'霓虹夜城', sub:'夜空 · 霓虹天際線',
+  {id:'neon',   emoji:'', name:'霓虹夜城', sub:'夜空 · 霓虹天際線',
    bg:0x06070f, fog:[0x0b0d20,18,90],  stands:true,  apron:false,
    fly:{wind:{x:0.10,z:-0.12},gust:0.75, updraft:0,    dragMul:1,    note:'大樓陣風（忽強忽弱）'},
    diff:{parMul:0.85, hitAdd:-1},
    hemi:[0x5a6bff,0x1a0f2e,0.40], key:[0xd8e6ff,0.85], fill:[0xff5ab8,0.45], build:buildNeonCity},
-  {id:'orbit',  emoji:'🛰️', name:'軌道太空站', sub:'星空 · 地球 · 太陽',
+  {id:'orbit',  emoji:'', name:'軌道太空站', sub:'星空 · 地球 · 太陽',
    bg:0x000005, fog:[0x000008,80,400], stands:true,  apron:false,
    fly:{wind:{x:0,z:0},       gust:0.08, updraft:0,    dragMul:0.45, note:'真空慣性・煞不住'},
    diff:{parMul:0.80, hitAdd:-1},
@@ -1995,6 +2080,7 @@ function updateSceneBar(){
 }
 buildSceneBar();
 setScene((()=>{ try{ return localStorage.getItem(SCENE_SAVE_KEY) || SCENES[0].id; }catch(e){ return SCENES[0].id; } })());
+setFieldStyle((()=>{ try{ return localStorage.getItem(FIELD_STYLE_KEY); }catch(e){ return null; } })());
 
 // ---------- 圓形球門框 ----------
 // 2026-10-21 依業主實際球框照片重做：圓環（內徑 40cm、外徑 70cm、厚 20cm），正反兩面同一張印刷圖——
@@ -2450,6 +2536,7 @@ class Drone{
     if(this.pos.y < DRONE_R){
       this.pos.y = DRONE_R;
       if(this.vel.y < 0){
+        hapticHit(this, -this.vel.y);
         if(this.vel.y < -2.5) this.disturb = Math.min(1, this.disturb + (-this.vel.y)*0.07);
         if(this.vel.y < -3.2 && chaosOn() && Math.random() < Math.min(0.7, (-this.vel.y-3.2)*0.4)){ this.startCrash(); return; }   // 重摔
         this.vel.y = -this.vel.y*0.35;
@@ -2460,7 +2547,7 @@ class Drone{
     // 天花網
     if(this.pos.y > ARENA.h-DRONE_R){
       this.pos.y = ARENA.h-DRONE_R;
-      if(this.vel.y>0){ const hit = this.vel.y; this.vel.y = -this.vel.y*REST_WALL; this.netHit(hit, V3(0,-1,0)); }
+      if(this.vel.y>0){ const hit = this.vel.y; this.vel.y = -this.vel.y*REST_WALL; hapticHit(this, hit); this.netHit(hit, V3(0,-1,0)); }
     }
     // 四面網牆
     const bx = ARENA.hx-DRONE_R, bz = ARENA.hz-DRONE_R;
@@ -2469,6 +2556,7 @@ class Drone{
       this.pos.x = Math.sign(this.pos.x)*bx;
       this.vel.x = -this.vel.x*REST_WALL; this.vel.y*=0.92; this.vel.z*=0.92;
       if(hit>2) this.disturb = Math.min(1,this.disturb+hit*0.05);
+      hapticHit(this, hit);
       this.netHit(hit, V3(-Math.sign(this.pos.x),0,0));
     }
     if(Math.abs(this.pos.z)>bz){
@@ -2476,6 +2564,7 @@ class Drone{
       this.pos.z = Math.sign(this.pos.z)*bz;
       this.vel.z = -this.vel.z*REST_WALL; this.vel.y*=0.92; this.vel.x*=0.92;
       if(hit>2) this.disturb = Math.min(1,this.disturb+hit*0.05);
+      hapticHit(this, hit);
       this.netHit(hit, V3(0,0,-Math.sign(this.pos.z)));
     }
     if(this.crash) return;
@@ -2555,7 +2644,7 @@ class Drone{
         if(this.vel.y < -1.6){                       // 摔得快：彈起來一下，水平速度保留大部分（會滾更遠）
           this.vel.y = -this.vel.y*0.32; this.vel.x *= 0.92; this.vel.z *= 0.92;
           C.spin.multiplyScalar(0.6);
-          try{ sfx.hit(Math.min(1, 0.3 - this.vel.y*0.1)); }catch(e){}
+          try{ sfx.hit(Math.min(1, 0.3 - this.vel.y*0.1)); hapticHit(this, this.vel.y/0.32); }catch(e){}
         }else{
           this.vel.y = 0; C.phase = 'ground'; C.t = 0; C.still = 0;
           C.wait = 0.8 + Math.random()*1.2;
@@ -2668,11 +2757,11 @@ function crashResist(d){   // 越高級的飛手越救得回來：AI Lv1 ×1.15 
   if(mode==='net' && NET.slotOwners && NET.slotOwners[drones.indexOf(d)]) return 1;
   return 1.3 - 0.12*(d.lv||1);
 }
-function onDroneCrash(d){ crashMsgTo(d, '💥 墜機！', '#fb923c', 1.4); }
-function onDroneRecover(d){ crashMsgTo(d, '⬆ 可以重新起飛了', '#7dffa9', 1.2); }
-function onDroneTurtle(d){ crashMsgTo(d, '🐢 翻過來了！反烏龜中…', '#fbbf24', 1.0); }
+function onDroneCrash(d){ crashMsgTo(d, '墜機！', '#fb923c', 1.4); }
+function onDroneRecover(d){ crashMsgTo(d, '可以重新起飛了', '#7dffa9', 1.2); }
+function onDroneTurtle(d){ crashMsgTo(d, '翻過來了！反烏龜中…', '#fbbf24', 1.0); }
 function onDroneHopFail(d){ crashMsgTo(d, '起飛失敗，再試一次…', '#fb923c', 0.9); }
-function onDroneSnag(d){ crashMsgTo(d, '🕸 勾到網了！', '#fbbf24', 1.0); }
+function onDroneSnag(d){ crashMsgTo(d, '勾到網了！', '#fbbf24', 1.0); }
 // ---------- 建立 3v3 ----------
 const drones = [];
 // 紅隊家＝紅場（+x），機頭朝 −x；藍隊家＝藍場（−x），機頭朝 +x
@@ -2715,6 +2804,7 @@ function collideDrones(){
       a.disturb = Math.min(1, a.disturb+k);
       b.disturb = Math.min(1, b.disturb+k);
       if(vn>1.2) sfx.hit(Math.min(1,vn/8));
+      hapticHit(a, vn); hapticHit(b, vn);
       // 撞得夠猛就可能墜機（被從上面壓下來的更容易），每台各自擲骰
       if(chaosOn() && vn > 1.4){
         const va = Math.max(0, a.vel.dot(n) + imp.dot(n)*2/(1+REST_DRONE)), vb = Math.max(0, -(b.vel.dot(n) - imp.dot(n)*2/(1+REST_DRONE)));   // 撞前各自往對方衝的速度
@@ -2758,6 +2848,7 @@ function collideRing(d, ring){
     d.vel.addScaledVector(n, Jn/MASS);
     d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
     if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
+    hapticHit(d, -vn);
     if(chaosOn() && -vn > 1.8 && Math.random() < Math.min(0.6, (-vn-1.8)*0.35)) d.startCrash();   // 狠狠撞到框
     if(S) ringSwingImpulse(ring, n.clone().multiplyScalar(-Jn), Pl.clone().applyQuaternion(q).add(ring.grp.position));
   }
@@ -2795,8 +2886,10 @@ function playFx(data){
     sfx.foul();
   }else if(data.type==='unlock'){
     flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
+  }else if(data.type==='haptic'){
+    hapticPulse(data.v);
   }else if(data.type==='zoneWarn'){
-    flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
+    flashMsg('勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
   }else if(data.type==='start'){
     flashMsg(data.ai ? '比賽開始！ AI：' + data.ai : '比賽開始！', '#ffe680', 1.5);
     sfx.whistle();
@@ -2805,7 +2898,7 @@ function playFx(data){
   }else if(data.type==='end'){
     sfx.buzzer();
     const rF = Math.max(0, rawScore('red')), bF = Math.max(0, rawScore('blue'));
-    const res = rF>bF ? '紅隊獲勝！🏆' : bF>rF ? '藍隊獲勝！🏆' : '平手！';
+    const res = rF>bF ? '紅隊獲勝！' : bF>rF ? '藍隊獲勝！' : '平手！';
     const neg = (rawScore('red') < 0 || rawScore('blue') < 0) ? '（負分記為 0）' : '';
     if(mode==='train'){ flashMsg(trainEndText(), '#ffe680', 9999); return; }
     flashMsg('最終 ' + bF + ' : ' + rF + neg + '　' + res + '（按 R 重賽）',
@@ -2859,10 +2952,10 @@ function updateFouls(dt){
       d.zoneT += dt;
       if(isSoloHuman(d) && d.zoneT>1.5 && !d.zoneWarned){
         d.zoneWarned = true;
-        flashMsg('⚠️ 勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
+        flashMsg('勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
       }else if(mode==='duo' && duoSideOf(d)>=0 && d.zoneT>1.5 && !d.zoneWarned){
         d.zoneWarned = true;
-        duoMsg(duoSideOf(d), '⚠️ 離開己方球門區！', '#fbbf24', 1.2);
+        duoMsg(duoSideOf(d), '離開己方球門區！', '#fbbf24', 1.2);
       }else if(mode==='net' && d.zoneT>1.5 && !d.zoneWarned && NET.slotOwners[i]){
         d.zoneWarned = true;
         fireFx({type:'zoneWarn'}, NET.slotOwners[i]);
@@ -3006,27 +3099,27 @@ const AI_LV_KEY = 'hsinchuDroneAiLvV1';
 // 2026-10-31 選手訓練：業主要「描述五個難度的差別，讓人比較好了解」→ 每級多三欄白話說明（數字對應下面的 AI_P）
 //   react 反應與手感；atk AI 當前鋒時怎麼攻；def AI 當防守時怎麼守；who 適合誰
 const AI_LEVELS = [null,
-  {ic:'🐣', name:'新手', desc:'原本的 AI：進攻直來直往、防守慢半拍',
+  {ic:'Lv1', name:'新手', desc:'原本的 AI：進攻直來直往、防守慢半拍',
    react:'反應約 0.45 秒，手最抖，推桿只推六成（飛得慢）',
    atk:'固定幾條路線，慢慢對準框心才衝；前面有人就繞開，不會假動作',
    def:'守在禁區外緣、幾乎不預判，常追不上衝刺；干擾機偶爾撞一下、撞完休息很久',
    who:'第一次對 AI、剛學會穿框'},
-  {ic:'🙂', name:'入門', desc:'反應快一點，防守會稍微預判',
+  {ic:'Lv2', name:'入門', desc:'反應快一點，防守會稍微預判',
    react:'反應約 0.36 秒，手比較穩',
    atk:'會挑比較空的路線，但到了射門點要猶豫 1 秒多才敢衝（防守來得及補）',
    def:'站在「前鋒→球門」連線上卡位，預判 0.25 秒；不堵門、隊友不補位',
    who:'能穩定穿框，開始練閃人'},
-  {ic:'💪', name:'進階', desc:'會挑空檔進攻，防守站在射門線上',
+  {ic:'Lv3', name:'進階', desc:'會挑空檔進攻，防守站在射門線上',
    react:'反應約 0.26 秒，機頭固定朝前、用平移鑽（像真人選手）',
    atk:'每 1 秒重找空檔路線，猶豫只剩 0.6 秒；會閃開衝撞',
    def:'卡射門線、預判 0.35 秒，干擾機靠近就撞、撞完很快回來',
    who:'社團比賽程度'},
-  {ic:'🔥', name:'高手', desc:'看到縫隙就衝，防守會短暫堵門、隊友補位',
+  {ic:'Lv4', name:'高手', desc:'看到縫隙就衝，防守會短暫堵門、隊友補位',
    react:'反應約 0.18 秒，推桿敢推到底（最高速）',
    atk:'看到通往框心的縫隙就直接全速衝，幾乎不猶豫；被堵會換路線或在門前左右晃假動作',
    def:'你逼近時會進禁區堵門最多 1.2 秒，退出後冷卻 1.4 秒＝你的進攻空檔；隊友會補位',
    who:'校隊、準備出賽'},
-  {ic:'👑', name:'大師', desc:'一直進攻鑽縫隙，防守輪流堵門，很難攻進去',
+  {ic:'Lv5', name:'大師', desc:'一直進攻鑽縫隙，防守輪流堵門，很難攻進去',
    react:'反應約 0.12 秒，幾乎不手抖',
    atk:'每 0.1 秒重算縫隙，一直在找空檔；進球後最短路線回半場解鎖、馬上再攻',
    def:'輪流堵門（1.6 秒、冷卻只有 1 秒），干擾機平時站第二道防線、你進危險區才全力撞',
@@ -3547,7 +3640,7 @@ function aiThinkClassic(d, dt, P){   // Lv1（P=null）＝原本的 AI 一字不
 
 // ---------- 手機／平板觸控（2026-10-09 新增，業主要求「像手遊一樣有左右搖桿」） ----------
 // 自動偵測：主要指標是觸控（pointer: coarse）→ 觸控模式；螢幕短邊 < 600px 算手機，否則平板。
-// 有觸控螢幕的筆電通常主要指標仍是滑鼠（pointer: fine），不會誤判；左上角「🎮 觸控」可手動切換並記住。
+// 有觸控螢幕的筆電通常主要指標仍是滑鼠（pointer: fine），不會誤判；左上角「觸控」可手動切換並記住。
 // 搖桿採 Mode 2（左：油門＋旋轉；右：前後＋側飛），放開自動回中（油門回中＝定高懸停），
 // 數值直接疊進 readInputInto()，所以單機、練習、闖關、賽道、連線對戰全部通用。
 let fsUiHook = null;            // 全螢幕提示的更新函式（定義在下方「全螢幕」區塊）
@@ -3569,7 +3662,7 @@ function touchApply(on){
   document.body.classList.toggle('touch', on);
   document.body.classList.toggle('phone', on && TOUCH.kind === 'phone');
   document.body.classList.toggle('tablet', on && TOUCH.kind === 'tablet');
-  document.getElementById('touchToggle').textContent = on ? '⌨️ 鍵盤' : '🎮 觸控';
+  document.getElementById('touchToggle').textContent = on ? '鍵盤' : '觸控';
   if(fsUiHook) fsUiHook();
   if(!on){ TOUCH.lx = TOUCH.ly = TOUCH.rx = TOUCH.ry = 0; }
 }
@@ -3720,7 +3813,7 @@ addEventListener('keyup', e=>{ keys[e.code]=false; });
 let padIndex = null;
 const padPrev = {};
 let padMsgT = 0;
-function padConnectedMsg(){ const n = performance.now(); if(n - padMsgT < 5000) return; padMsgT = n; flashMsg('🎮 搖桿已連接', '#7dffa9', 2.2); }
+function padConnectedMsg(){ const n = performance.now(); if(n - padMsgT < 5000) return; padMsgT = n; flashMsg('搖桿已連接', '#7dffa9', 2.2); }
 addEventListener('gamepadconnected', e=>{
   if(!e.gamepad) return;
   if(padIndex === null) padIndex = e.gamepad.index;
@@ -3794,11 +3887,49 @@ function readInputInto(i){    // i：任一 drone 的 .input（本地玩家操�
 function readPlayerInput(){ readInputInto(player.input); }
 
 // ---------- 音效（WebAudio 合成） ----------
+// ---------- 撞擊震動（2026-11-11）：撞到對手／網／球門框／地板／柱子，依撞擊速度分輕重 ----------
+//   手機：navigator.vibrate（Android；iPhone Safari 不支援）。搖桿：gamepad 雙馬達 rumble（Chrome/Edge）。
+//   連線對戰：房主算物理，撞到「別人操控的機」時用 fx 訊息通知那位玩家的裝置震動。
+const HAPTIC = {on: (()=>{ try{ return localStorage.getItem('hapticOn') !== '0'; }catch(e){ return true; } })()};
+function hapticStrength(v){ return Math.max(0, Math.min(1, (v - 0.7)/5.5)); }   // 0.7 m/s 以下不震；約 6 m/s 以上滿震
+function hapticPulse(v, pad){
+  if(!HAPTIC.on) return;
+  const s = hapticStrength(v); if(s <= 0) return;
+  const now = performance.now();
+  if(now - (hapticPulse.t||0) < 70) return; hapticPulse.t = now;
+  const ms = Math.round(18 + s*s*140);                       // 輕擦 ~20ms，正面重撞 ~160ms
+  try{ if(!pad && navigator.vibrate) navigator.vibrate(s > 0.6 ? [ms, 30, Math.round(ms*0.5)] : ms); }catch(e){}
+  try{
+    const pads = pad ? [pad] : Array.from(navigator.getGamepads ? navigator.getGamepads() : []).filter(g=>g && g.connected);
+    pads.forEach(g=>{
+      const a = g.vibrationActuator || (g.hapticActuators && g.hapticActuators[0]);
+      if(a && a.playEffect) a.playEffect('dual-rumble', {startDelay:0, duration: ms + 40, weakMagnitude: 0.25 + 0.6*s, strongMagnitude: 0.1 + 0.9*s}).catch(()=>{});
+    });
+  }catch(e){}
+}
+function hapticHit(d, v){   // d＝被撞的機，v＝撞擊速度（m/s）
+  if(!HAPTIC.on || !d || v < 0.7) return;
+  if(mode==='net'){
+    const i = drones.indexOf(d), owner = NET.slotOwners && NET.slotOwners[i];
+    if(i === NET.mySlot) hapticPulse(v);
+    else if(owner && NET.isHost && owner !== selfId) netBroadcastFx({type:'haptic', v:Math.round(v*10)/10}, owner);
+  }else if(mode==='duo'){
+    const si = duoSideOf(d);
+    if(si >= 0 && DUO.cur && DUO.cur[si] && DUO.cur[si].pad){ const pr = navigator.getGamepads ? navigator.getGamepads()[DUO.cur[si].pad.index] : null; if(pr) hapticPulse(v, pr); }
+  }else if(d === camDrone()) hapticPulse(v);
+}
 const sfx = (()=>{
-  let ctx=null, noiseBuf=null, crowdGain=null, crowdMaster=null, engines=null;
+  let ctx=null, noiseBuf=null, crowdGain=null, crowdMaster=null, engines=null, master=null;
+  // 總音量／靜音（2026-11-11）：所有聲音都先進 master，再到喇叭；設定存 localStorage
+  let vol = 0.8, muted = false;
+  try{ const v = parseFloat(localStorage.getItem('audioVol')); if(v>=0 && v<=1) vol = v; muted = localStorage.getItem('audioMuted') === '1'; }catch(e){}
+  function applyMaster(){ if(master) master.gain.setTargetAtTime(muted ? 0 : vol, ctx.currentTime, 0.03); }
+  function setVolume(v){ vol = Math.max(0, Math.min(1, v)); try{ localStorage.setItem('audioVol', String(vol)); }catch(e){} applyMaster(); }
+  function setMuted(m){ muted = !!m; try{ localStorage.setItem('audioMuted', muted?'1':'0'); }catch(e){} applyMaster(); }
   function init(){
     if(ctx) return;
     ctx = new (window.AudioContext||window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = muted ? 0 : vol; master.connect(ctx.destination);
     // 觀眾人聲（低頻噪音循環，營造滿場嘈雜聲）
     const cbuf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
     const cd = cbuf.getChannelData(0);
@@ -3813,7 +3944,7 @@ const sfx = (()=>{
     // 2026-10-09：觀眾聲多一道總開關——只有「比賽進行中＋有看台的場景」才出聲；
     // 以前在主選單也一直播，低沉的嘈雜聲聽起來像無人機在嗡嗡叫
     crowdMaster = ctx.createGain(); crowdMaster.gain.value = 0;
-    crowdSrc.connect(cf); cf.connect(crowdGain); crowdGain.connect(crowdMaster); crowdMaster.connect(ctx.destination);
+    crowdSrc.connect(cf); cf.connect(crowdGain); crowdGain.connect(crowdMaster); crowdMaster.connect(master);
     crowdSrc.start();
     // 噪音 buffer（碰撞）
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.12, ctx.sampleRate);
@@ -3843,7 +3974,7 @@ const sfx = (()=>{
       panner.rolloffFactor = 1.1;
       o1.connect(lp); o2.connect(lp); lp.connect(toneGain); toneGain.connect(panner);
       propSrc.connect(nf); nf.connect(noiseGain); noiseGain.connect(panner);
-      panner.connect(ctx.destination);
+      panner.connect(master);
       o1.start(); o2.start();
       return {o1,o2,toneGain,nf,noiseGain,panner};
     });
@@ -3888,14 +4019,14 @@ const sfx = (()=>{
     });
   }
   return {
-    init,
+    init, setVolume, setMuted, getVolume:()=>vol, isMuted:()=>muted,
     updateEngines,
     hit(v){
       if(!ctx) return;
       const s=ctx.createBufferSource(); s.buffer=noiseBuf;
       const g=ctx.createGain(); g.gain.value=0.25*v;
       const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=600+v*1500;
-      s.connect(f); f.connect(g); g.connect(ctx.destination); s.start();
+      s.connect(f); f.connect(g); g.connect(master); s.start();
     },
     cheer(){   // 進球觀眾歡呼（人聲瞬間放大再緩降）
       if(!ctx || !crowdGain) return;
@@ -3909,7 +4040,7 @@ const sfx = (()=>{
       if(!ctx) return;
       [[220,0.12,0],[165,0.22,0.14]].forEach(([f,dur,t])=>{
         const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
-        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+        const g=ctx.createGain(); o.connect(g); g.connect(master);
         const t0=ctx.currentTime+t;
         g.gain.setValueAtTime(0.16,t0); g.gain.linearRampToValueAtTime(0,t0+dur);
         o.start(t0); o.stop(t0+dur+0.05);
@@ -3919,7 +4050,7 @@ const sfx = (()=>{
       if(!ctx) return;
       [0,0.38,0.76].forEach(t=>{
         const o=ctx.createOscillator(); o.type='square'; o.frequency.value=440;
-        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+        const g=ctx.createGain(); o.connect(g); g.connect(master);
         const t0=ctx.currentTime+t;
         g.gain.setValueAtTime(0.14,t0); g.gain.linearRampToValueAtTime(0,t0+0.28);
         o.start(t0); o.stop(t0+0.35);
@@ -3928,7 +4059,7 @@ const sfx = (()=>{
     warn(){
       if(!ctx) return;
       const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=660;
-      const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+      const g=ctx.createGain(); o.connect(g); g.connect(master);
       g.gain.setValueAtTime(0.12,ctx.currentTime);
       g.gain.linearRampToValueAtTime(0,ctx.currentTime+0.1);
       o.start(); o.stop(ctx.currentTime+0.15);
@@ -3938,7 +4069,7 @@ const sfx = (()=>{
       [[660,0],[880,0.12],[1320,0.24]].forEach(([f,t])=>{
         const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
         const g=ctx.createGain(); g.gain.value=0;
-        o.connect(g); g.connect(ctx.destination);
+        o.connect(g); g.connect(master);
         const t0=ctx.currentTime+t;
         g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(0.22,t0+0.02);
         g.gain.exponentialRampToValueAtTime(0.001,t0+0.5);
@@ -3950,7 +4081,7 @@ const sfx = (()=>{
       const m = mul || 1;
       [[1320*m,0],[1760*m,0.06]].forEach(([f,t])=>{
         const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=f;
-        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+        const g=ctx.createGain(); o.connect(g); g.connect(master);
         const t0=ctx.currentTime+t;
         g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(0.12,t0+0.01);
         g.gain.exponentialRampToValueAtTime(0.001,t0+0.16);
@@ -3961,10 +4092,18 @@ const sfx = (()=>{
       if(!ctx) return;
       const o=ctx.createOscillator(); o.type='square'; o.frequency.value=2200;
       const g=ctx.createGain(); g.gain.value=0.08;
-      o.connect(g); g.connect(ctx.destination);
+      o.connect(g); g.connect(master);
       o.start(); o.stop(ctx.currentTime+0.35);
     }
   };
+})();
+(function(){   // 音量／靜音控制
+  const mb = document.getElementById('audioMute'), sl = document.getElementById('audioVol'), pc = document.getElementById('audioPct');
+  function sync(){ const m = sfx.isMuted(); mb.classList.toggle('off', m); mb.textContent = m ? '靜音' : '音效'; sl.value = Math.round(sfx.getVolume()*100); pc.textContent = m ? '0%' : sl.value + '%'; }
+  mb.addEventListener('click', e=>{ e.stopPropagation(); sfx.setMuted(!sfx.isMuted()); sync(); });
+  sl.addEventListener('input', e=>{ e.stopPropagation(); sfx.setVolume(sl.value/100); if(sfx.isMuted() && +sl.value > 0) sfx.setMuted(false); sync(); });
+  ['click','pointerdown','touchstart'].forEach(ev=>document.getElementById('audioCtl').addEventListener(ev, e=>e.stopPropagation()));
+  sync();
 })();
 
 // ---------- HUD ----------
@@ -4004,7 +4143,7 @@ function updateHUD(){
     nb.style.display = 'block';
     const roleTxt = NET.isHost ? '房主' : '玩家';
     const slotTxt = NET.mySlot>=0 ? SLOT_LABELS[NET.mySlot] : '觀戰中';
-    if(WATCH.viewer) nb.innerHTML = `📺 觀賽中　房號 <b style="color:#7dffa9">${WATCH.code}</b>　${watchViewerStatus()}`;
+    if(WATCH.viewer) nb.innerHTML = `觀賽中　房號 <b style="color:#7dffa9">${WATCH.code}</b>　${watchViewerStatus()}`;
     else nb.innerHTML = `房號 <b style="color:#7dffa9">${NET.roomId||''}</b>　${roleTxt}／${slotTxt}　連線人數 ${NET.peers.size+1}`;
   }
 }
@@ -4149,7 +4288,7 @@ function restart(){
   setState('play');
   trainReset();
   fireFx({type:'start', ai: mode==='train' ? trainOppLabel() : (mode==='player' || mode==='demo' || (mode==='duo' && DUO.ai)) ? aiMatchLabel() : null});
-  if(mode==='train') flashMsg((TRAIN.role==='atk' ? '⚔️ 攻擊訓練開始！' : '🛡️ 防守訓練開始！') + ' ' + trainOppLabel(), '#ffe680', 1.8);
+  if(mode==='train') flashMsg((TRAIN.role==='atk' ? '攻擊訓練開始！' : '防守訓練開始！') + ' ' + trainOppLabel(), '#ffe680', 1.8);
 }
 function endMatch(){
   setState('over');
@@ -4170,11 +4309,11 @@ function demoLoopTick(dt){
   document.body.classList.toggle('netMode', mode==='net');
   const ws = document.getElementById('watchShare'), wsShow = !WATCH.viewer;
   if(ws.style.display !== (wsShow ? '' : 'none')) ws.style.display = wsShow ? '' : 'none';
-  const wsx = WATCH.host ? '🔴 直播中・' + WATCH.peers.size + ' 人在看' : '📡 分享觀賽';
+  const wsx = WATCH.host ? '直播中・' + WATCH.peers.size + ' 人在看' : '分享觀賽';
   if(ws.textContent !== wsx){ ws.textContent = wsx; ws.classList.toggle('on', !!WATCH.host); }
-  const rt = document.getElementById('rpToggle'), rtx = '🎬 回放：' + (REPLAY.enabled ? '開' : '關');
+  const rt = document.getElementById('rpToggle'), rtx = '回放：' + (REPLAY.enabled ? '開' : '關');
   if(rt.textContent !== rtx){ rt.textContent = rtx; rt.classList.toggle('on', REPLAY.enabled); }
-  let txt = '🔁 連續對戰：' + (DEMO_LOOP.on ? '開' : '關');
+  let txt = '連續對戰：' + (DEMO_LOOP.on ? '開' : '關');
   if(show && DEMO_LOOP.on && state==='over'){
     DEMO_LOOP.nextT -= dt;
     if(DEMO_LOOP.nextT <= 0){ restart(); return; }
@@ -4300,10 +4439,10 @@ function trainUpdateHUD(){
   let h;
   if(TRAIN.role==='atk'){
     const f = score.red.o + score.red.d;
-    h = '⚔️ 攻擊訓練（' + trainOppLabel() + '）　進球<b>' + score.red.g + '</b>' + (f ? '　<span class="bad">違規 ' + f + '</span>' : '');
+    h = '攻擊訓練（' + trainOppLabel() + '）　進球<b>' + score.red.g + '</b>' + (f ? '　<span class="bad">違規 ' + f + '</span>' : '');
   }else{
     const g = score.blue.g, sv = Math.max(0, TRAIN.shots - g);
-    h = '🛡️ 防守訓練（' + trainOppLabel() + '）　AI 射門 ' + TRAIN.shots + '　擋下<b>' + sv + '</b>　失分 <span class="bad">' + g + '</span>'
+    h = '防守訓練（' + trainOppLabel() + '）　AI 射門 ' + TRAIN.shots + '　擋下<b>' + sv + '</b>　失分 <span class="bad">' + g + '</span>'
       + (score.red.d ? '　<span class="bad">守門違規 ' + score.red.d + '</span>' : '');
   }
   if(el.innerHTML !== h) el.innerHTML = h;
@@ -4332,7 +4471,7 @@ function trainEndText(){   // 終場訊息（取代一般的「紅隊獲勝」�
     line = '防守訓練結束：AI 射門 ' + TRAIN.shots + ' 次，你擋下 ' + Math.max(0, TRAIN.shots-val) + ' 次、失 ' + val + ' 分';
   }
   if(better){ TRAIN.best[k] = val; try{ localStorage.setItem(TRAIN_BEST_KEY, JSON.stringify(TRAIN.best)); }catch(e){} }
-  const bestTxt = better ? (old===undefined ? '　🏅 第一筆紀錄' : '　🏅 新紀錄！')
+  const bestTxt = better ? (old===undefined ? '　第一筆紀錄' : '　新紀錄！')
     : '　最佳：' + (TRAIN.role==='atk' ? '進 ' + old + ' 球' : '失 ' + old + ' 分');
   return line + bestTxt + '（按 R 再練一次）';
 }
@@ -4552,9 +4691,9 @@ function duoFrame(dt){
     const a = document.getElementById('duoArm'+v);
     a.textContent = d.canScore ? '已解鎖' : '需回防'; a.className = d.canScore ? 'armed' : 'disarmed';
     const pe = document.getElementById('duoPad'+v);
-    if(gp){ pe.textContent = '🎮 搖桿 ✓'; pe.title = gp.id; pe.style.color = '#7dffa9'; }
-    else if(cur.kb === 'full'){ pe.textContent = '⌨️ 鍵盤操作'; pe.title = ''; pe.style.color = '#9fc1ff'; }
-    else { pe.textContent = '🎮 搖桿未偵測（接上後按一下搖桿）'; pe.title = ''; pe.style.color = '#fbbf24'; }
+    if(gp){ pe.textContent = '搖桿 ✓'; pe.title = gp.id; pe.style.color = '#7dffa9'; }
+    else if(cur.kb === 'full'){ pe.textContent = '鍵盤操作'; pe.title = ''; pe.style.color = '#9fc1ff'; }
+    else { pe.textContent = '搖桿未偵測（接上後按一下搖桿）'; pe.title = ''; pe.style.color = '#fbbf24'; }
     const ke = document.getElementById('duoKb'+v), kt = cur.kb===null ? '' : DUO_KB_TXT[cur.kb];
     if(ke.textContent !== kt){ ke.textContent = kt; ke.style.display = kt ? '' : 'none'; }
     if(DUO.msgT[v] > 0){ DUO.msgT[v] -= dt; if(DUO.msgT[v] <= 0) document.getElementById('duoM'+v).style.opacity = 0; }
@@ -4786,7 +4925,7 @@ function updateNetWaitStatus(){
     const tl = Math.max(0, netLiveTimeLeft()||0);
     const mm = Math.floor(tl/60), ss = Math.floor(tl%60);
     const hasVacancy = NET.slotOwners.includes(null);
-    el.textContent = (netLiveState()==='pause' ? '⏸ 比賽暫停中，剩餘 ' : '⏱ 比賽進行中，剩餘 ')
+    el.textContent = (netLiveState()==='pause' ? '比賽暫停中，剩餘 ' : '比賽進行中，剩餘 ')
       + mm+':'+String(ss).padStart(2,'0')
       + (hasVacancy ? '　尚有空位，可點選中途加入' : '　目前滿位，請等待比賽結束');
     el.style.color = '#7dffa9';
@@ -4804,7 +4943,7 @@ function refreshLobbyUI(){
   const msgEl = document.getElementById('netMsg');
   const waited = performance.now() - (NET.joinedAt||0);
   if(NET.joinErr && !NET.peers.size){
-    msgEl.textContent = '⚠ 找到對方了，但網路不允許直接連線（常見於手機 4G、學校 Wi-Fi）。'
+    msgEl.textContent = '找到對方了，但網路不允許直接連線（常見於手機 4G、學校 Wi-Fi）。'
       + (NET_TURN.length ? '中繼也連不上，請換個網路再試。' : '請改用同一個家用 Wi-Fi，或請老師開啟中繼伺服器（TURN）。');
   }else if(!NET.isHost && !NET.hostId && waited > 19000){
     msgEl.textContent = '還沒找到房主：請確認房號正確、房主還在大廳裡。';
@@ -4859,7 +4998,7 @@ function refreshLobbyUI(){
     if(r && NET.slotOwners[0]===null) w.push('紅隊沒人坐 Striker，無法得分');
     if(b && NET.slotOwners[3]===null) w.push('藍隊沒人坐 Striker，無法得分');
     fmt.innerHTML = '目前 <b>' + r + ' v ' + b + '</b>（只有真人上場）'
-      + (w.length ? '　<span class="warn">⚠ ' + w.join('；') + '</span>' : '');
+      + (w.length ? '　<span class="warn">' + w.join('；') + '</span>' : '');
   }
   netApplyBench();
   updateNetWaitStatus();
@@ -4979,7 +5118,7 @@ document.getElementById('btnFillNone').addEventListener('click', ()=>netSetFillA
 
 // ============================================================
 // 觀賽直播（2026-10-31，業主：「有辦法一鍵複製網址，讓人觀賽嗎？例如現在的 AI 對戰」）
-//   - 比賽中右上角「📡 分享觀賽」：開一個觀賽房（跟連線對戰同一套 Trystero/Nostr，不需要任何帳號），
+//   - 比賽中右上角「分享觀賽」：開一個觀賽房（跟連線對戰同一套 Trystero/Nostr，不需要任何帳號），
 //     網址 ?watch=房號 自動複製到剪貼簿，另外顯示 QR Code（教室投影給學生用手機掃）。
 //   - 直播主（按分享的人）：不管是 AI 示範賽、自己打 AI、左右雙人或連線對戰，都把畫面狀態（各機位置／姿態／
 //     比分／時間／搖桿）約 15 次／秒送給每位觀眾，比賽事件（進球、違規、開賽…）照樣同步。
@@ -5040,7 +5179,7 @@ function watchTick(){
       const p = netSnapPayload();
       if(p.state === 'replay') p.state = 'pause';      // 直播主在看回放：觀眾那邊畫面停住（觀眾自己也有回放）
       if(!live) p.state = 'menu';
-      p.live = live; p.sc = curScene;
+      p.live = live; p.sc = curScene; p.fs = fieldStyle;
       p.bn = drones.map(d=>d.benched ? 1 : 0);
       p.in = drones.map(d=>{ const i = d.input || {}; return [+(i.pitch||0).toFixed(2), +(i.roll||0).toFixed(2), +(i.yawRate||0).toFixed(2), +(i.throttle||0).toFixed(2)]; });
       try{ WATCH.act.snap.send(p); }catch(e){}
@@ -5064,7 +5203,7 @@ async function watchPopShow(copy){
   watchPopCount();
   if(copy){
     const ok = await watchCopy(url);
-    document.getElementById('wpMsg').textContent = ok ? '✅ 網址已複製！貼到 LINE／群組，朋友打開就能即時看。'
+    document.getElementById('wpMsg').textContent = ok ? '網址已複製！貼到 LINE／群組，朋友打開就能即時看。'
                                                       : '請長按下面的網址複製，或讓朋友掃 QR Code。';
     if(ok) flashMsg('觀賽網址已複製', '#7dffa9', 1.4);
   }
@@ -5126,6 +5265,7 @@ async function watchViewerStart(code){
     WATCH.hostPeer = id; WATCH.ended = false; WATCH.stale = false; WATCH.lastRecv = performance.now();
     NET.snapPrev = NET.snapCur; NET.snapCur = d; d._recv = performance.now();
     if(d.sc && d.sc !== curScene) setScene(d.sc);
+    if(d.fs && d.fs !== fieldStyle) setFieldStyle(d.fs);
     drones.forEach((dr, i)=>{
       const b = !!(d.bn && d.bn[i]);
       if(b !== !!dr.benched){ dr.benched = b; setDroneVisible(dr, !b); }
@@ -5186,6 +5326,8 @@ function mfBuildScenes(){
     host.querySelectorAll('.mfScene').forEach(x=>x.classList.toggle('sel', x === b));
   }));
 }
+document.querySelectorAll('#mfField button').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); setFieldStyle(b.dataset.fs); }));
+setFieldStyle(fieldStyle);
 function mfPickMode(m){
   MF.mode = m;
   if(m === 'campaign' || m === 'race' || m === 'net'){   // 這三個有自己的下一步畫面（選關／選玩法／連線大廳）
@@ -5462,14 +5604,14 @@ function campClearScene(){
 // ---------- 場景專屬關卡（第五章）：只有該場景才有，針對該場景的飛行條件設計 ----------
 // raw:true → 不套用 campXfTask 的場景變形（這些座標本來就是為該場景手寫的）
 const CAMP_EXTRA = [
-  // ☁️ 天空之城：微弱上升氣流
+  // 天空之城：微弱上升氣流
   {ch:5, only:'sky', raw:true, name:'氣流懸停', brief:'上升氣流會一直把你往上帶——用油門壓住，在窄圈裡停滿 8 秒。',
    par:32, maxHit:1, tasks:[HV(1.3,1.9,0,0.30,8)]},
   {ch:5, only:'sky', raw:true, name:'島間長程', brief:'高空長距離往返，一趟高一趟低，順著氣流調整推力。',
    par:52, maxHit:3, tasks:[WP(2.5,2.4,0.9), WP(-2.5,2.4,-0.9), WP(2.5,1.0,-0.9), WP(-2.5,1.0,0.9)]},
   {ch:5, only:'sky', raw:true, name:'雲隙穿降', brief:'從最高的光環一路往下鑽，最後精準降落在雲端平台上。',
    par:48, maxHit:2, tasks:[GT(1.2,2.4,0.6), GT(-0.2,1.6,-0.6), GT(-1.6,0.9,0.6), LD(-2.4,0,0.34)]},
-  // 🏟️ 室內競技場：無風，純技術考核
+  // 室內競技場：無風，純技術考核
   {ch:5, only:'arena', raw:true, name:'連續射門考核', brief:'60 秒內完成三次得分——每次得分後都要飛回己方半場解鎖。',
    par:46, maxHit:2, limit:60,
    tasks:[GL('W'), WP(2.4,1.4,0,0.5), GL('W'), WP(2.4,1.4,0,0.5), GL('W')]},
@@ -5481,14 +5623,14 @@ const CAMP_EXTRA = [
    par:58, maxHit:3, limit:70,
    poles:[{x:1.7,z:0.5},{x:0.1,z:-0.55},{x:-1.4,z:0.5}],
    tasks:[GT(2.2,1.5,0.75), WP(0.6,2.1,-0.85), GT(-1.0,1.2,0.8), GL('W'), WP(2.4,1.4,0,0.5), GL('W')]},
-  // 🌿 草原湖畔：穩定側風
+  // 草原湖畔：穩定側風
   {ch:5, only:'meadow', raw:true, name:'側風懸停', brief:'側風會一直把你往同一邊推——持續側飛修正，在窄圈裡停滿 8 秒。',
    par:34, maxHit:1, tasks:[HV(1.3,1.4,0,0.28,8)]},
   {ch:5, only:'meadow', raw:true, name:'逆風直線', brief:'兩條直線來回：一趟順風、一趟逆風，感受一下差多少。',
    par:54, maxHit:3, tasks:[WP(-2.5,1.4,1.1), WP(2.5,1.4,1.1), WP(-2.5,1.4,-1.1), WP(2.5,1.4,-1.1)]},
   {ch:5, only:'meadow', raw:true, name:'側風降落考核', brief:'側風中連續兩次精準降落——落地前要先把橫向速度殺掉。',
    par:52, maxHit:2, tasks:[LD(-2.2,0.9,0.30), WP(0,1.7,0), LD(2.2,-0.9,0.30)]},
-  // 🌃 霓虹夜城：大樓陣風
+  // 霓虹夜城：大樓陣風
   {ch:5, only:'neon', raw:true, name:'陣風穩定', brief:'陣風忽強忽弱、方向會變——不要過度修正，在窄圈裡撐 9 秒。',
    par:36, maxHit:1, tasks:[HV(1.3,1.9,0,0.26,9)]},
   {ch:5, only:'neon', raw:true, name:'亂流穿環', brief:'55 秒內在陣風中來回穿五道光環，進環前要預判被吹偏的量。',
@@ -5498,7 +5640,7 @@ const CAMP_EXTRA = [
    par:64, maxHit:4, limit:80,
    poles:[{x:1.9,z:-0.5},{x:0.3,z:0.6},{x:-1.2,z:-0.5}],
    tasks:[GT(2.3,2.0,-0.7), WP(0.7,1.1,0.9), GT(-1.1,2.0,-0.8), GL('W'), WP(2.4,1.5,0,0.5), GL('W')]},
-  // 🛰️ 軌道太空站：真空慣性
+  // 軌道太空站：真空慣性
   {ch:5, only:'orbit', raw:true, name:'慣性煞車', brief:'衝到場地另一端，然後在指定點「停住」——沒有空氣幫你煞車，要提早反推。',
    par:36, maxHit:2, tasks:[WP(-2.4,1.7,0,0.40), HV(2.2,1.7,0,0.34,4)]},
   {ch:5, only:'orbit', raw:true, name:'無阻力繞行', brief:'大範圍繞行一圈——真空中一旦偏出去就很難拉回來，轉彎要提早。',
@@ -5698,6 +5840,7 @@ function campCollidePoles(){
         player.vel.x -= nx*vn*1.5; player.vel.z -= nz*vn*1.5;   // 恢復係數 0.5
         player.disturb = Math.min(1, player.disturb + Math.min(0.6, -vn*0.12));
         if(-vn > 1.0) sfx.hit(Math.min(1, -vn/8));
+        hapticHit(player, -vn);
       }
     }
   }
@@ -5740,7 +5883,7 @@ function campDetectHit(h){
   if(!hit && player.pos.y <= DRONE_R+0.004 && campPrevVel.y < -1.2) hit = true;
   if(!hit && player.pos.y >= FIELD.h-DRONE_R-0.004 && campPrevVel.y > 1.0) hit = true;
   campPrevDist = player.disturb;
-  if(hit){ campHits++; campHitCd = 0.55; flashMsg('💥 碰撞 ' + campHits, '#f87171', 0.5); }
+  if(hit){ campHits++; campHitCd = 0.55; flashMsg('碰撞 ' + campHits, '#f87171', 0.5); }
 }
 function campStep(h, t){
   if(campDone || state !== 'play') return;
@@ -5767,7 +5910,7 @@ function campUpdateHUD(){
   document.getElementById('campBrief').textContent = campLevel.brief;
   const SC = sceneById(campSceneId);
   document.getElementById('campEnv').textContent =
-    SC.emoji + ' ' + SC.name + '　飛行條件：' + ((SC.fly && SC.fly.note) || '無風') +
+    SC.name + '　飛行條件：' + ((SC.fly && SC.fly.note) || '無風') +
     '　航線：' + campLayout().name;
   document.getElementById('campDots').innerHTML =
     campTasks.map((_,i)=> i < campIdx ? '<b>●</b>' : '○').join('');
@@ -5822,7 +5965,7 @@ function campBuildList(){
       const st = campStars(L.id), lk = !campUnlocked(L.id);
       const stars = [0,1,2].map(i=> i < st ? '<b>★</b>' : '☆').join('');
       return '<div class="campCell' + (lk?' locked':'') + (st>0?' done':'') + '" data-id="' + L.id + '">' +
-             '<div class="n">' + (lk?'🔒 ':'') + L.no + '</div>' +
+             '<div class="n">' + (lk?'鎖定 ':'') + L.no + '</div>' +
              '<div class="nm">' + L.name + '</div>' +
              '<div class="st">' + stars + '</div></div>';
     }).join('');
@@ -5830,7 +5973,7 @@ function campBuildList(){
            '<span>' + ch.sub + '</span></div><div class="campGrid">' + cells + '</div></div>';
   }).join('');
   document.getElementById('campSceneName').textContent = sceneById(campSceneId).emoji + ' ' + sceneById(campSceneId).name;
-  document.getElementById('campStarTotal').textContent = '⭐ ' + campTotalStars() + ' / ' + campSceneMax(campSceneId);
+  document.getElementById('campStarTotal').textContent = '★ ' + campTotalStars() + ' / ' + campSceneMax(campSceneId);
   host.querySelectorAll('.campCell').forEach(el=>{
     el.addEventListener('click', ()=>{
       const id = +el.dataset.id;
@@ -5846,11 +5989,11 @@ function campBuildMaps(){
            '<div class="ico">' + S.emoji + '</div><div class="nm">' + S.name + '</div>' +
            '<div class="sb">' + S.sub + '</div>' +
            '<div class="fly">' + ((S.fly && S.fly.note) || '無風') + '</div>' +
-           '<div class="pg">⭐ ' + st + ' / ' + mx + '</div>' +
+           '<div class="pg">★ ' + st + ' / ' + mx + '</div>' +
            '<div class="bar"><b style="width:' + pct + '%"></b></div></div>';
   }).join('');
   document.getElementById('campMapTotal').textContent =
-    '⭐ ' + campGrandTotal() + ' / ' + campGrandMax();
+    '★ ' + campGrandTotal() + ' / ' + campGrandMax();
   host.querySelectorAll('.campMapCard').forEach(el=>{
     el.addEventListener('click', ()=>{
       campSceneId = el.dataset.id;
@@ -5912,21 +6055,21 @@ document.getElementById('btnCampNext').addEventListener('click', e=>campStart(+e
 })();
 
 // ============================================================
-// 🏁 飛行賽道（2026-10-09 新增，業主要求「闖關不要都在競賽場裡，要有開放空間＋障礙物，
+// 飛行賽道（2026-10-09 新增，業主要求「闖關不要都在競賽場裡，要有開放空間＋障礙物，
 //    引導從哪裡起飛、穿越障礙到終點，像飛行版的賽車遊戲」）
 //   - 每個場景一條專屬賽道（RACE_TRACKS，業主選「每個場景各自一條，比較耐玩」）
-//   - 三種玩法三選一：⏱ 計時賽／⭐ 收集賽／🛡 零碰撞挑戰，各自記最佳成績與 ⭐（5 場景 × 3 玩法 × 3 星 = 45）
+//   - 三種玩法三選一：計時賽／★ 收集賽／零碰撞挑戰，各自記最佳成績與 ★（5 場景 × 3 玩法 × 3 星 = 45）
 //   - 進入賽道時把比賽場地的網牆、充氣管、球門、看台、廣告板全部藏起來（只留 EVA 地墊當起飛坪），
 //     並把飛行邊界 ARENA 放大；離開時全部還原（raceExitCleanup 掛在 campExitCleanup 裡，任何回選單的路徑都會跑到）
 //   - 物理完全沿用 Drone.step()，只疊加該場景的飛行條件（SCENES[].fly，與闖關相同）
 //   - 引導：下一道拱門綠色閃爍＋編號、航線光點（目前這段較亮）、機身上方的綠色箭頭指向下一道門
-//   - 與闖關模式（⭐405）分開計分，不影響闖關的關卡數與星星數
+//   - 與闖關模式（★405）分開計分，不影響闖關的關卡數與星星數
 // ============================================================
 const RACE_SAVE_KEY = 'hsinchuDroneRaceV1';
 const RACE_MODES = [
-  {id:'time',  emoji:'⏱', name:'計時賽',     desc:'依序穿過所有拱門飛到終點，越快越好。'},
-  {id:'coins', emoji:'⭐', name:'收集賽',     desc:'沿著航線收集星幣，收越多越好；要飛到終點才算數。'},
-  {id:'nohit', emoji:'🛡', name:'零碰撞挑戰', desc:'撞到拱門、障礙物或重摔一次就 +3 秒，撞 3 次挑戰失敗。'},
+  {id:'time',  emoji:'', name:'計時賽',     desc:'依序穿過所有拱門飛到終點，越快越好。'},
+  {id:'coins', emoji:'', name:'收集賽',     desc:'沿著航線收集星幣，收越多越好；要飛到終點才算數。'},
+  {id:'nohit', emoji:'', name:'零碰撞挑戰', desc:'撞到拱門、障礙物或重摔一次就 +3 秒，撞 3 次挑戰失敗。'},
 ];
 const RACE_GT = 0.07;        // 拱門管徑
 const RACE_LIMIT = 150;      // 限時（秒）
@@ -6225,7 +6368,7 @@ function raceBuild(){
   raceRefreshGates();
   raceUpdateHUD();
   const M = RACE_MODES.find(m=>m.id===raceModeId);
-  flashMsg(D.T.name + '　' + M.emoji + ' ' + M.name, '#ffd75a', 1.6);
+  flashMsg(D.T.name + '　' + M.name, '#ffd75a', 1.6);
 }
 // 點到障礙物的最短距離（球心算法；給星幣避位與測試用）
 function raceObsDist(o, p){
@@ -6266,6 +6409,7 @@ function raceBounce(n, restitution, d=player){
   d.vel.addScaledVector(n, -vn*(1+restitution));
   d.disturb = Math.min(1, d.disturb + Math.min(0.6, -vn*0.1));
   if(-vn > 1.0) sfx.hit(Math.min(1, -vn/8));
+  hapticHit(d, -vn);
   return -vn;
 }
 function raceCollideGate(c, dr=player){
@@ -6356,9 +6500,9 @@ function raceStep(h, t){
   if(impact > 0.6 && raceHitCd <= 0){
     raceHits++; raceHitCd = 0.5;
     if(raceModeId === 'nohit'){
-      flashMsg('💥 碰撞 ' + raceHits + ' / 3　+' + RACE_PENALTY + ' 秒', '#f87171', 0.8);
+      flashMsg('碰撞 ' + raceHits + ' / 3　+' + RACE_PENALTY + ' 秒', '#f87171', 0.8);
       if(raceHits >= 3){ raceFinish(false, '撞擊 3 次，挑戰失敗'); return; }
-    }else flashMsg('💥 碰撞', '#f87171', 0.45);
+    }else flashMsg('碰撞', '#f87171', 0.45);
   }
   // 下一道門：由後往前穿過圓環平面、且在開口內
   const c = raceData.gates[raceIdx];
@@ -6414,7 +6558,7 @@ function raceFinish(ok, reason){
   const ttl = document.getElementById('raceResultTitle');
   ttl.textContent = ok ? '完賽！' : (reason || '挑戰失敗');
   ttl.className = ok ? '' : 'fail';
-  document.getElementById('raceResultSub').textContent = sceneById(raceSceneId).emoji + ' ' + D.T.name + '　' + M.emoji + ' ' + M.name;
+  document.getElementById('raceResultSub').textContent = sceneById(raceSceneId).emoji + ' ' + D.T.name + '　' + M.name;
   document.getElementById('raceStars').innerHTML = [0,1,2].map(i=> i < stars ? '<b>★</b>' : '★').join('');
   const g = '<span style="color:#7c88a8">', e = '</span>';
   let st = '<em>用時</em>' + raceTime.toFixed(1) + ' s';
@@ -6424,7 +6568,7 @@ function raceFinish(ok, reason){
   if(raceModeId === 'time')  st += g + '3★ ≤ ' + par + ' s　2★ ≤ ' + Math.round(par*1.35) + ' s' + e;
   if(raceModeId === 'coins') st += g + '3★ 全部收集　2★ 收集 6 成以上' + e;
   if(raceModeId === 'nohit') st += g + '3★ 零碰撞且 ≤ ' + Math.round(par*1.35) + ' s　2★ 碰撞 ≤ 1 次' + e;
-  if(ok && isNew) st += '<br><span style="color:#7dffa9;font-weight:700">🏅 新紀錄！</span>';
+  if(ok && isNew) st += '<br><span style="color:#7dffa9;font-weight:700">新紀錄！</span>';
   if(!ok) st += '<br>' + g + '通過 ' + raceIdx + ' / ' + D.gates.length + ' 道拱門' + e;
   document.getElementById('raceStats').innerHTML = st;
   document.getElementById('raceResult').style.display = 'flex';
@@ -6453,8 +6597,8 @@ function raceUpdateHUD(){
   if(!raceData) return;
   const D = raceData, M = RACE_MODES.find(m=>m.id===raceModeId), SC = sceneById(raceSceneId);
   const $ = id => document.getElementById(id);
-  $('raceTitle').textContent = '🏁 ' + D.T.name + '　' + M.emoji + ' ' + M.name;
-  $('raceEnv').textContent = SC.emoji + ' ' + SC.name + '　飛行條件：' + ((SC.fly && SC.fly.note) || '無風') +
+  $('raceTitle').textContent = '' + D.T.name + '　' + M.name;
+  $('raceEnv').textContent = SC.name + '　飛行條件：' + ((SC.fly && SC.fly.note) || '無風') +
     '　全長 ' + Math.round(D.len) + ' m';
   $('raceGate').textContent = Math.min(raceIdx, D.gates.length) + ' / ' + D.gates.length;
   $('raceTime').textContent = raceTotalTime().toFixed(1);
@@ -6532,7 +6676,7 @@ function raceBuildPanel(){
       '<div class="best">' + best + '</div></div>';
   }).join('');
   document.querySelectorAll('#raceMaps .raceCard').forEach(el=>el.addEventListener('click', ()=>raceStart(el.dataset.id)));
-  document.getElementById('raceTotal').textContent = '⭐ ' + raceGrandTotal() + ' / ' + raceGrandMax();
+  document.getElementById('raceTotal').textContent = '★ ' + raceGrandTotal() + ' / ' + raceGrandMax();
 }
 function raceOpenPanel(){
   try{ const m = localStorage.getItem(RACE_SAVE_KEY + '-mode'); if(RACE_MODES.some(x=>x.id===m)) raceModeId = m; }catch(e){}
@@ -6592,9 +6736,9 @@ function raceDuoStep(h, t){
     if(impact > 0.6 && r.hitCd <= 0){
       r.hits++; r.hitCd = 0.5;
       if(raceModeId === 'nohit'){
-        duoMsg(r.v, '💥 碰撞 ' + r.hits + ' / 3　+' + RACE_PENALTY + ' 秒', '#f87171', 0.8);
+        duoMsg(r.v, '碰撞 ' + r.hits + ' / 3　+' + RACE_PENALTY + ' 秒', '#f87171', 0.8);
         if(r.hits >= 3){ raceDuoFinishOne(r, false, '撞 3 次出局'); return; }
-      }else duoMsg(r.v, '💥 碰撞', '#f87171', 0.45);
+      }else duoMsg(r.v, '碰撞', '#f87171', 0.45);
     }
     const c = raceData.gates[r.idx];
     if(c){
@@ -6623,7 +6767,7 @@ function raceDuoFinishOne(r, ok, reason){
   r.done = true; r.ok = ok; r.reason = reason || '';
   if(ok){
     sfx.goal();
-    duoMsg(r.v, '🏁 完賽！' + raceDuoTotal(r).toFixed(1) + ' 秒', '#ffd75a', 3);
+    duoMsg(r.v, '完賽！' + raceDuoTotal(r).toFixed(1) + ' 秒', '#ffd75a', 3);
     if(!raceDuoEndT) raceDuoEndT = raceTime + RACE_DUO_GRACE;
     const o = raceRacers[1-r.v];
     if(o && !o.done) duoMsg(o.v, '對手已完賽！剩 ' + RACE_DUO_GRACE + ' 秒', '#fbbf24', 2.5);
@@ -6642,10 +6786,10 @@ function raceDuoResult(){
   let cmp = 0; for(let k=0;k<3 && !cmp;k++) cmp = Math.sign(sa[k]-sb[k]);
   const NAME = ['P1 藍隊', 'P2 紅隊'];
   const ttl = document.getElementById('raceResultTitle');
-  ttl.textContent = cmp > 0 ? '🏆 ' + NAME[0] + ' 獲勝！' : cmp < 0 ? '🏆 ' + NAME[1] + ' 獲勝！' : '平手！';
+  ttl.textContent = cmp > 0 ? '' + NAME[0] + ' 獲勝！' : cmp < 0 ? '' + NAME[1] + ' 獲勝！' : '平手！';
   ttl.className = '';
   ttl.style.color = cmp > 0 ? '#60a5fa' : cmp < 0 ? '#f87171' : '';
-  document.getElementById('raceResultSub').textContent = '👥 雙人賽　' + sceneById(raceSceneId).emoji + ' ' + D.T.name + '　' + M.emoji + ' ' + M.name;
+  document.getElementById('raceResultSub').textContent = '雙人賽　' + sceneById(raceSceneId).emoji + ' ' + D.T.name + '　' + M.name;
   document.getElementById('raceStars').innerHTML = '';
   const line = (r, k)=>{
     let t = '<b style="color:' + (k===0 ? '#60a5fa' : '#f87171') + '">' + NAME[k] + '</b>　';
@@ -6677,9 +6821,9 @@ function raceDuoAnimate(t){
 function raceDuoHUDText(v){
   const r = raceRacers[v]; if(!r || !raceData) return '';
   const n = raceData.gates.length;
-  let t = '🏁 ' + Math.min(r.idx, n) + '/' + n + '　⏱ ' + raceDuoTotal(r).toFixed(1) + 's　';
-  t += raceModeId === 'coins' ? '⭐ ' + r.coins : '💥 ' + r.hits + (raceModeId === 'nohit' ? '/3' : '');
-  if(r.done) t += r.ok ? '　✅' : '　❌';
+  let t = '關卡 ' + Math.min(r.idx, n) + '/' + n + '　時間 ' + raceDuoTotal(r).toFixed(1) + 's　';
+  t += raceModeId === 'coins' ? '星幣 ' + r.coins : '碰撞 ' + r.hits + (raceModeId === 'nohit' ? '/3' : '');
+  if(r.done) t += r.ok ? '　完成' : '　失敗';
   return t;
 }
 // 賽道選單：人數切換（單人／雙人）＋只有一支搖桿時給哪邊
@@ -6704,7 +6848,7 @@ document.getElementById('btnRaceList').addEventListener('click', raceBackToPanel
 //   「AI 對打可以進球自動回放，但人的比賽是不能中斷的，就用有按鈕的回放」）
 //   - 錄影：比賽中每 1/30 秒記一格「全部機體的物理狀態＋兩個球門的擺盪姿態」，保留最近 12 秒（環形緩衝）。
 //   - 進球：切出「進球前 6 秒～進球後 1.6 秒」成為一段片段，這場比賽的每一球都留著（重賽/回選單才清掉）。
-//   - 有人在玩（對戰 AI／雙人／連線）：只出現「🎬 關鍵回放」按鈕（或按 V），按了才看；
+//   - 有人在玩（對戰 AI／雙人／連線）：只出現「關鍵回放」按鈕（或按 V），按了才看；
 //     單機／雙人按下去會暫停比賽、看完回到原狀態；連線對戰不能暫停別人，所以回放時比賽照常進行（畫面有提示）。
 //   - AI vs AI 示範賽：進球 1.6 秒後自動播一次（導播鏡頭＋進球瞬間慢動作），播完自動回到比賽；
 //     中途碰任何控制鍵就變成手動、不自動關。
@@ -6949,7 +7093,7 @@ function rpSyncUI(){
     + (mode==='net' ? '　·　連線比賽仍在進行中' : '') + (REPLAY.auto ? '　·　自動回放中（點任何按鈕接手）' : '');
   document.getElementById('rpMark').style.left = (c.goalAt / Math.max(0.01, c.dur) * 100) + '%';
   document.getElementById('rpClipN').textContent = (REPLAY.idx+1) + ' / ' + REPLAY.clips.length;
-  document.getElementById('rpPlay').textContent = REPLAY.playing ? '⏸' : '▶';
+  document.getElementById('rpPlay').textContent = REPLAY.playing ? '❚❚' : '▶';
   document.getElementById('rpLoop').classList.toggle('sel', REPLAY.loop);
   document.querySelectorAll('#rpUI [data-sp]').forEach(b=>b.classList.toggle('sel', b.dataset.sp === REPLAY.speed));
   document.querySelectorAll('#rpUI [data-cam]').forEach(b=>b.classList.toggle('sel', b.dataset.cam === REPLAY.cam));
@@ -6967,7 +7111,7 @@ function rpUpdateBtn(force){
   const b = document.getElementById('rpBtn');
   b.style.display = show ? '' : 'none';
   b.classList.toggle('hot', hot);
-  b.innerHTML = hot ? '🎬 關鍵回放 <small>V</small>' : '🎬 回放 <b>' + n + '</b>';
+  b.innerHTML = hot ? '關鍵回放 <small>V</small>' : '回放 <b>' + n + '</b>';
 }
 function rpUserTook(){ if(REPLAY.auto){ REPLAY.auto = false; REPLAY.loop = true; rpSyncUI(); } }
 function rpAct(a){
@@ -7691,7 +7835,7 @@ function loop(){
   }
   updateGoalBoards();
   // 觀眾：姿勢切換在 shader 裡；這裡更新時間、氣氛，並決定哪幾面看台要畫
-  crowdTick(dt, t, !!sceneById(curScene).stands && !raceHidden.length);
+  crowdTick(dt, t, SHOW_CROWD && !!sceneById(curScene).stands && !raceHidden.length);
   for(const f of flashSprites){
     f.t -= dt;
     if(f.t<=0){ f.m.opacity = CROWD.flash ? 0.9 : 0; f.t = 1.5 + Math.random()*5; }   // 白天的戶外場景不閃手機燈
@@ -7706,7 +7850,7 @@ function loop(){
   if(REPLAY.on) rpCamera(dt);
   if(duoOn) duoFrame(dt);                       // 左右兩個鏡頭＋各自的遮擋半透明／HUD
   sfx.updateEngines(drones, duoOn ? DUO.lisPos : camera.position, duoOn ? DUO.lisLook : camLook, state==='play',
-                    state==='play' && sceneById(curScene).stands);   // 觀眾聲：只有比賽中＋有看台的場景   // 各機依與鏡頭的距離/方位即時調整音量與定位
+                    state==='play' && SHOW_CROWD && sceneById(curScene).stands);   // 觀眾聲：只有比賽中＋有看台的場景   // 各機依與鏡頭的距離/方位即時調整音量與定位
   if(duoOn) duoRender(); else renderer.render(scene, camera);
 }
 
@@ -7721,8 +7865,8 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
     if(seen) return;
     try{ localStorage.setItem('offlineReadyShown', e.data.cache); }catch(_){}
     const t = document.createElement('div');
-    t.textContent = e.data.missing ? '⚠️ 部分素材還沒存好，下次有網路時會自動補齊'
-                                   : '✅ 已存到這台裝置：之後沒有網路也能打開、照常飛（連線對戰除外）';
+    t.textContent = e.data.missing ? '部分素材還沒存好，下次有網路時會自動補齊'
+                                   : '已存到這台裝置：之後沒有網路也能打開、照常飛（連線對戰除外）';
     t.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10000;max-width:90vw;'
       + 'background:rgba(10,16,30,.92);color:#e8eefc;border:1px solid #3b82f6;border-radius:10px;padding:10px 16px;'
       + 'font-size:14px;line-height:1.4;text-align:center;pointer-events:none;transition:opacity .6s';
