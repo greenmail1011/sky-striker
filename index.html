@@ -44,6 +44,24 @@
   #msg{top:22%;left:50%;transform:translateX(-50%);font-size:52px;font-weight:900;letter-spacing:4px;
     opacity:0;transition:opacity .25s;text-align:center;white-space:nowrap}
   #msg.long{font-size:28px;letter-spacing:1px;white-space:normal;width:min(900px,92vw);line-height:1.35}
+  #report{position:fixed;left:50%;top:33%;transform:translateX(-50%);z-index:35;width:min(780px,96vw);max-height:64vh;overflow:auto;
+    background:rgba(7,7,26,.92);border:1px solid rgba(120,160,255,.35);border-radius:14px;padding:12px 16px;color:#e2e8f0;
+    font-size:14px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  #report h3{margin:0 0 8px;font-size:17px;letter-spacing:2px;text-align:center}
+  #report table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  #report td{padding:3px 6px;text-align:center;border-bottom:1px solid rgba(255,255,255,.08)}
+  #report td.k{color:#94a3b8;font-size:12px}
+  #report td.b{color:#60a5fa;font-weight:700}
+  #report td.r{color:#f87171;font-weight:700}
+  #report .rpGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+  @media (max-width:640px){#report .rpGrid{grid-template-columns:1fr}}
+  #report canvas{display:block;margin:0 auto 2px;width:100%;max-width:400px;aspect-ratio:2/1;background:#0b1a12;border-radius:8px}
+  #report .cap{font-size:11px;color:#94a3b8;text-align:center}
+  #report .cmp{margin-top:6px;font-size:13px;color:#fde68a;text-align:center;line-height:1.6}
+  #report button{display:block;margin:8px auto 0;padding:5px 22px;border-radius:8px;border:1px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px;cursor:pointer}
+  body.replaying #report,body.inMenu #report{display:none!important}
+  body.touch.phone #report{font-size:12px;top:30%;max-height:66vh}
   #telemetry{right:16px;bottom:16px;background:rgba(8,12,24,.7);border:1px solid rgba(120,160,255,.2);
     border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.7;font-variant-numeric:tabular-nums;min-width:170px}
   #telemetry b{color:#9fc1ff}
@@ -582,6 +600,7 @@
   </div>
 </div>
 <div class="hud" id="msg"></div>
+<div id="report" style="display:none"></div>
 <button class="hud" id="rpBtn" style="display:none">回放</button>
 <div id="hudTgl" style="display:none">
   <button id="rpToggle" title="關掉後：進球不切回放片段、不出現回放按鈕、示範賽也不自動回放">回放：開</button>
@@ -2800,7 +2819,7 @@ function crashResist(d){   // 越高級的飛手越救得回來：AI Lv1 ×1.15 
   if(mode==='net' && NET.slotOwners && NET.slotOwners[drones.indexOf(d)]) return 1;
   return 1.3 - 0.12*(d.lv||1);
 }
-function onDroneCrash(d){ crashMsgTo(d, '墜機！', '#fb923c', 1.4); }
+function onDroneCrash(d){ msCrash(d); crashMsgTo(d, '墜機！', '#fb923c', 1.4); }
 function onDroneRecover(d){ crashMsgTo(d, '可以重新起飛了', '#7dffa9', 1.2); }
 function onDroneTurtle(d){ crashMsgTo(d, '翻過來了！反烏龜中…', '#fbbf24', 1.0); }
 function onDroneHopFail(d){ crashMsgTo(d, '起飛失敗，再試一次…', '#fb923c', 0.9); }
@@ -2957,7 +2976,7 @@ function checkGoals(){
     // Striker 回防解鎖
     if(d.role==='striker' && !d.canScore
        && Math.sign(d.pos.x||1)!==Math.sign(atkRing.x) && Math.abs(d.pos.x)>0.4){
-      d.canScore = true;
+      d.canScore = true; msUnlock(d.team);
       if(isSoloHuman(d)) flashMsg('得分權已解鎖 ✓', '#7dffa9', 1.2);
       else if(mode==='duo' && duoSideOf(d)>=0) duoMsg(duoSideOf(d), '得分權已解鎖 ✓', '#7dffa9', 1.2);
       else if(mode==='net' && NET.slotOwners[i]) fireFx({type:'unlock'}, NET.slotOwners[i]);
@@ -2972,6 +2991,7 @@ function checkGoals(){
     if(d.role==='striker'){
       if(!d.canScore) return;
       score[d.team].g++;
+      msGoal(d.team);
       d.canScore = false;
       updateScore(true, d.team);
       fireFx({type:'goal', team:d.team, ring: atkRing===ringEast?'E':'W'});
@@ -4298,6 +4318,7 @@ let warned30 = false;
 function setState(s){
   if(s === 'play' && state !== 'play'){ panelsPeek(); fsAuto(); }
   state = s;
+  if(s!=='over') reportHide();
 }
 // 操作說明／飛行數據：預設收起；每次開始飛的前 4 秒自動展開一下提醒，之後收回（使用者點標題固定的就一直開著）
 const PANEL_KEY = 'hsinchuDronePanelsV1';
@@ -4321,7 +4342,95 @@ document.querySelectorAll('.pTitle').forEach(t=>t.addEventListener('click', e=>{
   clearTimeout(panelPeekTmr); panelPeekTmr = null; panelsApply();
 }));
 panelsApply();
+// ---------- 賽後成績單（2026-11-12，業主要求「更像培訓系統」）
+//   蒐集：每球進攻耗時（解鎖得分權→進球）、回半場耗時（進球→解鎖）、進攻／防守違規、墜機、紅隊 Striker 軌跡。
+//   比賽結束（單機／示範賽／雙人）顯示成績單；單機模式會跟「上一場同 AI 等級」比較（localStorage）。
+const REPORT_KEY = 'hsinchuDroneReportV1';
+const MS = {on:false, red:null, blue:null, trail:[], trailT:0};
+function msTeam(){ return {goals:[], unlocks:[], lastRef:0, goalAt:null, crashes:0}; }
+function msReset(){ MS.red = msTeam(); MS.blue = msTeam(); MS.trail = []; MS.trailT = 0; MS.on = true; }
+function msElapsed(){ return MATCH_TIME - timeLeft; }
+function msGoal(team){
+  const T = MS.on && MS[team]; if(!T) return;
+  const t = msElapsed();
+  T.goals.push({dur: t - T.lastRef, ti: team==='red' ? MS.trail.length-1 : -1});
+  T.goalAt = t;
+}
+function msUnlock(team){
+  const T = MS.on && MS[team]; if(!T || T.goalAt==null) return;
+  const t = msElapsed();
+  T.unlocks.push(t - T.goalAt); T.lastRef = t; T.goalAt = null;
+}
+function msCrash(d){ const T = MS.on && state==='play' && MS[d.team]; if(T) T.crashes++; }
+function msTick(dt){
+  if(!MS.on) return;
+  MS.trailT -= dt;
+  if(MS.trailT <= 0){
+    MS.trailT = 0.1;
+    if(MS.trail.length < 2000) MS.trail.push([player.pos.x, player.pos.z, player.canScore ? 1 : 0]);
+  }
+}
+function reportHide(){ const el = document.getElementById('report'); if(el) el.style.display = 'none'; }
+function msFinish(){
+  if(!MS.on) return;
+  MS.on = false;
+  if(!(mode==='player' || mode==='demo' || mode==='duo')) return;
+  const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+  const sec = v => v==null ? '—' : v.toFixed(1) + ' 秒';
+  const stat = tm => { const T = MS[tm], du = T.goals.map(g=>g.dur);
+    return {goals:T.goals.length, avgAtk:avg(du), best:du.length ? Math.min(...du) : null,
+            avgRet:avg(T.unlocks), off:score[tm].o, def:score[tm].d, crashes:T.crashes}; };
+  const B = stat('blue'), R = stat('red');
+  const rF = Math.max(0, rawScore('red')), bF = Math.max(0, rawScore('blue'));
+  const res = rF>bF ? '紅隊獲勝' : bF>rF ? '藍隊獲勝' : '平手';
+  // 與上一場同模式、同 AI 等級的紅隊（玩家）比較
+  let cmp = '';
+  if(mode==='player'){
+    const key = 'player|' + AI_LV;
+    let store = {}; try{ store = JSON.parse(localStorage.getItem(REPORT_KEY)||'{}') || {}; }catch(e){}
+    const p = store[key];
+    if(p){
+      const parts = ['進球 ' + R.goals + '（上次 ' + p.goals + '）'];
+      if(R.avgAtk!=null && p.avgAtk!=null){
+        const d = R.avgAtk - p.avgAtk;
+        parts.push('平均每球 ' + R.avgAtk.toFixed(1) + ' 秒（上次 ' + p.avgAtk.toFixed(1) + '，' + (d<0 ? '快了 ' : '慢了 ') + Math.abs(d).toFixed(1) + ' 秒）');
+      }
+      parts.push('違規 ' + (R.off+R.def) + '（上次 ' + p.vio + '）', '墜機 ' + R.crashes + '（上次 ' + p.crashes + '）');
+      cmp = '<div class="cmp">與上一場同等級（' + aiLabel() + '）比較<br>' + parts.join('　') + '</div>';
+    }else cmp = '<div class="cmp">這是此 AI 等級（' + aiLabel() + '）的第一場紀錄，下次會顯示比較</div>';
+    store[key] = {goals:R.goals, avgAtk:R.avgAtk, vio:R.off+R.def, crashes:R.crashes, ts:Date.now()};
+    try{ localStorage.setItem(REPORT_KEY, JSON.stringify(store)); }catch(e){}
+  }
+  const row = (k,b,r) => '<tr><td class="b">'+b+'</td><td class="k">'+k+'</td><td class="r">'+r+'</td></tr>';
+  const el = document.getElementById('report');
+  el.innerHTML = '<h3>賽後成績單　' + bF + ' : ' + rF + '　' + res + '</h3>' +
+    '<div class="rpGrid"><table><tr><td class="b">藍隊</td><td class="k"></td><td class="r">紅隊</td></tr>' +
+    row('進球', B.goals, R.goals) + row('平均每球耗時', sec(B.avgAtk), sec(R.avgAtk)) +
+    row('最快一球', sec(B.best), sec(R.best)) + row('平均回半場耗時', sec(B.avgRet), sec(R.avgRet)) +
+    row('進攻違規', B.off, R.off) + row('防守違規', B.def, R.def) + row('墜機', B.crashes, R.crashes) + '</table>' +
+    '<div><canvas id="reportMap" width="400" height="200"></canvas>' +
+    '<div class="cap">紅隊 Striker 飛行軌跡（紅線＝可得分，灰線＝回半場解鎖中，白圈＝進球）</div></div></div>' + cmp +
+    '<button id="reportClose">關閉</button>';
+  el.style.display = 'block';
+  // 軌跡圖（場地俯視，藍場在左）
+  const cv = document.getElementById('reportMap'), g = cv.getContext('2d');
+  const X = x => (x + FIELD.hx) / (FIELD.hx*2) * cv.width, Z = z => (z + FIELD.hz) / (FIELD.hz*2) * cv.height;
+  g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.strokeRect(1,1,cv.width-2,cv.height-2);
+  g.beginPath(); g.moveTo(cv.width/2,0); g.lineTo(cv.width/2,cv.height); g.stroke();
+  [[ringWest,'#60a5fa'],[ringEast,'#f87171']].forEach(([rg,c])=>{ g.fillStyle = c; g.fillRect(X(rg.x)-3, Z(-RING.R-0.04), 6, (RING.R+0.04)*2/(FIELD.hz*2)*cv.height); });
+  g.lineWidth = 2; g.lineJoin = 'round';
+  for(let i=1;i<MS.trail.length;i++){
+    const a = MS.trail[i-1], b = MS.trail[i];
+    g.strokeStyle = b[2] ? '#f87171' : 'rgba(180,190,200,.55)';
+    g.beginPath(); g.moveTo(X(a[0]), Z(a[1])); g.lineTo(X(b[0]), Z(b[1])); g.stroke();
+  }
+  g.fillStyle = '#fff'; g.strokeStyle = '#111'; g.lineWidth = 1.5;
+  MS.red.goals.forEach(gl=>{ const q = MS.trail[Math.max(0,gl.ti)]; if(!q) return;
+    g.beginPath(); g.arc(X(q[0]), Z(q[1]), 5, 0, Math.PI*2); g.fill(); g.stroke(); });
+}
+document.getElementById('report').addEventListener('click', e=>{ e.stopPropagation(); if(e.target.id==='reportClose') reportHide(); });
 function restart(){
+  msReset(); reportHide();
   ringSwingReset();
   score.red = {g:0,o:0,d:0}; score.blue = {g:0,o:0,d:0}; updateScore();
   timeLeft = MATCH_TIME; warned30 = false;
@@ -4334,6 +4443,7 @@ function restart(){
   if(mode==='train') flashMsg((TRAIN.role==='atk' ? '攻擊訓練開始！' : '防守訓練開始！') + ' ' + trainOppLabel(), '#ffe680', 1.8);
 }
 function endMatch(){
+  msFinish();
   setState('over');
   updateScore();                                // 終場結算：負分記為 0
   fireFx({type:'end'});
@@ -8092,6 +8202,7 @@ function loop(){
     }
     updateFouls(dt);
     trainTick();
+    msTick(dt);
   }
   if(mode==='net' && NET.isHost) netMaybeBroadcastSnapshot();   // 房主：無論何種 state 都持續廣播（暫停/賽後也同步）
   watchTick();                                  // 觀賽直播：直播主送畫面、觀眾套用（見 WATCH）
