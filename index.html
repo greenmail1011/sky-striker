@@ -397,6 +397,8 @@
   #credit{bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;
     color:#8a94ad;letter-spacing:1px;opacity:.85}
   #overlay .credit{margin-top:18px;font-size:13px;color:#8a94ad;letter-spacing:1px}
+  #overlay .credit a{color:inherit;text-decoration:none;cursor:pointer;padding:6px 4px}
+  #overlay .credit a:hover,#overlay .credit a:focus-visible{color:#cfe0ff;text-decoration:underline}
   /* ---------- 闖關模式（2026-08-26 新增） ---------- */
   #btnCampaign{border-color:rgba(255,215,90,.6);color:#ffd75a}
   #btnCampaign:hover{border-color:#ffd75a;color:#fff;box-shadow:0 0 18px rgba(255,215,90,.35)}
@@ -578,6 +580,11 @@
   /* ---------- 飛行賽道（2026-10-09 新增） ---------- */
   #btnRace{border-color:rgba(125,255,169,.6);color:#7dffa9}
   #btnRace:hover{border-color:#7dffa9;color:#fff;box-shadow:0 0 18px rgba(125,255,169,.35)}
+  #raceMore{display:none;gap:8px;justify-content:center;margin:-6px 0 10px}
+  #raceMore.on{display:flex}
+  #raceModesMore{display:none;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 6px}
+  #raceModesMore.on{display:flex}
+  #raceModes .moreBtn{opacity:.8}
   #raceHeadTtl{font-size:16px;font-weight:900;color:#7dffa9;letter-spacing:2px}
   #raceTotal{font-size:15px;color:#ffd75a;font-weight:900;letter-spacing:1px}
   #raceModes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px}
@@ -908,18 +915,18 @@
     <div id="raceHead">
       <button class="netBtnSmall" id="btnRaceBack">‹ 返回選單</button>
       <div id="raceHeadTtl">飛行賽道</div>
-      <button class="netBtnSmall" id="btnLadder">天梯排行</button>
-      <button class="netBtnSmall" id="btnCert">練習證書（示意）</button>
       <button class="netBtnSmall" id="btnDaily">今日挑戰</button>
-      <button class="netBtnSmall" id="btnBadge">成就徽章</button>
+      <button class="netBtnSmall" id="btnRaceMore">我的紀錄 ▾</button>
       <div id="raceTotal">★ 0 / 45</div>
     </div>
+    <div id="raceMore"><button class="netBtnSmall" id="btnLadder">天梯排行</button><button class="netBtnSmall" id="btnBadge">成就徽章</button><button class="netBtnSmall" id="btnCert">練習證書</button></div>
     <div id="raceDuoOpt">人數：<button class="sceneBtn" data-rd="0">單人</button><button class="sceneBtn" data-rd="1">雙人（左右分割）</button>
       <span id="raceDuoPad">　只有一支搖桿時給：<button class="sceneBtn" data-rpad="0">◀ 左 P1 藍</button><button class="sceneBtn" data-rpad="1">右 P2 紅 ▶</button></span></div>
     <div id="raceModes"></div>
+    <div id="raceModesMore"></div>
     <div id="raceModeDesc"></div>
     <div id="raceMaps"></div>
-    <div id="raceHint">每個場景一條專屬賽道：從場地中央起飛，跟著綠色箭頭與光點依序穿過拱門到終點。R 重來、M 回選單</div>
+    <div id="raceHint">選一個場景開始。R 重來、M 回選單</div>
   </div>
   <div id="campPanel" style="display:none">
     <div id="campHead">
@@ -932,7 +939,7 @@
       <button class="netBtnSmall leave" id="btnCampReset">清除本場景紀錄</button>
     </div>
   </div>
-  <div class="credit">新竹市無人機創新科技協會©</div>
+  <div class="credit"><a href="https://hcdrone.org.tw/" target="_blank" rel="noopener noreferrer">新竹市無人機創新科技協會©</a></div>
 </div>
 
 <div id="raceResult">
@@ -956,7 +963,6 @@
   <div class="ctRow"><label>姓名 <input id="ctName" maxlength="12" placeholder="輸入姓名" autocomplete="off"></label>
   <label>等級 <select id="ctLevel"><option value="0">初級 Beginner</option><option value="1">中級 Intermediate</option><option value="2">高級 Advanced</option></select></label></div>
   <div class="ctRow" id="ctStat" style="font-size:13px;line-height:1.7"></div>
-  <label style="font-size:13px;color:#9fb0d8"><input type="checkbox" id="ctDemo"> 示範模式（不檢查成績，教學示範用）</label>
   <canvas id="ctCanvas" width="1754" height="1240"></canvas>
   <div class="ctRow"><button class="modeBtn" id="ctDownload">下載圖片（PNG）</button><button class="modeBtn" id="ctClose">關閉</button></div>
   <div style="font-size:12px;color:#7c88a8">本證書為模擬器練習用示意證書，不是任何官方認證。</div></div></div>
@@ -6386,6 +6392,8 @@ const RACE_MODES = [
   {id:'items',  emoji:'', name:'道具賽',     desc:'航線上有綠色加速圈（瞬間加速）和金色時間膠囊（總成績 −2 秒）；雙人時先到先得。'},
   {id:'elim',   emoji:'', name:'淘汰賽',     desc:'紅色淘汰線從起點追上來，越追越快；被追上就淘汰。雙人時落後的人會先被追上。'},
 ];
+const RACE_MODES_MAIN = ['time','coins','nohit','laps'];   // 選單先顯示的玩法；其餘收在「更多玩法」
+let raceModesMoreOpen = false;
 const RACE_GT = 0.07;        // 拱門管徑
 const RACE_LIMIT = 150;      // 限時（秒）
 const RACE_PENALTY = 3;      // 零碰撞：每撞一次加秒
@@ -7309,13 +7317,13 @@ const CERT_RULES = [
 ];
 const certUnlocked = i => CERT_RULES[i].done() >= CERT_RULES[i].total;
 function certRefreshLevels(){
-  const demo = document.getElementById('ctDemo').checked, sel = document.getElementById('ctLevel');
+  const sel = document.getElementById('ctLevel');
   let best = -1;
   CERT_RULES.forEach((r,i)=>{ if(certUnlocked(i)) best = i; });
-  [...sel.options].forEach((o,i)=>{ o.disabled = !demo && !certUnlocked(i); o.textContent = CERT_LEVELS[i].zh + ' ' + CERT_LEVELS[i].en + (certUnlocked(i) ? '　✓' : (demo ? '' : '　（未解鎖）')); });
+  [...sel.options].forEach((o,i)=>{ o.disabled = !certUnlocked(i); o.textContent = CERT_LEVELS[i].zh + ' ' + CERT_LEVELS[i].en + (certUnlocked(i) ? '　✓' : '　（未過關）'); });
   if(sel.options[sel.selectedIndex].disabled) sel.value = String(Math.max(best, 0));
   document.getElementById('ctStat').innerHTML = CERT_RULES.map((r,i)=>CERT_LEVELS[i].zh + '：' + r.desc + '　<b style="color:' + (certUnlocked(i) ? '#7dffa0' : '#ffd75a') + '">' + Math.min(r.done(), r.total) + ' / ' + r.total + '</b>').join('<br>');
-  const locked = !demo && !certUnlocked(+sel.value || 0);
+  const locked = !certUnlocked(+sel.value || 0);
   document.getElementById('ctCanvas').style.opacity = locked ? '.25' : '1';
   document.getElementById('ctDownload').disabled = locked;
   return locked;
@@ -7388,7 +7396,6 @@ document.getElementById('btnCert').addEventListener('click', certOpen);
 document.getElementById('ctClose').addEventListener('click', ()=>{ document.getElementById('certModal').style.display = 'none'; });
 document.getElementById('ctName').addEventListener('input', certDraw);
 document.getElementById('ctLevel').addEventListener('change', ()=>{ certRefreshLevels(); certDraw(); });
-document.getElementById('ctDemo').addEventListener('change', ()=>{ certRefreshLevels(); certDraw(); });
 document.getElementById('ctDownload').addEventListener('click', ()=>{
   const r = certDraw(), a = document.createElement('a');
   a.download = '練習證書_示意_' + r.no + '.png'; a.href = document.getElementById('ctCanvas').toDataURL('image/png');
@@ -7566,9 +7573,19 @@ function raceBackToPanel(){
 // ---------- 選單：玩法 × 場景 ----------
 function raceBuildPanel(){
   const M = RACE_MODES.find(m=>m.id===raceModeId);
-  document.getElementById('raceModes').innerHTML = RACE_MODES.map(m=>
-    '<button class="sceneBtn' + (m.id===raceModeId ? ' on' : '') + '" data-id="' + m.id + '"><i>' + ico('race_' + m.id) + '</i>' + m.name + '</button>').join('');
-  document.querySelectorAll('#raceModes .sceneBtn').forEach(b=>b.addEventListener('click', ()=>{
+  const mBtn = m=>'<button class="sceneBtn' + (m.id===raceModeId ? ' on' : '') + '" data-id="' + m.id + '"><i>' + ico('race_' + m.id) + '</i>' + m.name + '</button>';
+  const mainM = RACE_MODES.filter(m=>RACE_MODES_MAIN.includes(m.id)), moreM = RACE_MODES.filter(m=>!RACE_MODES_MAIN.includes(m.id));
+  const moreOn = raceModesMoreOpen || moreM.some(m=>m.id===raceModeId);     // 選到進階玩法時自動展開
+  document.getElementById('raceModes').innerHTML = mainM.map(mBtn).join('') +
+    '<button class="sceneBtn moreBtn" id="btnModesMore">' + (moreOn ? '收起 ▴' : '更多玩法 ▾') + '</button>';
+  document.getElementById('raceModesMore').innerHTML = moreM.map(mBtn).join('');
+  document.getElementById('raceModesMore').classList.toggle('on', moreOn);
+  document.getElementById('btnModesMore').addEventListener('click', ()=>{
+    raceModesMoreOpen = !moreOn && true;
+    if(moreOn && moreM.some(m=>m.id===raceModeId)){ raceModeId = 'time'; }   // 收起時若選的是進階玩法，退回計時賽
+    raceBuildPanel();
+  });
+  document.querySelectorAll('#raceModes .sceneBtn:not(.moreBtn), #raceModesMore .sceneBtn').forEach(b=>b.addEventListener('click', ()=>{
     raceModeId = b.dataset.id;
     try{ localStorage.setItem(RACE_SAVE_KEY + '-mode', raceModeId); }catch(e){}
     raceBuildPanel();
@@ -7760,6 +7777,10 @@ document.querySelectorAll('#raceDuoOpt button').forEach(b=>b.addEventListener('c
   if(b.dataset.rpad !== undefined) DUO.padSide = +b.dataset.rpad;
   duoSaveOpt(); raceSyncDuoOpt(); duoSyncOpt();
 }));
+document.getElementById('btnRaceMore').addEventListener('click', ()=>{
+  const m = document.getElementById('raceMore'), on = !m.classList.contains('on');
+  m.classList.toggle('on', on); document.getElementById('btnRaceMore').textContent = on ? '我的紀錄 ▴' : '我的紀錄 ▾';
+});
 document.getElementById('btnRace').addEventListener('click', raceOpenPanel);
 document.getElementById('btnRaceBack').addEventListener('click', raceClosePanel);
 document.getElementById('btnRaceRetry').addEventListener('click', raceRestart);
