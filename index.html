@@ -533,6 +533,13 @@
   body.touch.phone #netBadge{top:auto!important;bottom:6px;right:50%!important;transform:translateX(50%) scale(.8);white-space:nowrap}
   body.touch.phone #credit{display:none}
   body.touch.phone #touchBtns button{width:38px;height:38px;font-size:17px}
+  /* 2026-11-12：觸控按鈕（視角／暫停／重來／選單／全螢幕）占右上角整排 → 回放開關、連續對戰、分享觀賽、連線徽章、觀賽視窗整組往下移，不再疊在一起（手機另有自己的位置，不受影響） */
+  body.touch #hudTgl{top:64px}
+  body.touch.netMode #hudTgl{top:108px}
+  body.touch #netBadge{top:64px!important}
+  body.touch #watchPop{top:108px}
+  body.touch.tablet #telemetry{top:108px}
+  body.touch.tablet.netMode #telemetry{top:152px}
   body.touch.phone #overlay h1{font-size:28px}
   body.touch.phone #overlay h2{font-size:13px;margin-bottom:12px}
   body.touch.phone #overlay .rules{font-size:12px;line-height:1.7;padding:10px 16px}
@@ -914,6 +921,8 @@
 <div id="certModal"><div class="ctBox"><h3>練習證書（示意）</h3>
   <div class="ctRow"><label>姓名 <input id="ctName" maxlength="12" placeholder="輸入姓名" autocomplete="off"></label>
   <label>等級 <select id="ctLevel"><option value="0">初級 Beginner</option><option value="1">中級 Intermediate</option><option value="2">高級 Advanced</option></select></label></div>
+  <div class="ctRow" id="ctStat" style="font-size:13px;line-height:1.7"></div>
+  <label style="font-size:13px;color:#9fb0d8"><input type="checkbox" id="ctDemo"> 示範模式（不檢查成績，教學示範用）</label>
   <canvas id="ctCanvas" width="1754" height="1240"></canvas>
   <div class="ctRow"><button class="modeBtn" id="ctDownload">下載圖片（PNG）</button><button class="modeBtn" id="ctClose">關閉</button></div>
   <div style="font-size:12px;color:#7c88a8">本證書為模擬器練習用示意證書，不是任何官方認證。</div></div></div>
@@ -6975,7 +6984,7 @@ async function ladderSync(cur){
     const j = await ladderFetchBoard(cur.sid, cur.mid, cur.rid);
     if(ladderCur !== cur) return;
     tbl.innerHTML = ladderRemoteTable(j, cur.mid);
-    rankEl.textContent = j.me ? '全校天梯第 ' + j.me.rank + ' 名（共 ' + j.total + ' 人）' + (j.me.isBest ? '' : '　你的最佳成績排名') : '成績已送出';
+    rankEl.textContent = j.me ? '天梯排行榜第 ' + j.me.rank + ' 名（共 ' + j.total + ' 人）' + (j.me.isBest ? '' : '　你的最佳成績排名') : '成績已送出';
   }catch(e){ if(ladderCur === cur) rankEl.textContent = '成績已送出（榜單暫時讀不到）'; }
 }
 function ladderResult(ok, mid, total){
@@ -6984,7 +6993,7 @@ function ladderResult(ok, mid, total){
   const sid = raceSceneId, rank = ladderAdd(sid, mid, total, raceCoinGot), cur = ladderCur;
   cur.sid = sid; cur.mid = mid; cur.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const inp = document.getElementById('ladderName');
-  inp.value = ladderName; inp.placeholder = LADDER_URL ? '暱稱（全校公開）' : '輸入名字';
+  inp.value = ladderName; inp.placeholder = LADDER_URL ? '暱稱（天梯排行榜公開）' : '輸入名字';
   document.getElementById('ldRank').textContent = LADDER_URL ? '成績送出中…' : (rank <= LADDER_MAX ? '天梯第 ' + rank + ' 名' : '未進前 ' + LADDER_MAX + ' 名（第 ' + rank + ' 名）');
   document.getElementById('ldTbl').innerHTML = ladderTable(sid, mid, cur.ts);
   box.style.display = 'block';
@@ -7020,7 +7029,7 @@ function ladderOpen(){
 }
 function ladderRender(){
   const mk = (list, cur, attr) => list.map(x=>'<button class="sceneBtn' + (x.id===cur ? ' on' : '') + '" ' + attr + '="' + x.id + '">' + x.name + '</button>').join('');
-  document.getElementById('ldScope').innerHTML = LADDER_URL ? mk([{id:'all', name:'全校榜'}, {id:'local', name:'這台裝置'}], ldSel.scope, 'data-lc') : '';
+  document.getElementById('ldScope').innerHTML = LADDER_URL ? mk([{id:'all', name:'天梯排行榜'}, {id:'local', name:'這台裝置'}], ldSel.scope, 'data-lc') : '';
   document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly), ldSel.mid, 'data-lm');
   document.getElementById('ldScenes').innerHTML = mk(SCENES, ldSel.sid, 'data-ls');
   const tb = document.getElementById('ldModalTbl'), my = ++ldSeq;
@@ -7028,7 +7037,7 @@ function ladderRender(){
     tb.innerHTML = '<div class="ldEmpty">載入中…</div>';
     const mid = ldSel.mid;
     ladderFlush().then(()=>ladderFetchBoard(ldSel.sid, mid, '')).then(j=>{ if(my === ldSeq) tb.innerHTML = ladderRemoteTable(j, mid); })
-      .catch(()=>{ if(my === ldSeq) tb.innerHTML = '<div class="ldEmpty">連不上全校榜（沒有網路？）可切到「這台裝置」</div>'; });
+      .catch(()=>{ if(my === ldSeq) tb.innerHTML = '<div class="ldEmpty">連不上天梯排行榜（沒有網路？）可切到「這台裝置」</div>'; });
   }else tb.innerHTML = ladderTable(ldSel.sid, ldSel.mid, null);
   document.querySelectorAll('#ldScope [data-lc]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.scope = b.dataset.lc; ladderRender(); }));
   document.querySelectorAll('#ldModes [data-lm]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.mid = b.dataset.lm; ladderRender(); }));
@@ -7041,6 +7050,26 @@ document.getElementById('ldClose').addEventListener('click', ()=>{ document.getE
 // 自己設計的版面，姓名／等級／日期／編號動態產生，整張帶「示意」浮水印與免責文字；不使用任何第三方認證機構的標誌或印章，也不收身分證字號。
 const CERT_LEVELS = [{zh:'初級', en:'Beginner', stars:1}, {zh:'中級', en:'Intermediate', stars:2}, {zh:'高級', en:'Advanced', stars:3}];
 let certLogo = null;
+// 發證條件（想調門檻改這裡）：用飛行賽道的紀錄 raceSave[場景][玩法] = {stars,…}
+const certStars = (sid, mid) => { const r = raceRec(sid, mid); return (r && r.stars) || 0; };
+const CERT_RULES = [
+  {desc:'任一場景完成「計時賽」',                         total:1,            done:()=>Math.min(1, SCENES.filter(sc=>certStars(sc.id,'time')>=1).length)},
+  {desc:'每個場景的「計時賽」都拿到 2 星以上',             total:SCENES.length, done:()=>SCENES.filter(sc=>certStars(sc.id,'time')>=2).length},
+  {desc:'每個場景「計時賽」3 星，且「零碰撞挑戰」2 星以上', total:SCENES.length, done:()=>SCENES.filter(sc=>certStars(sc.id,'time')>=3 && certStars(sc.id,'nohit')>=2).length},
+];
+const certUnlocked = i => CERT_RULES[i].done() >= CERT_RULES[i].total;
+function certRefreshLevels(){
+  const demo = document.getElementById('ctDemo').checked, sel = document.getElementById('ctLevel');
+  let best = -1;
+  CERT_RULES.forEach((r,i)=>{ if(certUnlocked(i)) best = i; });
+  [...sel.options].forEach((o,i)=>{ o.disabled = !demo && !certUnlocked(i); o.textContent = CERT_LEVELS[i].zh + ' ' + CERT_LEVELS[i].en + (certUnlocked(i) ? '　✓' : (demo ? '' : '　（未解鎖）')); });
+  if(sel.options[sel.selectedIndex].disabled) sel.value = String(Math.max(best, 0));
+  document.getElementById('ctStat').innerHTML = CERT_RULES.map((r,i)=>CERT_LEVELS[i].zh + '：' + r.desc + '　<b style="color:' + (certUnlocked(i) ? '#7dffa0' : '#ffd75a') + '">' + Math.min(r.done(), r.total) + ' / ' + r.total + '</b>').join('<br>');
+  const locked = !demo && !certUnlocked(+sel.value || 0);
+  document.getElementById('ctCanvas').style.opacity = locked ? '.25' : '1';
+  document.getElementById('ctDownload').disabled = locked;
+  return locked;
+}
 function certNo(name, lv, ymd){
   let h = 2166136261;                                  // 同姓名＋等級＋日期 → 同一個編號（重開視窗不會變）
   for(const ch of name + '|' + lv + '|' + ymd){ h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; }
@@ -7098,6 +7127,7 @@ function certDraw(){
   return {no, name};
 }
 function certOpen(){
+  certRefreshLevels();
   let nm = '';
   try{ nm = localStorage.getItem(LADDER_NAME_KEY) || ''; }catch(e){}
   const inp = document.getElementById('ctName'); if(!inp.value) inp.value = nm;
@@ -7107,7 +7137,8 @@ function certOpen(){
 document.getElementById('btnCert').addEventListener('click', certOpen);
 document.getElementById('ctClose').addEventListener('click', ()=>{ document.getElementById('certModal').style.display = 'none'; });
 document.getElementById('ctName').addEventListener('input', certDraw);
-document.getElementById('ctLevel').addEventListener('change', certDraw);
+document.getElementById('ctLevel').addEventListener('change', ()=>{ certRefreshLevels(); certDraw(); });
+document.getElementById('ctDemo').addEventListener('change', ()=>{ certRefreshLevels(); certDraw(); });
 document.getElementById('ctDownload').addEventListener('click', ()=>{
   const r = certDraw(), a = document.createElement('a');
   a.download = '練習證書_示意_' + r.no + '.png'; a.href = document.getElementById('ctCanvas').toDataURL('image/png');
