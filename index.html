@@ -278,6 +278,14 @@
   #raceDuoOpt .sceneBtn{padding:5px 12px;font-size:13px}
   .duoP .racei{display:none} body.duoRace .duoP .racei{display:inline;font-weight:800;color:#ffd75a} body.duoRace .duoP .arm{display:none}
   body.duoRace #raceHUD .row{display:none}
+  #raceLights{position:fixed;top:96px;left:50%;transform:translateX(-50%);gap:12px;z-index:12;pointer-events:none;padding:10px 16px;background:rgba(8,10,24,.82);border-radius:16px;border:1px solid rgba(255,255,255,.15)}
+  #raceLights i{width:34px;height:34px;border-radius:50%;background:#2a2f40;box-shadow:inset 0 0 8px rgba(0,0,0,.6)}
+  #raceLights i.r{background:#ff3b3b;box-shadow:0 0 18px #ff3b3b} #raceLights i.g{background:#39ff8a;box-shadow:0 0 18px #39ff8a}
+  .duoPos{display:none;position:fixed;top:96px;transform:translateX(-50%);text-align:center;z-index:10;pointer-events:none;text-shadow:0 0 10px rgba(0,0,0,.95)}
+  body.duoRace .duoPos{display:block} body.replaying .duoPos{visibility:hidden}
+  .duoPos b{display:block;font-size:44px;font-weight:900;letter-spacing:2px;line-height:1} .duoPos b.p1{color:#ffd75a} .duoPos b.p2{color:#cdd8ee}
+  .duoPos span{font-size:18px;font-weight:800}
+  #duoPos0{left:25%} #duoPos1{left:75%}
   #mfDuoOpt .rTeam,#mfDuoOpt .rPlayers,#mfDuoOpt .rPad,#mfDuoOpt .rAi,#mfDuoOpt .rAiDemo{display:none}
   #menuFlow.aiLv #mfDuoOpt,#menuFlow.aiLv .rAi{display:flex}
   #menuFlow.aiLvDemo #mfDuoOpt,#menuFlow.aiLvDemo .rAiDemo{display:flex}
@@ -638,6 +646,7 @@
     <span><i>時間</i><span id="raceTime">0.0</span>s</span>
     <span id="raceCoinWrap"><i>星幣</i><span id="raceCoins">0</span></span>
     <span id="raceHitWrap"><i>碰撞</i><span id="raceHits">0</span></span>
+    <span id="raceXWrap" style="display:none"><i id="raceXLbl"></i><span id="raceX">—</span></span>
     <span><i>最佳</i><span id="raceBest">—</span></span>
   </div>
 </div>
@@ -654,7 +663,9 @@
     <span class="pad" id="duoPad1">—</span>
     <span class="kb" id="duoKb1"></span></div>
   <div class="duoMsg" id="duoM0"></div><div class="duoMsg" id="duoM1"></div>
+  <div class="duoPos" id="duoPos0"></div><div class="duoPos" id="duoPos1"></div>
 </div>
+<div id="raceLights" style="display:none"><i></i><i></i><i></i></div>
 <div id="touchUI">
   <div class="joy" id="joyL"><span class="joyLbl">油門／旋轉</span><div class="joyBase"></div><div class="joyKnob"></div></div>
   <div class="joy" id="joyR"><span class="joyLbl">前後／側飛</span><div class="joyBase"></div><div class="joyKnob"></div></div>
@@ -1125,6 +1136,11 @@ const ICO_PATHS = {
   scene_orbit:'<circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(-20 12 12)"/>',
   race_time:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/>',
   race_coins:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M9.5 9.5h4a1.7 1.7 0 010 3.5h-3a1.7 1.7 0 000 3.5h4.5"/>',
+  race_ghost:'<path d="M5 21V10a7 7 0 0114 0v11l-3-2.2-2 2.2-2-2.2-2 2.2-2-2.2z"/><circle cx="9.5" cy="11" r="1"/><circle cx="14.5" cy="11" r="1"/>',
+  race_laps:'<path d="M20 12a8 8 0 01-14.3 4.9M4 12a8 8 0 0114.3-4.9"/><path d="M18.5 3.5v4h-4M5.5 20.5v-4h4"/>',
+  race_versus:'<path d="M4 4v17M4 5h7l-1.5 3L11 11H4"/><path d="M20 4v17M20 5h-7l1.5 3L13 11h7"/>',
+  race_items:'<path d="M13 2L5 14h6l-1 8 8-12h-6z"/>',
+  race_elim:'<circle cx="12" cy="12" r="9"/><path d="M8 8l8 8M16 8l-8 8"/>',
   race_nohit:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5L16 9.5"/>',
   phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
 };
@@ -4714,7 +4730,10 @@ function duoFrame(dt){
     document.getElementById('duoAlt'+v).textContent = Math.max(0,d.pos.y-DRONE_R).toFixed(1);
     document.getElementById('duoThr'+v).textContent = Math.round(d.thrustN/(MASS*G)*100);
     document.getElementById('duoCnt'+v).textContent = DUO.pracCnt[v];
-    if(DUO.kind === 'race') document.getElementById('duoRace'+v).textContent = raceDuoHUDText(v);
+    if(DUO.kind === 'race'){
+      document.getElementById('duoRace'+v).textContent = raceDuoHUDText(v);
+      const pe = document.getElementById('duoPos'+v), ph = raceDuoPosHTML(v); if(pe && pe._h !== ph){ pe._h = ph; pe.innerHTML = ph; }
+    }
     const a = document.getElementById('duoArm'+v);
     a.textContent = d.canScore ? '已解鎖' : '需回防'; a.className = d.canScore ? 'armed' : 'disarmed';
     const pe = document.getElementById('duoPad'+v);
@@ -6102,6 +6121,12 @@ const RACE_MODES = [
   {id:'time',  emoji:'', name:'計時賽',     desc:'依序穿過所有拱門飛到終點，越快越好。'},
   {id:'coins', emoji:'', name:'收集賽',     desc:'沿著航線收集星幣，收越多越好；要飛到終點才算數。'},
   {id:'nohit', emoji:'', name:'零碰撞挑戰', desc:'撞到拱門、障礙物或重摔一次就 +3 秒，撞 3 次挑戰失敗。'},
+  // 2026-11-12 賽車風格玩法（業主：「飛行賽道可以參考賽車的模式，左右螢幕雙人對戰」）
+  {id:'ghost',  emoji:'', name:'幽靈機挑戰', solo:true, desc:'跟「幽靈機」賽跑：第一次是標準速度，之後是你自己的最佳紀錄；每過一道門顯示領先或落後幾秒。'},
+  {id:'laps',   emoji:'', name:'多圈賽',     desc:'繞航線 3 圈。每圈分成 3 段計時，紫色＝破紀錄、綠色＝比這場更快、黃色＝較慢，還有最佳圈。'},
+  {id:'versus', emoji:'', name:'雙人同場競速', duoOnly:true, star:false, desc:'兩人同一條航線同時起飛（左右分割畫面），先通過終點的人立刻獲勝；畫面顯示名次與領先／落後距離。'},
+  {id:'items',  emoji:'', name:'道具賽',     desc:'航線上有綠色加速圈（瞬間加速）和金色時間膠囊（總成績 −2 秒）；雙人時先到先得。'},
+  {id:'elim',   emoji:'', name:'淘汰賽',     desc:'紅色淘汰線從起點追上來，越追越快；被追上就淘汰。雙人時落後的人會先被追上。'},
 ];
 const RACE_GT = 0.07;        // 拱門管徑
 const RACE_LIMIT = 150;      // 限時（秒）
@@ -6257,7 +6282,7 @@ raceLoad();
 const raceRec = (sid, m) => (raceSave[sid] && raceSave[sid][m]) || null;
 const raceStarsOf = (sid, m) => (raceRec(sid,m) ? raceRec(sid,m).stars|0 : 0);
 const raceGrandTotal = () => SCENES.reduce((n,S)=>n + RACE_MODES.reduce((k,M)=>k + raceStarsOf(S.id,M.id), 0), 0);
-const raceGrandMax = () => SCENES.length * RACE_MODES.length * 3;
+const raceGrandMax = () => SCENES.length * RACE_MODES.filter(m=>m.star!==false).length * 3;
 
 // ---------- 狀態 ----------
 let raceSceneId = 'sky', raceModeId = 'time';
@@ -6265,6 +6290,183 @@ let raceData = null, raceGroup = null, raceHidden = [];
 let raceGateObjs = [], raceCoinObjs = [], raceObs = [], raceArrow = null, raceDotsHi = null;
 let raceIdx = 0, raceTime = 0, raceHits = 0, raceHitCd = 0, raceCD = 0, raceCDShown = 0, raceDone = false, raceCoinGot = 0;
 const racePrevPos = V3(0,0,0);
+
+// ===== 2026-11-12 賽車風格玩法：共用狀態與函式（單人／雙人共用同一套規則；單人用 raceSoloR 包裝全域變數） =====
+const RACE_LAPS = 3, RACE_ELIM_W = 2.3;
+let raceItems = [], raceChaser = null;
+const raceSoloR = {v:0, lap:0, lapT0:0, lapTimes:[], secBest:[], secT0:0, bonus:0, minGap:99, splits:[], prog:0, boosts:0, warnT:0};
+Object.defineProperties(raceSoloR, {
+  d:{get:()=>player}, idx:{get:()=>raceIdx, set:x=>{ raceIdx = x; }}, time:{get:()=>raceTime, set:x=>{ raceTime = x; }},
+  hits:{get:()=>raceHits, set:x=>{ raceHits = x; }}, coins:{get:()=>raceCoinGot, set:x=>{ raceCoinGot = x; }} });
+function raceModeReset(r){ r.lap = 0; r.lapT0 = 0; r.lapTimes = []; r.secBest = []; r.secT0 = 0; r.bonus = 0; r.minGap = 99; r.splits = []; r.prog = 0; r.boosts = 0; r.warnT = 0; }
+const raceSay = (r, t, c, dur)=>{ if(raceDuo) duoMsg(r.v, t, c, dur); else flashMsg(t, c, dur); };
+const raceAdj = r => (raceModeId === 'nohit' ? r.hits*RACE_PENALTY : 0) - (r.bonus || 0);
+const raceLimit = () => (raceModeId === 'laps' && raceData) ? Math.max(RACE_LIMIT, raceData.par*RACE_LAPS*1.8) : RACE_LIMIT;
+function raceFinishOne(r, ok, reason){ if(raceDuo) raceDuoFinishOne(r, ok, reason); else raceFinish(ok, reason); }
+// 起跑燈：3 顆紅燈依序亮起 → 綠燈
+function raceLights(n, green){
+  const el = document.getElementById('raceLights'); if(!el) return;
+  el.style.display = (n > 0 || green) ? 'flex' : 'none';
+  [...el.children].forEach((c, i)=>{ c.className = green ? 'g' : (i < n ? 'r' : ''); });
+}
+function raceLightsGo(){ raceLights(3, true); setTimeout(()=>{ if(raceCD <= 0) raceLights(0, false); }, 900); }
+// 沿航線的前進距離（公尺，含圈數）：用來排名次、算領先／落後，以及淘汰線
+function raceProg(r){
+  const D = raceData, g = D.gates, n = D.C.length - 1, cur = g[r.idx];
+  if(!cur) return r.prog;
+  const prevCi = r.idx > 0 ? g[r.idx-1].ci : 0;
+  const pc = r.idx > 0 ? g[r.idx-1] : {x:RACE_START.x, y:0, z:RACE_START.z};
+  const L = Math.hypot(cur.x-pc.x, cur.y-pc.y, cur.z-pc.z) || 1;
+  const dist = Math.hypot(r.d.pos.x-cur.x, r.d.pos.y-cur.y, r.d.pos.z-cur.z);
+  const fr = clamp(1 - dist/L, 0, 1);
+  return (r.lap + (prevCi + (cur.ci-prevCi)*fr)/n) * D.len;
+}
+// 淘汰線的位置（沿航線公尺）：起點後方 4 m 出發，速度從 1.4 m/s 逐漸加到 3.0 m/s
+function raceChaserPos(){
+  const t = Math.max(0, raceTime);
+  return t <= 46 ? -4 + 1.4*t + 0.0175*t*t : 97.43 + 3.0*(t - 46);
+}
+// ---- 幽靈機 ----
+const RACE_GHOST_KEY = 'hsinchuDroneRaceGhostV1';
+let raceGhostSave = {}; try{ raceGhostSave = JSON.parse(localStorage.getItem(RACE_GHOST_KEY) || '{}') || {}; }catch(e){}
+let raceGhost = null, raceGhostObj = null, raceGhostBuf = [], raceGhostAcc = 0;
+function raceGhostInit(){
+  raceGhostBuf = []; raceGhostAcc = 0;
+  const rec = raceGhostSave[raceSceneId];
+  raceGhost = {rec: (rec && rec.s && rec.s.length > 8) ? rec : null};
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({color:0x6fe3ff, transparent:true, opacity:.4, depthWrite:false});
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), mat));
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.012, 8, 28), mat); ring.rotation.x = Math.PI/2; g.add(ring);
+  const lb = raceLabel(raceGhost.rec ? 'GHOST' : 'PAR', '#6fe3ff', 192); lb.position.y = 0.34; g.add(lb);
+  raceGroup.add(g); raceGhostObj = g;
+}
+function raceGhostPoseAt(t){
+  const G = raceGhost, D = raceData;
+  if(G.rec){
+    const s = G.rec.s, N = s.length/4, i = Math.max(0, t/0.05), i0 = Math.min(Math.floor(i), N-1), i1 = Math.min(i0+1, N-1), f = Math.min(1, i - Math.floor(i));
+    const a = i0*4, b = i1*4, ya = s[a+3]/100, yb = s[b+3]/100;
+    return {x:(s[a]*(1-f)+s[b]*f)/100, y:(s[a+1]*(1-f)+s[b+1]*f)/100, z:(s[a+2]*(1-f)+s[b+2]*f)/100, yaw: ya + Math.atan2(Math.sin(yb-ya), Math.cos(yb-ya))*f};
+  }
+  const u = clamp(t/D.par, 0, 1), p = D.curve.getPointAt(u), tg = D.curve.getTangentAt(u);
+  return {x:p.x, y:Math.max(DRONE_R, p.y), z:p.z, yaw:Math.atan2(tg.x, tg.z)};
+}
+function raceGhostSplit(k){
+  const G = raceGhost; if(!G) return null;
+  if(G.rec) return (G.rec.splits && G.rec.splits[k] != null) ? G.rec.splits[k] : null;
+  return raceData.gates[k].ci / (raceData.C.length-1) * raceData.par;
+}
+function raceGhostSample(h){
+  raceGhostAcc += h;
+  while(raceGhostAcc >= 0.05){ raceGhostAcc -= 0.05; const p = player.pos; raceGhostBuf.push(Math.round(p.x*100), Math.round(p.y*100), Math.round(p.z*100), Math.round(player.yaw*100)); }
+}
+// ---- 道具／淘汰線的場景物件 ----
+function raceBuildItems(D){
+  raceItems = [];
+  const n = D.C.length - 1, g = D.gates;
+  const boostMat = new THREE.MeshStandardMaterial({color:0x14301c, emissive:0x39ff8a, emissiveIntensity:1.6, roughness:.4});
+  const timeMat = new THREE.MeshStandardMaterial({color:0x3a2a00, emissive:0xffc93d, emissiveIntensity:1.4, roughness:.3, metalness:.4});
+  for(let k = 0; k < g.length - 1; k++){
+    const u = (g[k].ci + g[k+1].ci) / 2 / n, p = D.curve.getPoint(u), tg = D.curve.getTangent(u);
+    if(raceObs.some(o=>raceObsDist(o, p) < 0.55)) continue;
+    const type = k % 2 === 0 ? 'boost' : 'time';
+    const m = type === 'boost' ? new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.06, 10, 28), boostMat)
+                               : new THREE.Mesh(new THREE.OctahedronGeometry(0.22), timeMat);
+    m.position.copy(p);
+    if(type === 'boost') m.lookAt(p.x + tg.x, p.y + tg.y, p.z + tg.z);
+    raceGroup.add(m); raceItems.push({m, type, on:true});
+  }
+}
+function raceBuildChaser(){
+  const grp = new THREE.Group();
+  grp.add(new THREE.Mesh(new THREE.TorusGeometry(RACE_ELIM_W, 0.06, 10, 44), new THREE.MeshBasicMaterial({color:0xff3b3b, toneMapped:false})));
+  grp.add(new THREE.Mesh(new THREE.CircleGeometry(RACE_ELIM_W, 44),
+    new THREE.MeshBasicMaterial({color:0xff2d2d, transparent:true, opacity:.2, side:THREE.DoubleSide, depthWrite:false})));
+  raceGroup.add(grp); raceChaser = grp;
+}
+function raceChaserPlace(){
+  if(!raceChaser || !raceData) return;
+  const D = raceData, cp = raceChaserPos();
+  let p, tg;
+  if(cp <= 0){ p = D.curve.getPointAt(0).clone(); tg = D.curve.getTangentAt(0); p.addScaledVector(tg, cp); }
+  else{ const u = clamp(cp/D.len, 0, 1); p = D.curve.getPointAt(u); tg = D.curve.getTangentAt(u); }
+  raceChaser.position.set(p.x, Math.max(p.y, 1.2), p.z);
+  raceChaser.lookAt(p.x + tg.x, Math.max(p.y, 1.2) + tg.y, p.z + tg.z);
+}
+function raceModeAnimate(t){
+  raceItems.forEach(it=>{ if(it.on){ if(it.type === 'boost') it.m.rotation.z += 0.05; else it.m.rotation.y += 0.05; } });
+  if(raceChaser) raceChaserPlace();
+  if(raceGhostObj && raceGhost){
+    const q = raceGhostPoseAt(raceCD > 0 ? 0 : raceTime);
+    raceGhostObj.position.set(q.x, q.y, q.z); raceGhostObj.rotation.y = q.yaw;
+  }
+}
+// 每個物理子步（每台機各自呼叫）：道具撿取、淘汰線追上、幽靈機取樣
+function raceModeTick(r, h, t){
+  const d = r.d;
+  r.prog = raceProg(r);
+  if(raceModeId === 'ghost'){ if(!raceDuo) raceGhostSample(h); }
+  else if(raceModeId === 'items'){
+    for(const it of raceItems){
+      if(!it.on || it.m.position.distanceToSquared(d.pos) > 0.25) continue;
+      it.on = false; it.m.visible = false;
+      if(it.type === 'boost'){
+        const sp = d.vel.length(), dir = sp > 0.5 ? d.vel.clone().multiplyScalar(1/sp) : V3(Math.sin(d.yaw), 0, Math.cos(d.yaw));
+        d.vel.addScaledVector(dir, 3.0); r.boosts++; raceSay(r, '加速！', '#7dffa9', 0.8); sfx.coin(1.8);
+      }else{ r.bonus += 2; raceSay(r, '時間膠囊　−2 秒', '#ffd75a', 0.9); sfx.coin(1.2); }
+    }
+  }else if(raceModeId === 'elim'){
+    const gap = r.prog - raceChaserPos();
+    r.minGap = Math.min(r.minGap, gap);
+    r.warnT = Math.max(0, r.warnT - h);
+    if(gap <= 0){ raceFinishOne(r, false, '被淘汰線追上'); return; }
+    if(gap < 3 && r.warnT <= 0){ r.warnT = 1.6; raceSay(r, '淘汰線逼近！', '#f87171', 0.8); }
+  }
+}
+// 通過一道門（單人／雙人共用）
+function raceGatePassed(r){
+  const D = raceData, n = D.gates.length, k = r.idx;
+  r.splits[k + r.lap*n] = r.time;
+  r.idx++;
+  let txt = '✓ ' + r.idx + ' / ' + n, col = '#7dffa9';
+  if(raceModeId === 'ghost'){
+    const gt = raceGhostSplit(k);
+    if(gt != null){ const dl = r.time - gt; txt += '　' + (dl > 0 ? '+' : '−') + Math.abs(dl).toFixed(2) + ' s'; col = dl > 0 ? '#f87171' : '#7dffa9'; }
+  }
+  if(raceModeId === 'laps'){
+    const bounds = [Math.ceil(n/3), Math.ceil(n*2/3), n], si = bounds.indexOf(r.idx);
+    if(si >= 0){
+      const st = r.time - r.secT0; r.secT0 = r.time;
+      const R0 = raceRec(raceSceneId, 'laps'), saved = (R0 && R0.secs) ? R0.secs[si] : null, pb = r.secBest[si];
+      let c = '#e6eeff', tag = '';
+      if(pb != null || saved != null){
+        if((saved == null || st < saved) && (pb == null || st < pb)){ c = '#c084fc'; tag = '　最佳'; }
+        else if(pb == null || st < pb) c = '#7dffa9';
+        else c = '#fbbf24';
+      }
+      if(pb == null || st < pb) r.secBest[si] = st;
+      txt = 'S' + (si+1) + '　' + st.toFixed(1) + ' s' + tag; col = c;
+    }
+  }
+  if(r.idx >= n){
+    if(raceModeId === 'laps'){
+      const lt = r.time - r.lapT0; r.lapTimes.push(lt); r.lapT0 = r.time; r.lap++;
+      const isBest = lt <= Math.min(...r.lapTimes) + 1e-6;
+      raceSay(r, '第 ' + r.lap + ' 圈　' + lt.toFixed(1) + ' s' + (isBest ? '　最佳圈' : ''), isBest ? '#c084fc' : '#7dffa9', 1.6);
+      if(r.lap >= RACE_LAPS){ raceFinishOne(r, true); return; }
+      r.idx = 0; sfx.coin(2); raceRefreshGates(); return;
+    }
+    raceFinishOne(r, true); return;
+  }
+  sfx.coin(1.5); raceSay(r, txt, col, 0.9);
+  raceRefreshGates();
+}
+function raceModeExtra(r){
+  if(raceModeId === 'laps') return '　<em>圈</em>' + Math.min(r.lap, RACE_LAPS) + '/' + RACE_LAPS + (r.lapTimes.length ? '　<em>最佳圈</em>' + Math.min(...r.lapTimes).toFixed(1) + ' s' : '');
+  if(raceModeId === 'items') return '　<em>加速</em>' + r.boosts + '　<em>時間獎勵</em>−' + r.bonus + ' s';
+  if(raceModeId === 'elim') return '　<em>最近距離</em>' + (r.minGap < 90 ? Math.max(0, r.minGap).toFixed(1) + ' m' : '—');
+  return '';
+}
 // 2026-10-21 雙人賽道（業主：「飛行賽道也可以選雙人畫面」）：mode 仍是 'race'（沿用賽道的建置／HUD／清理流程），
 // raceDuo＝true 時兩台機（DUO.sides：左 P1 藍、右 P2 紅）同時比賽，各自的進度存在 raceRacers[]，畫面用雙人分割。
 let raceDuo = false, raceRacers = [], raceArrow2 = null, raceDuoEndT = 0;
@@ -6303,6 +6505,7 @@ function raceClear(){
     raceGroup.traverse(o=>{ if(o.geometry && o.geometry!==raceCoinGeo) o.geometry.dispose(); });
   }
   raceGroup = null; raceGateObjs = []; raceCoinObjs = []; raceObs = []; raceArrow = null; raceArrow2 = null; raceDotsHi = null;
+  raceItems = []; raceChaser = null; raceGhostObj = null; raceGhost = null;
 }
 function raceBuild(){
   raceClear();
@@ -6384,6 +6587,9 @@ function raceBuild(){
       raceGroup.add(m); raceCoinObjs.push(m);
     });
   }
+  if(raceModeId === 'items') raceBuildItems(D);
+  if(raceModeId === 'elim') raceBuildChaser();
+  if(raceModeId === 'ghost' && !raceDuo) raceGhostInit();
   // 指向下一道門的箭頭
   raceArrow = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.26, 12).rotateX(Math.PI/2),
     new THREE.MeshBasicMaterial({color:0x39ff8a, toneMapped:false}));
@@ -6396,6 +6602,7 @@ function raceBuild(){
   racePrevPos.copy(player.pos);
   raceIdx = 0; raceTime = 0; raceHits = 0; raceHitCd = 0; raceDone = false; raceCoinGot = 0;
   raceCD = 3.0; raceCDShown = 4;
+  raceModeReset(raceSoloR); raceLights(0, false);
   if(raceDuo) raceDuoSetup(g0);
   raceRefreshGates();
   raceUpdateHUD();
@@ -6514,8 +6721,8 @@ function raceStep(h, t){
     player.pos.set(RACE_START.x, DRONE_R, RACE_START.z); player.vel.set(0,0,0);
     player.input = {pitch:0, roll:0, yawRate:0, throttle:0};
     const sec = Math.ceil(raceCD);
-    if(sec !== raceCDShown && sec > 0){ raceCDShown = sec; flashMsg(String(sec), '#ffd75a', 0.8); sfx.warn(); }
-    if(raceCD <= 0){ flashMsg('GO!', '#7dffa9', 0.9); sfx.whistle(); }
+    if(sec !== raceCDShown && sec > 0){ raceCDShown = sec; flashMsg(String(sec), '#ffd75a', 0.8); sfx.warn(); raceLights(4 - sec, false); }
+    if(raceCD <= 0){ flashMsg('GO!', '#7dffa9', 0.9); sfx.whistle(); raceLightsGo(); }
     racePrevPos.copy(player.pos);
     return;
   }
@@ -6536,6 +6743,7 @@ function raceStep(h, t){
       if(raceHits >= 3){ raceFinish(false, '撞擊 3 次，挑戰失敗'); return; }
     }else flashMsg('碰撞', '#f87171', 0.45);
   }
+  raceModeTick(raceSoloR, h, t); if(raceDone) return;
   // 下一道門：由後往前穿過圓環平面、且在開口內
   const c = raceData.gates[raceIdx];
   if(c){
@@ -6552,41 +6760,61 @@ function raceStep(h, t){
       m.visible = false; raceCoinGot++; sfx.coin();
     }
   }
-  if(!raceDone && raceTime >= RACE_LIMIT) raceFinish(false, '時間到');
+  if(!raceDone && raceTime >= raceLimit()) raceFinish(false, '時間到');
 }
-function racePassGate(){
-  raceIdx++;
-  if(raceIdx >= raceData.gates.length){ raceFinish(true); return; }
-  sfx.coin(1.5);
-  flashMsg('✓ ' + raceIdx + ' / ' + raceData.gates.length, '#7dffa9', 0.6);
-  raceRefreshGates();
-}
-const raceTotalTime = () => raceTime + (raceModeId === 'nohit' ? raceHits*RACE_PENALTY : 0);
+function racePassGate(){ raceGatePassed(raceSoloR); }
+const raceTotalTime = () => raceTime + raceAdj(raceSoloR);
 function raceFinish(ok, reason){
   raceDone = true;
   setState('over');
-  const D = raceData, par = D.par, total = raceTotalTime(), nCoin = raceCoinObjs.length;
-  let stars = 0;
+  const D = raceData, par = D.par, total = raceTotalTime(), nCoin = raceCoinObjs.length, R = raceSoloR, mid = raceModeId;
+  let stars = 0, ghostLine = '';
   if(ok){
     stars = 1;
-    if(raceModeId === 'time'){ if(total <= par*1.35) stars = 2; if(total <= par) stars = 3; }
-    else if(raceModeId === 'coins'){ const r = nCoin ? raceCoinGot/nCoin : 1; if(r >= 0.6) stars = 2; if(r >= 1) stars = 3; }
+    if(mid === 'time' || mid === 'ghost'){ if(total <= par*1.35) stars = 2; if(total <= par) stars = 3; }
+    else if(mid === 'laps'){ const P = par*RACE_LAPS; if(total <= P*1.35) stars = 2; if(total <= P) stars = 3; }
+    else if(mid === 'items'){ if(total <= par*1.25) stars = 2; if(total <= par*0.9) stars = 3; }
+    else if(mid === 'elim'){ if(R.minGap >= 3) stars = 2; if(R.minGap >= 6) stars = 3; }
+    else if(mid === 'coins'){ const r = nCoin ? raceCoinGot/nCoin : 1; if(r >= 0.6) stars = 2; if(r >= 1) stars = 3; }
     else { if(raceHits <= 1 && total <= par*1.35) stars = 2; if(raceHits === 0 && total <= par*1.35) stars = 3; }
     sfx.goal();
   }
+  // 幽靈機：和幽靈比成績；有更快就把這次存成新的幽靈
+  if(mid === 'ghost' && raceGhost){
+    const gt = raceGhost.rec ? raceGhost.rec.time : par, gl = raceGhost.rec ? '你的最佳紀錄' : '標準速度';
+    if(ok){
+      const df = raceTime - gt;
+      ghostLine = '<br><em>幽靈機</em>' + gt.toFixed(1) + ' s（' + gl + '）　' + (df <= 0 ? '<b style="color:#7dffa9">快 ' + (-df).toFixed(2) + ' s</b>' : '<b style="color:#f87171">慢 ' + df.toFixed(2) + ' s</b>');
+      if(!raceGhost.rec || raceTime < raceGhost.rec.time){
+        raceGhostSave[raceSceneId] = {time:+raceTime.toFixed(2), s:raceGhostBuf.slice(), splits:R.splits.map(x=>x==null ? null : +x.toFixed(2))};
+        try{ localStorage.setItem(RACE_GHOST_KEY, JSON.stringify(raceGhostSave)); }catch(e){}
+        ghostLine += '<br><span style="color:#7dffa9">這次的飛行已存成新的幽靈機</span>';
+      }
+    }else ghostLine = '<br><em>幽靈機</em>' + gt.toFixed(1) + ' s（' + gl + '）';
+  }
+  const bestLap = R.lapTimes.length ? Math.min(...R.lapTimes) : null;
   // 紀錄：星數高的優先；同星數比成績（收集賽：星幣多→時間短；其他：總時間短）
   let isNew = false;
   if(ok){
-    const old = raceRec(raceSceneId, raceModeId);
+    const old = raceRec(raceSceneId, mid);
     const better = !old || stars > old.stars || (stars === old.stars && (
-      raceModeId === 'coins' ? (raceCoinGot > old.coins || (raceCoinGot === old.coins && total < old.best)) : total < old.best));
+      mid === 'coins' ? (raceCoinGot > old.coins || (raceCoinGot === old.coins && total < old.best)) : total < old.best));
     if(better){
       raceSave[raceSceneId] = raceSave[raceSceneId] || {};
-      raceSave[raceSceneId][raceModeId] = {stars, best: +total.toFixed(2), coins: raceCoinGot, of: nCoin};
+      raceSave[raceSceneId][mid] = {stars, best: +total.toFixed(2), coins: raceCoinGot, of: nCoin};
       raceStore(); isNew = !!old || true;
     }
+    if(mid === 'laps' && bestLap != null){      // 最佳圈與各分段最佳：不管總成績有沒有破紀錄都更新
+      const R2 = raceRec(raceSceneId, 'laps');
+      if(R2){
+        R2.lap = R2.lap == null ? +bestLap.toFixed(2) : Math.min(R2.lap, +bestLap.toFixed(2));
+        R2.secs = (R2.secs || []).slice();
+        R.secBest.forEach((v, i)=>{ if(R2.secs[i] == null || v < R2.secs[i]) R2.secs[i] = +v.toFixed(2); });
+        raceStore();
+      }
+    }
   }
-  const M = RACE_MODES.find(m=>m.id===raceModeId);
+  const M = RACE_MODES.find(m=>m.id===mid);
   const ttl = document.getElementById('raceResultTitle');
   ttl.textContent = ok ? '完賽！' : (reason || '挑戰失敗');
   ttl.className = ok ? '' : 'fail';
@@ -6594,12 +6822,19 @@ function raceFinish(ok, reason){
   document.getElementById('raceStars').innerHTML = [0,1,2].map(i=> i < stars ? '<b>★</b>' : '★').join('');
   const g = '<span style="color:#7c88a8">', e = '</span>';
   let st = '<em>用時</em>' + raceTime.toFixed(1) + ' s';
-  if(raceModeId === 'nohit') st += '　<em>碰撞</em>' + raceHits + ' 次（+' + raceHits*RACE_PENALTY + ' s）<br><em>總成績</em>' + total.toFixed(1) + ' s';
-  if(raceModeId === 'coins') st += '<br><em>星幣</em>' + raceCoinGot + ' / ' + nCoin;
+  if(mid === 'nohit') st += '　<em>碰撞</em>' + raceHits + ' 次（+' + raceHits*RACE_PENALTY + ' s）<br><em>總成績</em>' + total.toFixed(1) + ' s';
+  if(mid === 'coins') st += '<br><em>星幣</em>' + raceCoinGot + ' / ' + nCoin;
+  if(mid === 'items') st += '　<em>加速</em>' + R.boosts + ' 次　<em>時間獎勵</em>−' + R.bonus + ' s<br><em>總成績</em>' + total.toFixed(1) + ' s';
+  if(mid === 'laps') st += '<br><em>各圈</em>' + (R.lapTimes.length ? R.lapTimes.map(x=>x.toFixed(1)).join(' / ') + ' s' : '—') + (bestLap != null ? '　<em>最佳圈</em>' + bestLap.toFixed(1) + ' s' : '');
+  if(mid === 'elim') st += '　<em>與淘汰線最近</em>' + (R.minGap < 90 ? Math.max(0, R.minGap).toFixed(1) + ' m' : '—');
+  if(mid === 'ghost') st += ghostLine;
   st += '<br>';
-  if(raceModeId === 'time')  st += g + '3★ ≤ ' + par + ' s　2★ ≤ ' + Math.round(par*1.35) + ' s' + e;
-  if(raceModeId === 'coins') st += g + '3★ 全部收集　2★ 收集 6 成以上' + e;
-  if(raceModeId === 'nohit') st += g + '3★ 零碰撞且 ≤ ' + Math.round(par*1.35) + ' s　2★ 碰撞 ≤ 1 次' + e;
+  if(mid === 'time' || mid === 'ghost') st += g + '3★ ≤ ' + par + ' s　2★ ≤ ' + Math.round(par*1.35) + ' s' + e;
+  if(mid === 'laps')  st += g + '3★ ≤ ' + par*RACE_LAPS + ' s　2★ ≤ ' + Math.round(par*RACE_LAPS*1.35) + ' s' + e;
+  if(mid === 'items') st += g + '3★ ≤ ' + Math.round(par*0.9) + ' s　2★ ≤ ' + Math.round(par*1.25) + ' s（含時間獎勵）' + e;
+  if(mid === 'elim')  st += g + '3★ 與淘汰線始終 ≥ 6 m　2★ ≥ 3 m' + e;
+  if(mid === 'coins') st += g + '3★ 全部收集　2★ 收集 6 成以上' + e;
+  if(mid === 'nohit') st += g + '3★ 零碰撞且 ≤ ' + Math.round(par*1.35) + ' s　2★ 碰撞 ≤ 1 次' + e;
   if(ok && isNew) st += '<br><span style="color:#7dffa9;font-weight:700">新紀錄！</span>';
   if(!ok) st += '<br>' + g + '通過 ' + raceIdx + ' / ' + D.gates.length + ' 道拱門' + e;
   document.getElementById('raceStats').innerHTML = st;
@@ -6610,6 +6845,7 @@ function raceFinish(ok, reason){
 // ---------- 每幀畫面 ----------
 function raceAnimate(t){
   if(mode !== 'race' || !raceData) return;
+  raceModeAnimate(t);
   if(raceDuo){ raceDuoAnimate(t); return; }
   const G = raceGateObjs[raceIdx];
   if(G) G.mat.emissiveIntensity = 2.0 + Math.sin(t*6)*0.9;
@@ -6638,6 +6874,12 @@ function raceUpdateHUD(){
   $('raceCoins').textContent = raceCoinGot + ' / ' + raceCoinObjs.length;
   $('raceHitWrap').style.display = raceModeId === 'coins' ? 'none' : '';
   $('raceHits').textContent = raceModeId === 'nohit' ? raceHits + ' / 3' : raceHits;
+  { const xw = $('raceXWrap'), q = raceSoloR; let lbl = '', val = '';
+    if(raceModeId === 'laps'){ lbl = '圈數'; val = Math.min(q.lap+1, RACE_LAPS) + ' / ' + RACE_LAPS + (q.lapTimes.length ? '　最佳圈 ' + Math.min(...q.lapTimes).toFixed(1) + 's' : ''); }
+    else if(raceModeId === 'ghost'){ lbl = '幽靈機'; val = (raceGhost && raceGhost.rec) ? '我的最佳 ' + raceGhost.rec.time.toFixed(1) + ' s' : '標準速度 ' + D.par + ' s'; }
+    else if(raceModeId === 'items'){ lbl = '道具'; val = '加速 ' + q.boosts + '　獎勵 −' + q.bonus + ' s'; }
+    else if(raceModeId === 'elim'){ lbl = '淘汰線'; val = '距離 ' + Math.max(0, q.prog - raceChaserPos()).toFixed(1) + ' m'; }
+    xw.style.display = lbl ? '' : 'none'; if(lbl){ $('raceXLbl').textContent = lbl; $('raceX').textContent = val; } }
   const R = raceRec(raceSceneId, raceModeId);
   $('raceBest').textContent = !R ? '—' : raceModeId === 'coins' ? (R.coins + '/' + R.of + ' 枚') : (R.best.toFixed(1) + ' s');
 }
@@ -6647,7 +6889,7 @@ function raceStart(sid){
   if(NET.connected) netTeardown();
   campExitCleanup();                              // 清掉闖關殘留（內含 raceExitCleanup）
   raceSceneId = sid;
-  raceDuo = DUO.raceDuo;
+  { const MM = RACE_MODES.find(m=>m.id===raceModeId); raceDuo = !!(MM.duoOnly || (!MM.solo && DUO.raceDuo)); }
   if(raceDuo){ DUO.on = true; DUO.kind = 'race'; DUO.snap = true; DUO.msgT = [0,0]; document.body.classList.add('duo','duoRace'); }
   setScene(sid);
   ['netPanel','campPanel','campMapPanel','racePanel','overlay','campResult','raceResult','scoreboard','practiceHUD']
@@ -6669,6 +6911,7 @@ function raceRestart(){
   setState('play');
 }
 function raceExitCleanup(){
+  raceLights(0, false);
   if(raceDuo){ raceDuo = false; raceRacers = []; duoCleanup(); }
   if(!raceGroup && !raceHidden.length) return;
   raceClear(); raceShowArena(); raceSetArena(false);
@@ -6696,15 +6939,16 @@ function raceBuildPanel(){
     try{ localStorage.setItem(RACE_SAVE_KEY + '-mode', raceModeId); }catch(e){}
     raceBuildPanel();
   }));
-  document.getElementById('raceModeDesc').textContent = M.desc;
+  document.getElementById('raceModeDesc').textContent = M.desc + (M.duoOnly ? '（自動使用雙人左右分割畫面）' : M.solo ? '（單人）' : '');
   document.getElementById('raceMaps').innerHTML = SCENES.map(S=>{
     const I = raceInfo(S.id), R = raceRec(S.id, raceModeId), st = raceStarsOf(S.id, raceModeId);
-    const best = !R ? '尚未完賽' : raceModeId === 'coins' ? ('最佳 ' + R.coins + '/' + R.of + ' 枚') : ('最佳 ' + R.best.toFixed(1) + ' s');
+    const noStar = M.star === false;
+    const best = noStar ? '雙人對戰・不列入紀錄' : !R ? '尚未完賽' : raceModeId === 'coins' ? ('最佳 ' + R.coins + '/' + R.of + ' 枚') : ('最佳 ' + R.best.toFixed(1) + ' s');
     return '<div class="campMapCard raceCard" data-id="' + S.id + '">' +
       '<div class="ico">' + ico('scene_' + S.id) + '</div><div class="nm">' + I.T.name + '</div>' +
       '<div class="sb">' + S.name + '・' + I.gates.length + ' 道門・' + Math.round(I.len) + ' m</div>' +
       '<div class="fly">' + ((S.fly && S.fly.note) || '無風') + '</div>' +
-      '<div class="pg">' + [0,1,2].map(i=> i < st ? '<b>★</b>' : '★').join('') + '</div>' +
+      '<div class="pg">' + (noStar ? '' : [0,1,2].map(i=> i < st ? '<b>★</b>' : '★').join('')) + '</div>' +
       '<div class="best">' + best + '</div></div>';
   }).join('');
   document.querySelectorAll('#raceMaps .raceCard').forEach(el=>el.addEventListener('click', ()=>raceStart(el.dataset.id)));
@@ -6735,19 +6979,20 @@ function raceDuoSetup(g0){
     d.pos.set(RACE_START.x + rx*off, DRONE_R, RACE_START.z + rz*off); d.vel.set(0,0,0);
     d.yaw = Math.atan2(g0.x-d.pos.x, g0.z-d.pos.z); d.prevX = d.pos.x;
     return {d, v, idx:0, time:0, hits:0, hitCd:0, done:false, ok:false, reason:'', coins:0,
+            lap:0, lapT0:0, lapTimes:[], secBest:[], secT0:0, bonus:0, minGap:99, splits:[], prog:0, boosts:0, warnT:0,
             prev:d.pos.clone(), start:d.pos.clone(), arrow: v===0 ? raceArrow2 : raceArrow, col: v===0 ? 0x5aa8ff : 0xff6b6b};
   });
   raceDuoEndT = 0;
 }
-const raceDuoTotal = r => r.time + (raceModeId === 'nohit' ? r.hits*RACE_PENALTY : 0);
+const raceDuoTotal = r => r.time + raceAdj(r);
 function raceDuoStep(h, t){
   if(raceDone || state !== 'play' || !raceData) return;
   if(raceCD > 0){                                    // 倒數：兩台機停在起飛坪
     raceCD -= h;
     raceRacers.forEach(r=>{ r.d.pos.copy(r.start); r.d.vel.set(0,0,0); r.d.input = {pitch:0, roll:0, yawRate:0, throttle:0}; r.prev.copy(r.d.pos); });
     const sec = Math.ceil(raceCD);
-    if(sec !== raceCDShown && sec > 0){ raceCDShown = sec; flashMsg(String(sec), '#ffd75a', 0.8); sfx.warn(); }
-    if(raceCD <= 0){ flashMsg('GO!', '#7dffa9', 0.9); sfx.whistle(); }
+    if(sec !== raceCDShown && sec > 0){ raceCDShown = sec; flashMsg(String(sec), '#ffd75a', 0.8); sfx.warn(); raceLights(4 - sec, false); }
+    if(raceCD <= 0){ flashMsg('GO!', '#7dffa9', 0.9); sfx.whistle(); raceLightsGo(); }
     return;
   }
   raceTime += h;
@@ -6772,6 +7017,7 @@ function raceDuoStep(h, t){
         if(r.hits >= 3){ raceDuoFinishOne(r, false, '撞 3 次出局'); return; }
       }else duoMsg(r.v, '碰撞', '#f87171', 0.45);
     }
+    raceModeTick(r, h, t); if(r.done) return;
     const c = raceData.gates[r.idx];
     if(c){
       const s0 = (r.prev.x-c.x)*c.nx + (r.prev.z-c.z)*c.nz;
@@ -6779,17 +7025,14 @@ function raceDuoStep(h, t){
       if(s0 < 0 && s1 >= 0){
         const b = -(d.pos.x-c.x)*c.nz + (d.pos.z-c.z)*c.nx, ry = d.pos.y-c.y;
         if(Math.hypot(b, ry) < c.r - DRONE_R*0.5){
-          r.idx++;
-          if(r.idx >= n){ raceDuoFinishOne(r, true); }
-          else { sfx.coin(1.5); duoMsg(r.v, '✓ ' + r.idx + ' / ' + n, '#7dffa9', 0.6); }
-          raceRefreshGates();
+          raceGatePassed(r);
         }
       }
     }
     for(const m of raceCoinObjs){                    // 星幣：誰先碰到算誰的
       if(m.visible && m.position.distanceTo(d.pos) < 0.42){ m.visible = false; r.coins++; sfx.coin(); }
     }
-    if(raceTime >= RACE_LIMIT) raceDuoFinishOne(r, false, '時間到');
+    if(!r.done && raceTime >= raceLimit()) raceDuoFinishOne(r, false, '時間到');
   });
   if(raceDuoEndT > 0 && raceTime >= raceDuoEndT)
     raceRacers.forEach(r=>{ if(!r.done) raceDuoFinishOne(r, false, '未在時限內完賽'); });
@@ -6797,6 +7040,7 @@ function raceDuoStep(h, t){
 }
 function raceDuoFinishOne(r, ok, reason){
   r.done = true; r.ok = ok; r.reason = reason || '';
+  if(ok && raceModeId === 'versus'){ const o = raceRacers[1-r.v]; if(o && !o.done){ o.done = true; o.ok = false; o.reason = '對手先抵達終點'; duoMsg(o.v, '落後了！', '#f87171', 3); } }
   if(ok){
     sfx.goal();
     duoMsg(r.v, '完賽！' + raceDuoTotal(r).toFixed(1) + ' 秒', '#ffd75a', 3);
@@ -6813,7 +7057,7 @@ function raceDuoResult(){
   const [a, b] = raceRacers;
   // 勝負：先比有沒有完賽；都完賽 → 收集賽比星幣（同數比時間）、其他比總成績；都沒完賽 → 比通過幾道門
   const score = r => r.ok ? (raceModeId === 'coins' ? [2, r.coins, -raceDuoTotal(r)] : [2, -raceDuoTotal(r), 0])
-                          : [1, r.idx, -raceDuoTotal(r)];
+                          : [1, Math.round(r.prog || 0), -raceDuoTotal(r)];
   const sa = score(a), sb = score(b);
   let cmp = 0; for(let k=0;k<3 && !cmp;k++) cmp = Math.sign(sa[k]-sb[k]);
   const NAME = ['P1 藍隊', 'P2 紅隊'];
@@ -6828,6 +7072,7 @@ function raceDuoResult(){
     t += r.ok ? '完賽 <em>總成績</em>' + raceDuoTotal(r).toFixed(1) + ' s' : (r.reason + '（通過 ' + r.idx + ' / ' + n + ' 道門）');
     if(raceModeId === 'coins') t += '　<em>星幣</em>' + r.coins;
     else t += '　<em>碰撞</em>' + r.hits + (raceModeId === 'nohit' ? '（+' + r.hits*RACE_PENALTY + ' s）' : '');
+    t += raceModeExtra(r);
     return t;
   };
   document.getElementById('raceStats').innerHTML = line(a,0) + '<br>' + line(b,1) +
@@ -6850,11 +7095,22 @@ function raceDuoAnimate(t){
     }
   });
 }
+function raceDuoPosHTML(v){
+  const a = raceRacers[v], b = raceRacers[1-v];
+  if(!a || !b || !raceData || raceCD > 0) return '';
+  const sc = r => r.done ? (r.ok ? 1e7 - raceDuoTotal(r) : r.prog - 1e5) : r.prog;
+  const lead = sc(a) >= sc(b), gap = Math.abs((a.prog||0) - (b.prog||0));
+  const gtxt = (a.done && a.ok) ? '完賽' : (gap < 0.1 ? '並列' : (lead ? '領先 ' : '落後 ') + gap.toFixed(1) + ' m');
+  return '<b class="' + (lead ? 'p1' : 'p2') + '">' + (lead ? '1ST' : '2ND') + '</b><span style="color:' + (lead ? '#7dffa9' : '#f87171') + '">' + gtxt + '</span>';
+}
 function raceDuoHUDText(v){
   const r = raceRacers[v]; if(!r || !raceData) return '';
   const n = raceData.gates.length;
   let t = '關卡 ' + Math.min(r.idx, n) + '/' + n + '　時間 ' + raceDuoTotal(r).toFixed(1) + 's　';
   t += raceModeId === 'coins' ? '星幣 ' + r.coins : '碰撞 ' + r.hits + (raceModeId === 'nohit' ? '/3' : '');
+  if(raceModeId === 'laps') t = '圈 ' + Math.min(r.lap+1, RACE_LAPS) + '/' + RACE_LAPS + '　' + t;
+  if(raceModeId === 'elim' && !r.done) t += '　距淘汰線 ' + Math.max(0, r.prog - raceChaserPos()).toFixed(1) + ' m';
+  if(raceModeId === 'items') t += '　獎勵 −' + r.bonus + 's';
   if(r.done) t += r.ok ? '　完成' : '　失敗';
   return t;
 }
