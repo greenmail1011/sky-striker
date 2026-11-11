@@ -693,7 +693,7 @@
 <div class="hud" id="practiceHUD" style="display:none;top:12px;left:50%;transform:translateX(-50%);
   background:rgba(7,7,26,.85);border:1px solid #1e1e40;border-radius:14px;padding:10px 26px;
   text-align:center;font-size:14px;color:#cdd8ee;letter-spacing:1px">
-  練習模式　穿越次數<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
+  靶場練習（由西往東 → 穿越）　次數<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
 </div>
 <div class="hud" id="campHUD" style="display:none">
   <div class="ttl" id="campTitle">—</div>
@@ -3134,7 +3134,36 @@ let ringPulse = null;
 // ---------- 練習模式：獨立於比賽／AI對戰／連線對戰，只有玩家機在場上，
 //            無比分／時間／AI 對手，穿越任一球門環即計數，方便一開始先熟悉操作 ----------
 let practiceCount = 0;
-let practiceCooldown = {E:0, W:0};
+let practiceCooldown = [0,0,0,0];
+// ---- 靶場（2026-11-12 業主：「圓環練習不用在網子競賽場裡面，就像打靶一樣，相同方向就可以了」）----
+// 圓環練習不再放在比賽場（網籠／充氣管框）裡：藏起比賽場、場地放大，改在開闊場地排一列圓環，全部朝同一方向（+x）；
+// 沿同一個方向（→）穿越才計數，逆向穿越只提示不計。單人／雙人練習共用。
+const PRAC_RINGS_SPEC = [[-3.5,1.7,0],[-1,2.3,0.7],[1.5,1.9,-0.7],[4,2.4,0]];   // [x, 高度 y, 側偏 z]
+let pracRings = [];
+function pracBuild(){
+  if(pracRings.length) return;
+  PRAC_RINGS_SPEC.forEach(([x,y,z],i)=>{
+    const r = makeGoalRing(x, i%2 ? 0xff1133 : 0x1166ff);
+    r.y = y; r.z = z; r.grp.position.set(x, y, z);
+    r.grp.children.forEach(c=>{ if(c.geometry && c.geometry.type==='BoxGeometry') c.visible = false; });   // 開闊場地沒有頂架，不要吊帶
+    r.grp.visible = false; r.passes = 0;
+    pracRings.push(r);
+  });
+}
+function pracOpen(){
+  pracBuild();
+  if(!raceHidden.length){ raceSetArena(true); raceHideArena(); }   // 跟飛行賽道一樣：藏起比賽場、邊界放大（離開時 raceExitCleanup 一併還原）
+  pracRings.forEach(r=>{ r.grp.visible = true; r.passes = 0; });
+}
+function pracPlace(d, z){      // 起點：靶場西端，機頭朝 +x（圓環的穿越方向）
+  d.pos.x = -6.5; d.pos.z = z; d.yaw = Math.PI/2; d.prevX = d.pos.x;
+}
+function pracPassDir(d, ring){   // 1＝順向（→）穿越、−1＝逆向穿越、0＝沒穿過
+  const a = d.prevX - ring.x, b = d.pos.x - ring.x;
+  if(a*b >= 0) return 0;
+  if(Math.hypot(d.pos.y-ring.y, d.pos.z-ring.z) >= RING.R - DRONE_R + 0.05) return 0;
+  return b > 0 ? 1 : -1;
+}
 function setDroneVisible(d, vis){    // 機身 group 之外，Striker 的緞帶是獨立場景物件，要一起藏/顯
   d.mesh.grp.visible = vis;
   if(d.mesh.ribbon) d.mesh.ribbon.visible = vis;
@@ -3144,19 +3173,16 @@ function updatePracticeHUD(){
   if(el) el.textContent = practiceCount;
 }
 function checkPracticePass(dt){
-  practiceCooldown.E = Math.max(0, practiceCooldown.E - dt);
-  practiceCooldown.W = Math.max(0, practiceCooldown.W - dt);
   const d = player;
-  [['E', ringEast], ['W', ringWest]].forEach(([key, ring])=>{
-    if(practiceCooldown[key] > 0) return;
-    const crossed = (d.prevX-ring.x)*(d.pos.x-ring.x) < 0;   // 穿越框平面偵測（同比賽模式判定邏輯）
-    if(!crossed) return;
-    const radial = Math.hypot(d.pos.y-ring.y, d.pos.z-ring.z);
-    const through = radial < RING.R - DRONE_R + 0.05;
-    if(!through) return;
-    practiceCooldown[key] = 0.6;   // 短冷卻，避免貼著框平面晃動時重複計數
+  pracRings.forEach((ring, i)=>{
+    practiceCooldown[i] = Math.max(0, practiceCooldown[i] - dt);
+    if(practiceCooldown[i] > 0) return;
+    const dir = pracPassDir(d, ring);
+    if(!dir) return;
+    practiceCooldown[i] = 0.6;   // 短冷卻，避免貼著框平面晃動時重複計數
+    if(dir < 0){ flashMsg('方向相反，請由西往東（→）穿越', '#ffb454', 1.0); return; }
     practiceCount++;
-    ring.passes = (ring.passes||0) + 1;   // 球門電子計分板：各框自己的穿越次數
+    ring.passes = (ring.passes||0) + 1;
     flashMsg('✓ 穿越成功！第 ' + practiceCount + ' 次', '#7dffa9', 1.1);
     sfx.goal();
     ringPulse = {ring, t:0};
@@ -3166,8 +3192,9 @@ function checkPracticePass(dt){
 function restartPractice(){
   ringSwingReset();
   drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });   // 只留玩家機，其餘 5 台隱藏、不參與模擬
-  practiceCount = 0; practiceCooldown = {E:0, W:0};
-  ringEast.passes = 0; ringWest.passes = 0;
+  pracPlace(player, 0);
+  practiceCount = 0; practiceCooldown = [0,0,0,0];
+  pracRings.forEach(r=>r.passes = 0);
   updatePracticeHUD();
   setState('play');
 }
@@ -3176,6 +3203,7 @@ function startPractice(){
   document.getElementById('netPanel').style.display = 'none';
   mode = 'practice';
   campExitCleanup();                        // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
+  pracOpen();                               // 靶場：藏起比賽場、排圓環
   document.getElementById('campPanel').style.display = 'none';
   document.getElementById('campMapPanel').style.display = 'none';
   document.getElementById('overlay').style.display = 'none';
@@ -4608,7 +4636,7 @@ const DUO = {
   pracDuo: false,      // 圓環練習選「雙人」
   raceDuo: false,      // 飛行賽道選「雙人」
   on: false,           // 目前是否在左右分割畫面（雙人比賽／雙人練習／雙人賽道）
-  pracCnt: [0,0], pracCD: [{E:0,W:0},{E:0,W:0}],
+  pracCnt: [0,0], pracCD: [[0,0,0,0],[0,0,0,0]],
   padSide: 0,          // 只有一支搖桿時，搖桿給哪一邊（0＝左 P1、1＝右 P2），另一人用整個鍵盤
   cur: [{pad:null, keys:null}, {pad:null, keys:null}],   // 這一幀實際的分配（duoAssign 算）
   sides: [
@@ -4866,20 +4894,22 @@ function duoPracReset(){
     const h = duoSideOf(d) >= 0;
     d.reset(); d.benched = !h; setDroneVisible(d, h);
   });
-  DUO.pracCnt = [0,0]; DUO.pracCD = [{E:0,W:0},{E:0,W:0}];
-  ringEast.passes = 0; ringWest.passes = 0;
+  DUO.pracCnt = [0,0]; DUO.pracCD = [[0,0,0,0],[0,0,0,0]];
+  pracRings.forEach(r=>r.passes = 0);
+  DUO.sides.forEach((s,v)=>{ if(duoSideOf(s.d) >= 0) pracPlace(s.d, v ? 0.9 : -0.9); });
   setState('play');
 }
 function duoRestart(){ if(DUO.kind === 'practice') duoPracReset(); else if(DUO.kind === 'race') raceRestart(); else restart(); }
 function duoCheckPracticePass(dt){
   DUO.sides.forEach((s,v)=>{
     const d = s.d, cd = DUO.pracCD[v];
-    cd.E = Math.max(0, cd.E - dt); cd.W = Math.max(0, cd.W - dt);
-    [['E', ringEast], ['W', ringWest]].forEach(([key, ring])=>{
-      if(cd[key] > 0) return;
-      if((d.prevX-ring.x)*(d.pos.x-ring.x) >= 0) return;             // 沒有穿過框平面
-      if(Math.hypot(d.pos.y-ring.y, d.pos.z-ring.z) >= RING.R - DRONE_R + 0.05) return;
-      cd[key] = 0.6;
+    pracRings.forEach((ring, i)=>{
+      cd[i] = Math.max(0, cd[i] - dt);
+      if(cd[i] > 0) return;
+      const dir = pracPassDir(d, ring);
+      if(!dir) return;
+      cd[i] = 0.6;
+      if(dir < 0){ duoMsg(v, '方向相反，請由西往東（→）穿越', '#ffb454', 1.0); return; }
       DUO.pracCnt[v]++;
       ring.passes = (ring.passes||0) + 1;
       duoMsg(v, '✓ 穿越成功！第 ' + DUO.pracCnt[v] + ' 次', '#7dffa9', 1.1);
@@ -6671,7 +6701,7 @@ const RACE_DUO_GRACE = 20;   // 第一個人完賽後，另一人還有 20 秒�
 // 把比賽場地（網牆、充氣管、球門＋計分板、看台、廣告板…）藏起來，只留 EVA 地墊、燈光、場景環境、無人機
 function raceHideArena(){
   raceHidden = [];
-  const keep = new Set([floor, apron, raceGroup, ...Object.values(envGroups)]);
+  const keep = new Set([floor, apron, raceGroup, ...pracRings.map(r=>r.grp), ...Object.values(envGroups)]);
   drones.forEach(d=>{ keep.add(d.mesh.grp); if(d.mesh.ribbon) keep.add(d.mesh.ribbon); });
   scene.children.slice().forEach(o=>{
     if(o.isLight || o.isCamera || keep.has(o) || !o.visible) return;
@@ -7483,6 +7513,7 @@ function raceRestart(){
 }
 function raceExitCleanup(){
   raceLights(0, false);
+  pracRings.forEach(r=>r.grp.visible = false);   // 靶場圓環（圓環練習用）
   if(raceDuo){ raceDuo = false; raceRacers = []; duoCleanup(); }
   if(!raceGroup && !raceHidden.length) return;
   raceClear(); raceShowArena(); raceSetArena(false);
@@ -8622,7 +8653,7 @@ function loop(){
     duoReadAll();
     acc += dt;
     while(acc >= H){
-      DUO.sides.forEach(s=>{ s.d.step(H); collideRing(s.d, ringEast); collideRing(s.d, ringWest); });
+      DUO.sides.forEach(s=>{ s.d.step(H); pracRings.forEach(r=>collideRing(s.d, r)); });
       duoCheckPracticePass(H);
       acc -= H;
     }
@@ -8632,7 +8663,7 @@ function loop(){
     acc += dt;
     while(acc >= H){
       player.step(H);
-      collideRing(player, ringEast); collideRing(player, ringWest);
+      pracRings.forEach(r=>collideRing(player, r));
       checkPracticePass(H);
       acc -= H;
     }
