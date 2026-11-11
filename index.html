@@ -440,6 +440,17 @@
   #ladderModal .ldBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:22px 28px;
     width:min(560px,94vw);max-height:90vh;overflow:auto;color:#cdd8ee;text-align:center}
   #ladderModal h3{margin:0 0 10px;font-size:24px;letter-spacing:4px;color:#ffd75a}
+  #badgeModal{position:fixed;inset:0;z-index:71;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.88)}
+  #badgeModal .bgBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:18px 24px;width:min(760px,94vw);max-height:92vh;overflow:auto;text-align:center}
+  #badgeModal h3{margin:0 0 6px;font-size:22px;letter-spacing:4px;color:#ffd75a}
+  #bgCount{font-size:14px;color:#9fb0d8;margin-bottom:10px}
+  #bgList{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;text-align:left}
+  #bgList .bg{border:1px solid rgba(120,160,255,.25);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.04)}
+  #bgList .bg b{display:block;font-size:15px;color:#e8ecf5}
+  #bgList .bg span{font-size:12px;color:#8e9bbd}
+  #bgList .bg.on{border-color:#ffd75a;background:rgba(255,215,90,.1)} #bgList .bg.on b{color:#ffd75a}
+  #bgList .bg.off{opacity:.5}
+  #bgList .bg em{font-style:normal;float:right;font-size:12px;color:#7dffa0}
   #certModal{position:fixed;inset:0;z-index:71;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.9);overflow:auto}
   #certModal .ctBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:18px 22px;max-width:min(920px,96vw);max-height:96vh;overflow:auto;text-align:center}
   #certModal h3{margin:0 0 8px;font-size:22px;letter-spacing:4px;color:#ffd75a}
@@ -882,6 +893,7 @@
       <div id="raceHeadTtl">飛行賽道</div>
       <button class="netBtnSmall" id="btnLadder">天梯排行</button>
       <button class="netBtnSmall" id="btnCert">練習證書（示意）</button>
+      <button class="netBtnSmall" id="btnBadge">成就徽章</button>
       <div id="raceTotal">★ 0 / 45</div>
     </div>
     <div id="raceDuoOpt">人數：<button class="sceneBtn" data-rd="0">單人</button><button class="sceneBtn" data-rd="1">雙人（左右分割）</button>
@@ -918,6 +930,7 @@
     </div>
   </div>
 </div>
+<div id="badgeModal"><div class="bgBox"><h3>成就徽章</h3><div id="bgCount"></div><div id="bgList"></div><div style="margin-top:12px"><button class="modeBtn" id="bgClose">關閉</button></div></div></div>
 <div id="certModal"><div class="ctBox"><h3>練習證書（示意）</h3>
   <div class="ctRow"><label>姓名 <input id="ctName" maxlength="12" placeholder="輸入姓名" autocomplete="off"></label>
   <label>等級 <select id="ctLevel"><option value="0">初級 Beginner</option><option value="1">中級 Intermediate</option><option value="2">高級 Advanced</option></select></label></div>
@@ -7045,6 +7058,44 @@ function ladderRender(){
 }
 document.getElementById('btnLadder').addEventListener('click', ladderOpen);
 document.getElementById('ldClose').addEventListener('click', ()=>{ document.getElementById('ladderModal').style.display = 'none'; });
+
+// ---------- 成就徽章（2026-11-12）----------
+// 全部由既有存檔（飛行賽道 raceSave、闖關 campSave、證書條件）即時算出，沒有另外記錄；想加徽章就在 BADGES 加一列。
+const BADGES = (()=>{
+  const raceAny = f => SCENES.some(sc=>Object.keys(raceSave[sc.id]||{}).some(m=>f(raceSave[sc.id][m], m, sc.id)));
+  const campTotal = () => SCENES.reduce((n,sc)=>n + campSceneStars(sc.id), 0);
+  const campMax = () => SCENES.reduce((n,sc)=>n + campListFor(sc.id).length*3, 0);
+  return [
+    {n:'首次起飛',   d:'完成任何一場飛行賽道',                   ok:()=>raceAny(r=>r && r.stars>=1)},
+    {n:'三星飛手',   d:'任何賽道拿到 3 顆星',                   ok:()=>raceAny(r=>r && r.stars>=3)},
+    {n:'環遊天地',   d:'每個場景都完成「計時賽」',               ok:()=>SCENES.every(sc=>certStars(sc.id,'time')>=1), p:()=>[SCENES.filter(sc=>certStars(sc.id,'time')>=1).length, SCENES.length]},
+    {n:'零碰撞達人', d:'「零碰撞挑戰」拿到 3 星',                ok:()=>raceAny((r,m)=>m==='nohit' && r.stars>=3)},
+    {n:'追光者',     d:'完成一次「幽靈機挑戰」',                 ok:()=>raceAny((r,m)=>m==='ghost' && r.stars>=1)},
+    {n:'三圈耐力',   d:'完成一次「多圈賽」',                     ok:()=>raceAny((r,m)=>m==='laps' && r.stars>=1)},
+    {n:'星海收藏家', d:'飛行賽道累積達總星數的一半',             ok:()=>raceGrandTotal()*2>=raceGrandMax(), p:()=>[raceGrandTotal(), Math.ceil(raceGrandMax()/2)]},
+    {n:'闖關新手',   d:'闖關模式拿到第一顆星',                   ok:()=>campTotal()>=1},
+    {n:'闖關好手',   d:'闖關模式累積達總星數的一半',             ok:()=>campTotal()*2>=campMax(), p:()=>[campTotal(), Math.ceil(campMax()/2)]},
+    {n:'場景征服者', d:'任一場景的闖關關卡全部拿滿星',           ok:()=>SCENES.some(sc=>campListFor(sc.id).length && campSceneStars(sc.id)>=campListFor(sc.id).length*3)},
+    {n:'滿星傳說',   d:'闖關模式全部拿滿星',                     ok:()=>campTotal()>=campMax(), p:()=>[campTotal(), campMax()]},
+    {n:'初級證書',   d:'達成練習證書「初級」條件',               ok:()=>certUnlocked(0)},
+    {n:'中級證書',   d:'達成練習證書「中級」條件',               ok:()=>certUnlocked(1), p:()=>[CERT_RULES[1].done(), CERT_RULES[1].total]},
+    {n:'高級證書',   d:'達成練習證書「高級」條件',               ok:()=>certUnlocked(2), p:()=>[CERT_RULES[2].done(), CERT_RULES[2].total]},
+  ];
+})();
+function badgeOpen(){
+  let got = 0;
+  const html = BADGES.map(b=>{
+    let on = false, prog = '';
+    try{ on = !!b.ok(); if(!on && b.p){ const q = b.p(); prog = '（' + Math.min(q[0],q[1]) + ' / ' + q[1] + '）'; } }catch(e){}
+    if(on) got++;
+    return '<div class="bg ' + (on ? 'on' : 'off') + '">' + (on ? '<em>已獲得</em>' : '') + '<b>' + (on ? '★ ' : '☆ ') + b.n + '</b><span>' + b.d + prog + '</span></div>';
+  }).join('');
+  document.getElementById('bgCount').textContent = '已獲得 ' + got + ' / ' + BADGES.length;
+  document.getElementById('bgList').innerHTML = html;
+  document.getElementById('badgeModal').style.display = 'flex';
+}
+document.getElementById('btnBadge').addEventListener('click', badgeOpen);
+document.getElementById('bgClose').addEventListener('click', ()=>{ document.getElementById('badgeModal').style.display = 'none'; });
 
 // ---------- 練習證書（示意）（2026-11-12）----------
 // 自己設計的版面，姓名／等級／日期／編號動態產生，整張帶「示意」浮水印與免責文字；不使用任何第三方認證機構的標誌或印章，也不收身分證字號。
