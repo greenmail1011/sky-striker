@@ -426,6 +426,21 @@
   #campLimit{color:#fbbf24}
   #campLimit.danger{color:#f87171;animation:pulse .8s infinite}
   /* 過關 / 失敗結算 */
+  #ladderBox{margin:-6px 0 18px;font-size:13px;color:#cdd8ee}
+  #ladderBox .ldRank{font-size:17px;font-weight:900;color:#ffd75a;letter-spacing:2px;margin-bottom:6px}
+  #ladderBox label{display:inline-flex;gap:8px;align-items:center;margin-bottom:8px;color:#aab8d8}
+  .ldName{width:150px;padding:5px 9px;border-radius:8px;border:1px solid rgba(120,160,255,.4);background:rgba(255,255,255,.08);color:#fff;font-size:14px;text-align:center}
+  .ldTbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin:0 auto}
+  .ldTbl td{padding:3px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:center}
+  .ldTbl td.n{text-align:left}
+  .ldTbl tr.me td{background:rgba(255,215,90,.16);color:#ffe9a0;font-weight:700}
+  .ldTbl .no{color:#ffd75a;font-weight:900}
+  .ldEmpty{color:#7c88a8;padding:14px 0}
+  #ladderModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.86)}
+  #ladderModal .ldBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:22px 28px;
+    width:min(560px,94vw);max-height:90vh;overflow:auto;color:#cdd8ee;text-align:center}
+  #ladderModal h3{margin:0 0 10px;font-size:24px;letter-spacing:4px;color:#ffd75a}
+  #ladderModal .ldSel{margin:6px 0;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
   #campResult,#raceResult{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:radial-gradient(ellipse at 50% 45%,rgba(20,30,60,.9),rgba(4,6,12,.96))}
   #campResultBox,#raceResultBox{background:rgba(12,16,32,.95);border:1px solid rgba(120,160,255,.32);border-radius:18px;
@@ -852,6 +867,7 @@
     <div id="raceHead">
       <button class="netBtnSmall" id="btnRaceBack">‹ 返回選單</button>
       <div id="raceHeadTtl">飛行賽道</div>
+      <button class="netBtnSmall" id="btnLadder">天梯排行</button>
       <div id="raceTotal">★ 0 / 45</div>
     </div>
     <div id="raceDuoOpt">人數：<button class="sceneBtn" data-rd="0">單人</button><button class="sceneBtn" data-rd="1">雙人（左右分割）</button>
@@ -881,12 +897,14 @@
     <div id="raceResultSub">—</div>
     <div id="raceStars">☆☆☆</div>
     <div id="raceStats">—</div>
+    <div id="ladderBox" style="display:none"><div class="ldRank" id="ldRank"></div><label>飛手名字<input class="ldName" id="ladderName" maxlength="12" placeholder="輸入名字" autocomplete="off"></label><div id="ldTbl"></div></div>
     <div id="raceResultBtns">
       <button class="modeBtn" id="btnRaceRetry">↻ 重玩</button>
       <button class="modeBtn" id="btnRaceList">換賽道／玩法</button>
     </div>
   </div>
 </div>
+<div id="ladderModal"><div class="ldBox"><h3>天梯排行</h3><div class="ldSel" id="ldModes"></div><div class="ldSel" id="ldScenes"></div><div id="ldModalTbl"></div><div style="margin-top:12px"><button class="modeBtn" id="ldClose">關閉</button></div></div></div>
 <div id="campResult">
   <div id="campResultBox">
     <h3 id="campResultTitle">關卡完成</h3>
@@ -3827,6 +3845,7 @@ fsUpdateUI();
 // ---------- 玩家輸入 ----------
 const keys = {};
 addEventListener('keydown', e=>{
+  if(e.target && e.target.tagName === 'INPUT') return;   // 在輸入框打字（飛手名字）時不觸發遊戲快捷鍵
   if(REPLAY.on){ rpKey(e); return; }            // 回放中：鍵盤只控制回放
   if(e.code==='KeyV' && document.getElementById('rpBtn').style.display !== 'none'){ rpOpen(); return; }
   keys[e.code]=true;
@@ -6874,6 +6893,66 @@ function raceStep(h, t){
 }
 function racePassGate(){ raceGatePassed(raceSoloR); }
 const raceTotalTime = () => raceTime + raceAdj(raceSoloR);
+// ---------- 天梯排行（2026-11-12，業主：「不要叫班級排行，叫天梯排行」）
+//   飛行賽道單人完賽的成績，依「賽道＋玩法」各存前 10 名在這台裝置（localStorage），免伺服器。
+//   排名：收集賽＝星幣多→時間短；其他＝總成績（含碰撞罰時、時間獎勵）越短越前面。名字記在 hsinchuDronePlayerNameV1。
+const LADDER_KEY = 'hsinchuDroneLadderV1', LADDER_NAME_KEY = 'hsinchuDronePlayerNameV1', LADDER_MAX = 10;
+let ladder = {}; try{ ladder = JSON.parse(localStorage.getItem(LADDER_KEY)||'{}') || {}; }catch(e){}
+let ladderName = ''; try{ ladderName = localStorage.getItem(LADDER_NAME_KEY) || ''; }catch(e){}
+let ladderCur = null;     // 這次完賽的那一筆 {k, ts}
+const ladderStore = () => { try{ localStorage.setItem(LADDER_KEY, JSON.stringify(ladder)); }catch(e){} };
+const ladderCmp = mid => (a,b) => mid==='coins' ? ((b.c-a.c) || (a.t-b.t)) : (a.t-b.t);
+function ladderAdd(sid, mid, t, coins){
+  const k = sid + '|' + mid, arr = ladder[k] = ladder[k] || [];
+  const e = {n: ladderName || '無名飛手', t: +t.toFixed(2), c: coins|0, ts: Date.now()};
+  arr.push(e); arr.sort(ladderCmp(mid));
+  const rank = arr.indexOf(e) + 1;
+  if(arr.length > LADDER_MAX) arr.length = LADDER_MAX;
+  ladderStore(); ladderCur = {k, ts: e.ts};
+  return rank;
+}
+function ladderTable(sid, mid, hlTs){
+  const arr = ladder[sid + '|' + mid] || [];
+  if(!arr.length) return '<div class="ldEmpty">這條賽道還沒有人上榜</div>';
+  const esc = x => String(x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  return '<table class="ldTbl">' + arr.map((e,i)=>'<tr' + (e.ts===hlTs ? ' class="me"' : '') + '><td class="no">' + (i+1) + '</td><td class="n">' + esc(e.n) + '</td><td>' +
+    (mid==='coins' ? e.c + ' 枚　' : '') + e.t.toFixed(1) + ' s</td></tr>').join('') + '</table>';
+}
+function ladderResult(ok, mid, total){
+  const box = document.getElementById('ladderBox');
+  if(!ok || raceDuo){ box.style.display = 'none'; ladderCur = null; return; }
+  const rank = ladderAdd(raceSceneId, mid, total, raceCoinGot);
+  document.getElementById('ldRank').textContent = rank <= LADDER_MAX ? '天梯第 ' + rank + ' 名' : '未進前 ' + LADDER_MAX + ' 名（第 ' + rank + ' 名）';
+  document.getElementById('ladderName').value = ladderName;
+  document.getElementById('ldTbl').innerHTML = ladderTable(raceSceneId, mid, ladderCur.ts);
+  box.style.display = 'block';
+}
+document.getElementById('ladderName').addEventListener('input', e=>{
+  ladderName = e.target.value.trim().slice(0, 12);
+  try{ localStorage.setItem(LADDER_NAME_KEY, ladderName); }catch(err){}
+  if(!ladderCur) return;
+  const arr = ladder[ladderCur.k] || [], me = arr.find(x=>x.ts===ladderCur.ts);
+  if(me){ me.n = ladderName || '無名飛手'; ladderStore();
+    const [sid, mid] = ladderCur.k.split('|');
+    document.getElementById('ldTbl').innerHTML = ladderTable(sid, mid, ladderCur.ts); }
+});
+const ldSel = {sid: null, mid: 'time'};
+function ladderOpen(){
+  ldSel.mid = RACE_MODES.some(m=>m.id===raceModeId && !m.duoOnly) ? raceModeId : 'time';
+  if(!ldSel.sid) ldSel.sid = SCENES[0].id;
+  ladderRender();
+  document.getElementById('ladderModal').style.display = 'flex';
+}
+function ladderRender(){
+  const mk = (list, cur, attr) => list.map(x=>'<button class="sceneBtn' + (x.id===cur ? ' on' : '') + '" ' + attr + '="' + x.id + '">' + x.name + '</button>').join('');
+  document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly), ldSel.mid, 'data-lm');
+  document.getElementById('ldScenes').innerHTML = mk(SCENES, ldSel.sid, 'data-ls');
+  document.getElementById('ldModalTbl').innerHTML = ladderTable(ldSel.sid, ldSel.mid, null);
+  document.querySelectorAll('#ldModes [data-lm]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.mid = b.dataset.lm; ladderRender(); }));
+  document.querySelectorAll('#ldScenes [data-ls]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.sid = b.dataset.ls; ladderRender(); }));
+}
+document.getElementById('btnLadder').addEventListener('click', ladderOpen);
+document.getElementById('ldClose').addEventListener('click', ()=>{ document.getElementById('ladderModal').style.display = 'none'; });
 function raceFinish(ok, reason){
   raceDone = true;
   setState('over');
@@ -6948,6 +7027,7 @@ function raceFinish(ok, reason){
   if(ok && isNew) st += '<br><span style="color:#7dffa9;font-weight:700">新紀錄！</span>';
   if(!ok) st += '<br>' + g + '通過 ' + raceIdx + ' / ' + D.gates.length + ' 道拱門' + e;
   document.getElementById('raceStats').innerHTML = st;
+  ladderResult(ok, mid, total);
   document.getElementById('raceResult').style.display = 'flex';
   raceArrow && (raceArrow.visible = false);
 }
