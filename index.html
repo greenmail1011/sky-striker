@@ -440,6 +440,12 @@
   #ladderModal .ldBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:22px 28px;
     width:min(560px,94vw);max-height:90vh;overflow:auto;color:#cdd8ee;text-align:center}
   #ladderModal h3{margin:0 0 10px;font-size:24px;letter-spacing:4px;color:#ffd75a}
+  #certModal{position:fixed;inset:0;z-index:71;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.9);overflow:auto}
+  #certModal .ctBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:18px 22px;max-width:min(920px,96vw);max-height:96vh;overflow:auto;text-align:center}
+  #certModal h3{margin:0 0 8px;font-size:22px;letter-spacing:4px;color:#ffd75a}
+  #certModal .ctRow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;margin:6px 0;font-size:14px;color:#c8d2f0}
+  #certModal input,#certModal select{background:#0c1224;color:#fff;border:1px solid rgba(120,160,255,.4);border-radius:8px;padding:6px 10px;font-size:15px}
+  #certModal canvas{width:100%;height:auto;border-radius:6px;margin-top:8px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
   #ladderModal .ldSel{margin:6px 0;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
   #campResult,#raceResult{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:radial-gradient(ellipse at 50% 45%,rgba(20,30,60,.9),rgba(4,6,12,.96))}
@@ -868,6 +874,7 @@
       <button class="netBtnSmall" id="btnRaceBack">‹ 返回選單</button>
       <div id="raceHeadTtl">飛行賽道</div>
       <button class="netBtnSmall" id="btnLadder">天梯排行</button>
+      <button class="netBtnSmall" id="btnCert">練習證書（示意）</button>
       <div id="raceTotal">★ 0 / 45</div>
     </div>
     <div id="raceDuoOpt">人數：<button class="sceneBtn" data-rd="0">單人</button><button class="sceneBtn" data-rd="1">雙人（左右分割）</button>
@@ -904,6 +911,12 @@
     </div>
   </div>
 </div>
+<div id="certModal"><div class="ctBox"><h3>練習證書（示意）</h3>
+  <div class="ctRow"><label>姓名 <input id="ctName" maxlength="12" placeholder="輸入姓名" autocomplete="off"></label>
+  <label>等級 <select id="ctLevel"><option value="0">初級 Beginner</option><option value="1">中級 Intermediate</option><option value="2">高級 Advanced</option></select></label></div>
+  <canvas id="ctCanvas" width="1754" height="1240"></canvas>
+  <div class="ctRow"><button class="modeBtn" id="ctDownload">下載圖片（PNG）</button><button class="modeBtn" id="ctClose">關閉</button></div>
+  <div style="font-size:12px;color:#7c88a8">本證書為模擬器練習用示意證書，不是任何官方認證。</div></div></div>
 <div id="ladderModal"><div class="ldBox"><h3>天梯排行</h3><div class="ldSel" id="ldScope"></div><div class="ldSel" id="ldModes"></div><div class="ldSel" id="ldScenes"></div><div id="ldModalTbl"></div><div style="margin-top:12px"><button class="modeBtn" id="ldClose">關閉</button></div></div></div>
 <div id="campResult">
   <div id="campResultBox">
@@ -7023,6 +7036,83 @@ function ladderRender(){
 }
 document.getElementById('btnLadder').addEventListener('click', ladderOpen);
 document.getElementById('ldClose').addEventListener('click', ()=>{ document.getElementById('ladderModal').style.display = 'none'; });
+
+// ---------- 練習證書（示意）（2026-11-12）----------
+// 自己設計的版面，姓名／等級／日期／編號動態產生，整張帶「示意」浮水印與免責文字；不使用任何第三方認證機構的標誌或印章，也不收身分證字號。
+const CERT_LEVELS = [{zh:'初級', en:'Beginner', stars:1}, {zh:'中級', en:'Intermediate', stars:2}, {zh:'高級', en:'Advanced', stars:3}];
+let certLogo = null;
+function certNo(name, lv, ymd){
+  let h = 2166136261;                                  // 同姓名＋等級＋日期 → 同一個編號（重開視窗不會變）
+  for(const ch of name + '|' + lv + '|' + ymd){ h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  const a = (h % 1679616).toString(36).toUpperCase().padStart(4, '0');   // 36^4
+  return 'SAMPLE-' + ymd + '-' + a;
+}
+function certDraw(){
+  const cv = document.getElementById('ctCanvas'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const raw = document.getElementById('ctName').value.replace(/[<>&"'`\\]/g, '').trim().slice(0, 12);
+  const name = raw || '（請輸入姓名）', lv = CERT_LEVELS[+document.getElementById('ctLevel').value || 0];
+  const d = new Date(), ymd = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  const dateTxt = d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+  const no = certNo(raw || '-', lv.en, ymd);
+  const SERIF = '"Noto Serif TC","Songti TC","PMingLiU","Source Han Serif TC",serif', KAI = '"DFKai-SB","BiauKai","Kaiti TC","Noto Serif TC",serif';
+  g.clearRect(0,0,W,H);
+  g.fillStyle = '#fbf8ef'; g.fillRect(0,0,W,H);
+  // 邊框：深藍＋金色雙線，四角圓弧
+  g.strokeStyle = '#15305f'; g.lineWidth = 18; g.strokeRect(40,40,W-80,H-80);
+  g.strokeStyle = '#c9a23a'; g.lineWidth = 5; g.strokeRect(70,70,W-140,H-140);
+  g.strokeStyle = '#15305f'; g.lineWidth = 2; g.strokeRect(84,84,W-168,H-168);
+  g.fillStyle = '#c9a23a';
+  for(const [x,y] of [[70,70],[W-70,70],[70,H-70],[W-70,H-70]]){ g.beginPath(); g.arc(x,y,16,0,Math.PI*2); g.fill(); }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  // 標題
+  g.fillStyle = '#15305f'; g.font = '700 84px ' + KAI; g.fillText('無人機足球練習證書', W/2, 230);
+  g.font = '600 30px ' + SERIF; g.fillStyle = '#4b5a7a'; g.fillText('CERTIFICATE OF DRONE SOCCER SIMULATOR PRACTICE', W/2, 300);
+  g.fillStyle = '#b3261e'; g.font = '700 34px ' + SERIF; g.fillText('— 示意 · SAMPLE —', W/2, 358);
+  // 等級條
+  g.fillStyle = '#e9dcae'; g.fillRect(250, 410, W-500, 110);
+  g.fillStyle = '#15305f'; g.font = '700 60px ' + SERIF; g.fillText('★'.repeat(lv.stars) + '  ' + lv.zh + ' / ' + lv.en, W/2, 466);
+  // 內文
+  g.font = '34px ' + SERIF; g.fillStyle = '#222';
+  g.fillText('茲證明', W/2, 590);
+  g.fillStyle = '#15305f'; g.font = '700 96px ' + KAI; g.fillText(name, W/2, 700);
+  g.fillStyle = '#c9a23a'; g.fillRect(W/2-330, 758, 660, 4);
+  g.fillStyle = '#222'; g.font = '34px ' + SERIF;
+  g.fillText('已於「無人機足球模擬培訓系統」完成' + lv.zh + '等級的模擬練習。', W/2, 830);
+  g.font = '26px ' + SERIF; g.fillStyle = '#555';
+  g.fillText('This sample certifies simulator practice only; it is not an official certification.', W/2, 885);
+  // 資訊列
+  g.textAlign = 'left'; g.font = '30px ' + SERIF; g.fillStyle = '#222';
+  g.fillText('發證日期 Date：' + dateTxt, 220, 975);
+  g.fillText('證書編號 No.：' + no, 220, 1027);
+  g.fillText('發證單位：新竹市無人機創新科技協會', 220, 1079);
+  // 浮水印
+  g.save(); g.translate(W/2, H/2+40); g.rotate(-Math.PI/7); g.textAlign = 'center';
+  g.fillStyle = 'rgba(179,38,30,0.13)'; g.font = '700 300px ' + SERIF; g.fillText('示意', 0, -80);
+  g.font = '700 150px ' + SERIF; g.fillText('SAMPLE', 0, 120); g.restore();
+  // 標誌（協會 logo；載不到就略過）
+  const drawLogo = ()=>{ if(certLogo && certLogo.complete && certLogo.naturalWidth){ const lh = 130, lw = lh*certLogo.naturalWidth/certLogo.naturalHeight; g.drawImage(certLogo, W-220-lw, 940, lw, lh); } };
+  if(!certLogo){ certLogo = new Image(); certLogo.onload = ()=>{ if(document.getElementById('certModal').style.display==='flex') certDraw(); }; certLogo.src = 'assets/logo.webp'; }
+  drawLogo();
+  g.textAlign = 'center'; g.font = '22px ' + SERIF; g.fillStyle = '#7a1c16';
+  g.fillText('本證書為模擬器練習用示意證書，非任何官方認證 ／ Sample only', W/2, H-108);
+  return {no, name};
+}
+function certOpen(){
+  let nm = '';
+  try{ nm = localStorage.getItem(LADDER_NAME_KEY) || ''; }catch(e){}
+  const inp = document.getElementById('ctName'); if(!inp.value) inp.value = nm;
+  document.getElementById('certModal').style.display = 'flex';
+  certDraw();
+}
+document.getElementById('btnCert').addEventListener('click', certOpen);
+document.getElementById('ctClose').addEventListener('click', ()=>{ document.getElementById('certModal').style.display = 'none'; });
+document.getElementById('ctName').addEventListener('input', certDraw);
+document.getElementById('ctLevel').addEventListener('change', certDraw);
+document.getElementById('ctDownload').addEventListener('click', ()=>{
+  const r = certDraw(), a = document.createElement('a');
+  a.download = '練習證書_示意_' + r.no + '.png'; a.href = document.getElementById('ctCanvas').toDataURL('image/png');
+  document.body.appendChild(a); a.click(); a.remove();
+});
 if(LADDER_URL){ if(ladderQ.length) ladderFlush(); addEventListener('online', ()=>{ if(ladderQ.length) ladderFlush(); }); }
 function raceFinish(ok, reason){
   raceDone = true;
