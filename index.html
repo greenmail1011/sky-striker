@@ -462,17 +462,35 @@
   #badgeModal{position:fixed;inset:0;z-index:71;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.88)}
   #badgeModal .bgBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:18px 24px;width:min(760px,94vw);max-height:92vh;overflow:auto;text-align:center}
   #badgeModal h3{margin:0 0 6px;font-size:22px;letter-spacing:4px;color:#ffd75a}
-  #bgCount{font-size:14px;color:#9fb0d8;margin-bottom:10px}
-  #bgList{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;text-align:left}
-  #bgList .bg{border:1px solid rgba(120,160,255,.25);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.04)}
-  #bgList .bg b{display:block;font-size:15px;color:#e8ecf5}
-  #bgList .bg span{font-size:12px;color:#8e9bbd}
-  #bgList .bg.on{border-color:#ffd75a;background:rgba(255,215,90,.1)} #bgList .bg.on b{color:#ffd75a}
-  #bgList .bg.off{opacity:.5}
-  #bgList .bg em{font-style:normal;float:right;font-size:12px;color:#7dffa0}
+  #bgCount{font-size:14px;color:#9fb0d8;margin-bottom:4px}
+  #bgBar{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin:6px auto 14px;max-width:420px}
+  #bgBar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#c98a3c,#ffd75a,#fff3b0);box-shadow:0 0 12px rgba(255,215,90,.6);transition:width .5s}
+  #bgList{display:block;text-align:left}
+  #bgList h4{margin:14px 0 8px;font-size:13px;letter-spacing:3px;color:#8fb4ff;font-weight:700;display:flex;align-items:center;gap:10px}
+  #bgList h4::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(120,160,255,.35),transparent)}
+  #bgList h4 small{font-size:12px;letter-spacing:1px;color:#6f7da3;font-weight:400}
+  #bgList .bgGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:10px}
+  #bgList .bg{display:flex;align-items:center;gap:12px;border:1px solid rgba(120,160,255,.2);border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.035);position:relative;overflow:hidden}
+  #bgList .bg .mdl{flex:0 0 64px;width:64px;height:64px}
+  #bgList .bg .tx{min-width:0;flex:1}
+  #bgList .bg b{display:block;font-size:15px;color:#e8ecf5;letter-spacing:.5px}
+  #bgList .bg span{display:block;font-size:12px;color:#8e9bbd;line-height:1.45;margin-top:2px}
+  #bgList .bg .pb{height:5px;border-radius:99px;background:rgba(255,255,255,.1);margin-top:6px;overflow:hidden}
+  #bgList .bg .pb i{display:block;height:100%;background:linear-gradient(90deg,#5ab8ff,#7dffa9)}
+  #bgList .bg .pt{font-size:11px;color:#7f8db0;margin-top:3px}
+  #bgList .bg.on{border-color:var(--bc);background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.02));box-shadow:0 0 18px -6px var(--bc)}
+  #bgList .bg.on b{color:var(--bc)}
+  #bgList .bg.on::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-18deg);animation:bgShine 4.5s ease-in-out infinite}
+  @keyframes bgShine{0%,60%{left:-60%}100%{left:130%}}
+  #bgList .bg.off .mdl{filter:grayscale(1) brightness(.7)} #bgList .bg.off b{color:#9aa6c4}
+  @media (prefers-reduced-motion:reduce){#bgList .bg.on::after{animation:none;display:none}}
   #certModal{position:fixed;inset:0;z-index:71;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.9);overflow:auto}
   #certModal .ctBox{background:rgba(12,16,32,.97);border:1px solid rgba(120,160,255,.32);border-radius:18px;padding:18px 22px;max-width:min(920px,96vw);max-height:96vh;overflow:auto;text-align:center}
   #certModal h3{margin:0 0 8px;font-size:22px;letter-spacing:4px;color:#ffd75a}
+  #ctLock{margin:6px auto;padding:8px 14px;border-radius:10px;font-size:15px;font-weight:800;max-width:min(820px,94%)}
+  #ctLock.no{background:rgba(255,80,70,.14);border:1px solid rgba(255,100,90,.7);color:#ff8f86}
+  #ctLock.ok{background:rgba(110,255,160,.1);border:1px solid rgba(125,255,160,.6);color:#7dffa0}
+  #ctDownload:disabled{opacity:.7;cursor:not-allowed;background:#2a2f44;color:#aab4d2;border-color:#4a5272;filter:none}
   #certModal .ctRow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;margin:6px 0;font-size:14px;color:#c8d2f0}
   #certModal input,#certModal select{background:#0c1224;color:#fff;border:1px solid rgba(120,160,255,.4);border-radius:8px;padding:6px 10px;font-size:15px}
   #certModal canvas{width:100%;height:auto;border-radius:6px;margin-top:8px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
@@ -958,11 +976,12 @@
 <div id="ladderToast"></div>
 <div id="dailyModal"><div class="dyBox"><h3>今日挑戰</h3><div id="dyDate"></div><div id="dyBody"></div>
   <div class="dyRow"><button class="modeBtn" id="dyStart">開始挑戰</button><button class="modeBtn" id="dyBoard">今日天梯</button><button class="modeBtn" id="dyClose">關閉</button></div></div></div>
-<div id="badgeModal"><div class="bgBox"><h3>成就徽章</h3><div id="bgCount"></div><div id="bgList"></div><div style="margin-top:12px"><button class="modeBtn" id="bgClose">關閉</button></div></div></div>
+<div id="badgeModal"><div class="bgBox"><h3>成就徽章</h3><div id="bgCount"></div><div id="bgBar"><i></i></div><div id="bgList"></div><div style="margin-top:12px"><button class="modeBtn" id="bgClose">關閉</button></div></div></div>
 <div id="certModal"><div class="ctBox"><h3>練習證書（示意）</h3>
   <div class="ctRow"><label>姓名 <input id="ctName" maxlength="12" placeholder="輸入姓名" autocomplete="off"></label>
   <label>等級 <select id="ctLevel"><option value="0">初級 Beginner</option><option value="1">中級 Intermediate</option><option value="2">高級 Advanced</option></select></label></div>
   <div class="ctRow" id="ctStat" style="font-size:13px;line-height:1.7"></div>
+  <div id="ctLock"></div>
   <canvas id="ctCanvas" width="1754" height="1240"></canvas>
   <div class="ctRow"><button class="modeBtn" id="ctDownload">下載圖片（PNG）</button><button class="modeBtn" id="ctClose">關閉</button></div>
   <div style="font-size:12px;color:#7c88a8">本證書為模擬器練習用示意證書，不是任何官方認證。</div></div></div>
@@ -7289,16 +7308,67 @@ const BADGES = (()=>{
   ];
 })();
 const dailyTotalDaysSafe = () => Object.keys((dailyData && dailyData.days) || {}).length;
+// 徽章外觀：[分組, 等級色, 圖樣]；等級色 bronze 銅／silver 銀／gold 金／special 傳說紫
+const BADGE_GROUPS = ['飛行賽道','闖關','每日挑戰','練習證書'];
+const BADGE_META = {
+  '首次起飛':['飛行賽道','bronze','plane'], '三星飛手':['飛行賽道','gold','star'], '環遊天地':['飛行賽道','silver','globe'],
+  '零碰撞達人':['飛行賽道','gold','shield'], '追光者':['飛行賽道','silver','ghost'], '三圈耐力':['飛行賽道','silver','loop'],
+  '星海收藏家':['飛行賽道','gold','gem'],
+  '闖關新手':['闖關','bronze','flag'], '闖關好手':['闖關','silver','flag'], '場景征服者':['闖關','gold','mountain'], '滿星傳說':['闖關','special','crown'],
+  '每日挑戰':['每日挑戰','bronze','cal'], '三日連勝':['每日挑戰','silver','bolt'], '七日全勤':['每日挑戰','gold','bolt'],
+  '初級證書':['練習證書','bronze','cert'], '中級證書':['練習證書','silver','cert'], '高級證書':['練習證書','gold','cert'],
+};
+const BADGE_TIER = {bronze:['#e0a064','#8a4f1e','#ffd9a8'], silver:['#dfe6f5','#7d8aa6','#ffffff'], gold:['#ffe27a','#b8860b','#fff6c9'], special:['#d9b8ff','#6b3fb8','#f5eaff']};
+const BADGE_GLYPH = {
+  plane:'<path d="M3 11l18-7-7 18-2-8-9-3z"/><path d="M12 14l9-10"/>',
+  star:'<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.5 3.5 3.5 14.5 0 18M12 3c-3.5 3.5-3.5 14.5 0 18"/>',
+  shield:'<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
+  ghost:'<path d="M6 20V11a6 6 0 0112 0v9l-2-2-2 2-2-2-2 2-2-2z"/><circle cx="10" cy="11" r=".9" fill="currentColor"/><circle cx="14" cy="11" r=".9" fill="currentColor"/>',
+  loop:'<path d="M20 12a8 8 0 11-3-6.2"/><path d="M20 4v5h-5"/>',
+  gem:'<path d="M6 4h12l3 5-9 11L3 9z"/><path d="M3 9h18M9 4l3 16 3-16"/>',
+  flag:'<path d="M6 21V4"/><path d="M6 4h11l-2 4 2 4H6"/>',
+  mountain:'<path d="M3 20l6-11 4 6 3-4 5 9z"/><path d="M7.6 12.6l1.4-1 1.6 1.6"/>',
+  crown:'<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/><path d="M5 19h14"/>',
+  cal:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4M9 15l2 2 4-4"/>',
+  bolt:'<path d="M13 2L5 14h6l-1 8 8-12h-6z"/>',
+  cert:'<rect x="4" y="4" width="16" height="12" rx="1.5"/><path d="M8 8h8M8 11h5M9 16l-1 5 4-2 4 2-1-5"/>',
+};
+let bgUid = 0;
+function badgeMedal(meta, on){
+  const [,tier,glyph] = meta, [c1,c2,c3] = BADGE_TIER[tier], id = 'bgm' + (++bgUid);
+  return '<svg class="mdl" viewBox="0 0 64 64" aria-hidden="true"><defs>' +
+    '<linearGradient id="' + id + 'r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + c3 + '"/><stop offset=".45" stop-color="' + c1 + '"/><stop offset="1" stop-color="' + c2 + '"/></linearGradient>' +
+    '<radialGradient id="' + id + 'i" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#27304f"/><stop offset="1" stop-color="#0d1226"/></radialGradient></defs>' +
+    '<path d="M22 2h8l2 14h-8zM42 2h-8l-2 14h8z" fill="' + c2 + '" opacity=".85"/>' +                  // 緞帶
+    '<circle cx="32" cy="38" r="23" fill="url(#' + id + 'r)"/>' +
+    '<circle cx="32" cy="38" r="19" fill="url(#' + id + 'i)" stroke="' + c3 + '" stroke-opacity=".55" stroke-width="1"/>' +
+    '<g transform="translate(18.5 24.5) scale(.98)" fill="none" stroke="' + c1 + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="color:' + c1 + '">' + BADGE_GLYPH[glyph] + '</g>' +
+    (on ? '<path d="M17 28a17 17 0 0111-8" stroke="#fff" stroke-opacity=".5" stroke-width="2" fill="none" stroke-linecap="round"/>'
+        : '<g transform="translate(40 46)"><rect x="0" y="5" width="13" height="10" rx="2" fill="#0d1226" stroke="#9aa6c4"/><path d="M3 5V3a3.5 3.5 0 017 0v2" fill="none" stroke="#9aa6c4" stroke-width="1.6"/></g>') +
+    '</svg>';
+}
 function badgeOpen(){
-  let got = 0;
-  const html = BADGES.map(b=>{
-    let on = false, prog = '';
-    try{ on = !!b.ok(); if(!on && b.p){ const q = b.p(); prog = '（' + Math.min(q[0],q[1]) + ' / ' + q[1] + '）'; } }catch(e){}
+  let got = 0; const groups = {};
+  BADGES.forEach(b=>{
+    const meta = BADGE_META[b.n] || ['其他','bronze','star'];
+    let on = false, q = null;
+    try{ on = !!b.ok(); if(!on && b.p) q = b.p(); }catch(e){}
     if(on) got++;
-    return '<div class="bg ' + (on ? 'on' : 'off') + '">' + (on ? '<em>已獲得</em>' : '') + '<b>' + (on ? '★ ' : '☆ ') + b.n + '</b><span>' + b.d + prog + '</span></div>';
-  }).join('');
+    const [c1] = BADGE_TIER[meta[1]];
+    const pr = q && q[1] ? Math.max(0, Math.min(1, q[0]/q[1])) : null;
+    const html = '<div class="bg ' + (on ? 'on' : 'off') + '" style="--bc:' + c1 + '">' + badgeMedal(meta, on) +
+      '<div class="tx"><b>' + b.n + '</b><span>' + b.d + '</span>' +
+      (on ? '<div class="pt" style="color:' + c1 + '">已獲得</div>'
+          : (pr !== null ? '<div class="pb"><i style="width:' + Math.round(pr*100) + '%"></i></div><div class="pt">' + Math.min(q[0],q[1]) + ' / ' + q[1] + '</div>' : '<div class="pt">尚未達成</div>')) +
+      '</div></div>';
+    (groups[meta[0]] = groups[meta[0]] || {n:0, t:0, h:[]}).h.push(html);
+    groups[meta[0]].t++; if(on) groups[meta[0]].n++;
+  });
   document.getElementById('bgCount').textContent = '已獲得 ' + got + ' / ' + BADGES.length;
-  document.getElementById('bgList').innerHTML = html;
+  document.querySelector('#bgBar i').style.width = Math.round(got / BADGES.length * 100) + '%';
+  document.getElementById('bgList').innerHTML = [...BADGE_GROUPS, '其他'].filter(k=>groups[k]).map(k=>
+    '<h4>' + k + '<small>' + groups[k].n + ' / ' + groups[k].t + '</small></h4><div class="bgGrid">' + groups[k].h.join('') + '</div>').join('');
   document.getElementById('badgeModal').style.display = 'flex';
 }
 document.getElementById('btnBadge').addEventListener('click', badgeOpen);
@@ -7316,16 +7386,17 @@ const CERT_RULES = [
   {desc:'每個場景「計時賽」3 星，且「零碰撞挑戰」2 星以上', total:SCENES.length, done:()=>SCENES.filter(sc=>certStars(sc.id,'time')>=3 && certStars(sc.id,'nohit')>=2).length},
 ];
 const certUnlocked = i => CERT_RULES[i].done() >= CERT_RULES[i].total;
+const certLocked = ()=>!certUnlocked(+document.getElementById('ctLevel').value || 0);
 function certRefreshLevels(){
   const sel = document.getElementById('ctLevel');
-  let best = -1;
-  CERT_RULES.forEach((r,i)=>{ if(certUnlocked(i)) best = i; });
-  [...sel.options].forEach((o,i)=>{ o.disabled = !certUnlocked(i); o.textContent = CERT_LEVELS[i].zh + ' ' + CERT_LEVELS[i].en + (certUnlocked(i) ? '　✓' : '　（未過關）'); });
-  if(sel.options[sel.selectedIndex].disabled) sel.value = String(Math.max(best, 0));
+  [...sel.options].forEach((o,i)=>{ o.disabled = false; o.textContent = CERT_LEVELS[i].zh + ' ' + CERT_LEVELS[i].en + (certUnlocked(i) ? '　✓ 已過關' : '　（尚未過關）'); });   // 未過關也能選來預覽，但不能下載
   document.getElementById('ctStat').innerHTML = CERT_RULES.map((r,i)=>CERT_LEVELS[i].zh + '：' + r.desc + '　<b style="color:' + (certUnlocked(i) ? '#7dffa0' : '#ffd75a') + '">' + Math.min(r.done(), r.total) + ' / ' + r.total + '</b>').join('<br>');
-  const locked = !certUnlocked(+sel.value || 0);
-  document.getElementById('ctCanvas').style.opacity = locked ? '.25' : '1';
-  document.getElementById('ctDownload').disabled = locked;
+  const locked = certLocked(), i = +sel.value || 0, lk = document.getElementById('ctLock');
+  lk.className = locked ? 'no' : 'ok';
+  lk.textContent = locked ? ('尚未過關，目前只能預覽、無法下載。（' + CERT_LEVELS[i].zh + '進度 ' + Math.min(CERT_RULES[i].done(), CERT_RULES[i].total) + ' / ' + CERT_RULES[i].total + '）')
+                          : '已過關，可以下載這張證書。';
+  const dl = document.getElementById('ctDownload');
+  dl.disabled = locked; dl.textContent = locked ? '過關後才能下載' : '下載圖片（PNG）';
   return locked;
 }
 function certNo(name, lv, ymd){
@@ -7376,6 +7447,16 @@ function certDraw(){
   g.save(); g.translate(W/2, H/2+40); g.rotate(-Math.PI/7); g.textAlign = 'center';
   g.fillStyle = 'rgba(179,38,30,0.13)'; g.font = '700 300px ' + SERIF; g.fillText('示意', 0, -80);
   g.font = '700 150px ' + SERIF; g.fillText('SAMPLE', 0, 120); g.restore();
+  if(certLocked()){      // 未過關：整張蓋上醒目的「尚未過關」，只能預覽
+    g.save(); g.translate(W/2, H/2); g.rotate(-Math.PI/9); g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 14; g.strokeStyle = 'rgba(210,30,30,.55)'; g.strokeRect(-640, -190, 1280, 380);
+    g.fillStyle = 'rgba(210,30,30,.30)'; g.font = '900 250px ' + SERIF; g.fillText('尚未過關', 0, -25);
+    g.font = '800 64px ' + SERIF; g.fillStyle = 'rgba(210,30,30,.6)'; g.fillText('PREVIEW ONLY · NOT YET EARNED', 0, 120);
+    g.restore();
+    g.fillStyle = 'rgba(210,30,30,.92)'; g.fillRect(0, 0, W, 54);
+    g.fillStyle = '#fff'; g.font = '700 30px ' + SERIF; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('尚未過關　預覽用，無法下載', W/2, 28);
+  }
   // 標誌（協會 logo；載不到就略過）
   const drawLogo = ()=>{ if(certLogo && certLogo.complete && certLogo.naturalWidth){ const lh = 130, lw = lh*certLogo.naturalWidth/certLogo.naturalHeight; g.drawImage(certLogo, W-220-lw, 940, lw, lh); } };
   if(!certLogo){ certLogo = new Image(); certLogo.onload = ()=>{ if(document.getElementById('certModal').style.display==='flex') certDraw(); }; certLogo.src = 'assets/logo.webp'; }
@@ -7385,6 +7466,7 @@ function certDraw(){
   return {no, name};
 }
 function certOpen(){
+  { let best = 0; CERT_RULES.forEach((r,i)=>{ if(certUnlocked(i)) best = i; }); document.getElementById('ctLevel').value = String(best); }
   certRefreshLevels();
   let nm = '';
   try{ nm = localStorage.getItem(LADDER_NAME_KEY) || ''; }catch(e){}
@@ -7397,6 +7479,7 @@ document.getElementById('ctClose').addEventListener('click', ()=>{ document.getE
 document.getElementById('ctName').addEventListener('input', certDraw);
 document.getElementById('ctLevel').addEventListener('change', ()=>{ certRefreshLevels(); certDraw(); });
 document.getElementById('ctDownload').addEventListener('click', ()=>{
+  if(certLocked()){ certRefreshLevels(); certDraw(); return; }   // 未過關一律不給下載
   const r = certDraw(), a = document.createElement('a');
   a.download = '練習證書_示意_' + r.no + '.png'; a.href = document.getElementById('ctCanvas').toDataURL('image/png');
   document.body.appendChild(a); a.click(); a.remove();
