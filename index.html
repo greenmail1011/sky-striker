@@ -904,7 +904,7 @@
     </div>
   </div>
 </div>
-<div id="ladderModal"><div class="ldBox"><h3>天梯排行</h3><div class="ldSel" id="ldModes"></div><div class="ldSel" id="ldScenes"></div><div id="ldModalTbl"></div><div style="margin-top:12px"><button class="modeBtn" id="ldClose">關閉</button></div></div></div>
+<div id="ladderModal"><div class="ldBox"><h3>天梯排行</h3><div class="ldSel" id="ldScope"></div><div class="ldSel" id="ldModes"></div><div class="ldSel" id="ldScenes"></div><div id="ldModalTbl"></div><div style="margin-top:12px"><button class="modeBtn" id="ldClose">關閉</button></div></div></div>
 <div id="campResult">
   <div id="campResultBox">
     <h3 id="campResultTitle">關卡完成</h3>
@@ -6893,15 +6893,21 @@ function raceStep(h, t){
 }
 function racePassGate(){ raceGatePassed(raceSoloR); }
 const raceTotalTime = () => raceTime + raceAdj(raceSoloR);
-// ---------- 天梯排行（2026-11-12，業主：「不要叫班級排行，叫天梯排行」）
-//   飛行賽道單人完賽的成績，依「賽道＋玩法」各存前 10 名在這台裝置（localStorage），免伺服器。
-//   排名：收集賽＝星幣多→時間短；其他＝總成績（含碰撞罰時、時間獎勵）越短越前面。名字記在 hsinchuDronePlayerNameV1。
-const LADDER_KEY = 'hsinchuDroneLadderV1', LADDER_NAME_KEY = 'hsinchuDronePlayerNameV1', LADDER_MAX = 10;
+// ---------- 天梯排行（2026-11-12，業主：「不要叫班級排行，叫天梯排行」「要跨裝置也能累積」）
+//   飛行賽道單人完賽的成績。本機榜：每個「賽道＋玩法」前 10 名存在這台裝置（localStorage）。
+//   全校榜：LADDER_URL 填了 Google Apps Script 網頁應用程式網址後，成績會送到老師的 Google 試算表，所有裝置共用（後端見「天梯後端_AppsScript.gs」）。
+//   排名：每個名字只算最佳一筆；收集賽＝星幣多→時間短，其他＝總成績（含罰時、時間獎勵）越短越前面。
+//   送不出去（沒網路）的成績會排進佇列（localStorage），下次連上網路自動補送；網址留空＝只用本機榜。
+const LADDER_KEY = 'hsinchuDroneLadderV1', LADDER_NAME_KEY = 'hsinchuDronePlayerNameV1', LADDER_Q_KEY = 'hsinchuDroneLadderQueueV1', LADDER_MAX = 10;
+const LADDER_URL = '';    // 例：'https://script.google.com/macros/s/xxxxxxxx/exec'
 let ladder = {}; try{ ladder = JSON.parse(localStorage.getItem(LADDER_KEY)||'{}') || {}; }catch(e){}
 let ladderName = ''; try{ ladderName = localStorage.getItem(LADDER_NAME_KEY) || ''; }catch(e){}
-let ladderCur = null;     // 這次完賽的那一筆 {k, ts}
+let ladderQ = []; try{ ladderQ = JSON.parse(localStorage.getItem(LADDER_Q_KEY)||'[]') || []; }catch(e){}
+let ladderCur = null;     // 這次完賽的那一筆 {k, ts, rid, sid, mid}
 const ladderStore = () => { try{ localStorage.setItem(LADDER_KEY, JSON.stringify(ladder)); }catch(e){} };
+const ladderQSave = () => { try{ localStorage.setItem(LADDER_Q_KEY, JSON.stringify(ladderQ.slice(-200))); }catch(e){} };
 const ladderCmp = mid => (a,b) => mid==='coins' ? ((b.c-a.c) || (a.t-b.t)) : (a.t-b.t);
+const ladderEsc = x => String(x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function ladderAdd(sid, mid, t, coins){
   const k = sid + '|' + mid, arr = ladder[k] = ladder[k] || [];
   const e = {n: ladderName || '無名飛手', t: +t.toFixed(2), c: coins|0, ts: Date.now()};
@@ -6914,45 +6920,110 @@ function ladderAdd(sid, mid, t, coins){
 function ladderTable(sid, mid, hlTs){
   const arr = ladder[sid + '|' + mid] || [];
   if(!arr.length) return '<div class="ldEmpty">這條賽道還沒有人上榜</div>';
-  const esc = x => String(x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  return '<table class="ldTbl">' + arr.map((e,i)=>'<tr' + (e.ts===hlTs ? ' class="me"' : '') + '><td class="no">' + (i+1) + '</td><td class="n">' + esc(e.n) + '</td><td>' +
+  return '<table class="ldTbl">' + arr.map((e,i)=>'<tr' + (e.ts===hlTs ? ' class="me"' : '') + '><td class="no">' + (i+1) + '</td><td class="n">' + ladderEsc(e.n) + '</td><td>' +
     (mid==='coins' ? e.c + ' 枚　' : '') + e.t.toFixed(1) + ' s</td></tr>').join('') + '</table>';
+}
+// ---- 全校榜（Apps Script）----
+function ladderRemoteTable(j, mid){
+  if(!j || !j.top || !j.top.length) return '<div class="ldEmpty">這條賽道還沒有人上榜</div>';
+  const me = j.me;
+  const row = (e, i, isMe) => '<tr' + (isMe ? ' class="me"' : '') + '><td class="no">' + i + '</td><td class="n">' + ladderEsc(e.n) + '</td><td>' +
+    (mid==='coins' ? e.c + ' 枚　' : '') + Number(e.t).toFixed(1) + ' s</td></tr>';
+  let h = '<table class="ldTbl">' + j.top.map((e,i)=>row(e, i+1, me && e.n===me.n)).join('');
+  if(me && me.rank > j.top.length) h += '<tr><td colspan="3" class="ldEmpty" style="padding:2px">…</td></tr>' + row(me, me.rank, true);
+  return h + '</table>';
+}
+async function ladderFetchT(url, opt){
+  const ac = new AbortController(), tm = setTimeout(()=>ac.abort(), 9000);
+  try{ const r = await fetch(url, Object.assign({signal: ac.signal}, opt || {})); return await r.json(); }
+  finally{ clearTimeout(tm); }
+}
+let ladderFlushP = null;
+function ladderFlush(){       // 依序送出佇列；伺服器有回應（成功或拒絕）就算處理完，網路失敗則保留到下次
+  if(!LADDER_URL) return Promise.resolve(false);
+  if(!ladderFlushP) ladderFlushP = (async()=>{
+    try{
+      while(ladderQ.length){
+        await ladderFetchT(LADDER_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(ladderQ[0])});
+        ladderQ.shift(); ladderQSave();
+      }
+      return true;
+    }catch(e){ return false; }
+  })().finally(()=>{ ladderFlushP = null; });
+  return ladderFlushP;
+}
+const ladderFetchBoard = (sid, mid, me) => ladderFetchT(LADDER_URL + '?k=' + encodeURIComponent(sid + '|' + mid) + (me ? '&me=' + encodeURIComponent(me) : ''));
+async function ladderSync(cur){
+  const rankEl = document.getElementById('ldRank'), tbl = document.getElementById('ldTbl');
+  const sent = await ladderFlush();
+  if(ladderCur !== cur) return;
+  if(!sent){ rankEl.textContent = '離線：成績已存在這台裝置，連上網路後自動補送'; return; }
+  try{
+    const j = await ladderFetchBoard(cur.sid, cur.mid, cur.rid);
+    if(ladderCur !== cur) return;
+    tbl.innerHTML = ladderRemoteTable(j, cur.mid);
+    rankEl.textContent = j.me ? '全校天梯第 ' + j.me.rank + ' 名（共 ' + j.total + ' 人）' + (j.me.isBest ? '' : '　你的最佳成績排名') : '成績已送出';
+  }catch(e){ if(ladderCur === cur) rankEl.textContent = '成績已送出（榜單暫時讀不到）'; }
 }
 function ladderResult(ok, mid, total){
   const box = document.getElementById('ladderBox');
   if(!ok || raceDuo){ box.style.display = 'none'; ladderCur = null; return; }
-  const rank = ladderAdd(raceSceneId, mid, total, raceCoinGot);
-  document.getElementById('ldRank').textContent = rank <= LADDER_MAX ? '天梯第 ' + rank + ' 名' : '未進前 ' + LADDER_MAX + ' 名（第 ' + rank + ' 名）';
-  document.getElementById('ladderName').value = ladderName;
-  document.getElementById('ldTbl').innerHTML = ladderTable(raceSceneId, mid, ladderCur.ts);
+  const sid = raceSceneId, rank = ladderAdd(sid, mid, total, raceCoinGot), cur = ladderCur;
+  cur.sid = sid; cur.mid = mid; cur.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const inp = document.getElementById('ladderName');
+  inp.value = ladderName; inp.placeholder = LADDER_URL ? '暱稱（全校公開）' : '輸入名字';
+  document.getElementById('ldRank').textContent = LADDER_URL ? '成績送出中…' : (rank <= LADDER_MAX ? '天梯第 ' + rank + ' 名' : '未進前 ' + LADDER_MAX + ' 名（第 ' + rank + ' 名）');
+  document.getElementById('ldTbl').innerHTML = ladderTable(sid, mid, cur.ts);
   box.style.display = 'block';
+  if(LADDER_URL){
+    ladderQ.push({k: sid + '|' + mid, id: cur.rid, n: ladderName || '無名飛手', t: +total.toFixed(2), c: raceCoinGot|0}); ladderQSave();
+    ladderSync(cur);
+  }
 }
+let ladderRenT = null;
 document.getElementById('ladderName').addEventListener('input', e=>{
   ladderName = e.target.value.trim().slice(0, 12);
   try{ localStorage.setItem(LADDER_NAME_KEY, ladderName); }catch(err){}
   if(!ladderCur) return;
-  const arr = ladder[ladderCur.k] || [], me = arr.find(x=>x.ts===ladderCur.ts);
-  if(me){ me.n = ladderName || '無名飛手'; ladderStore();
-    const [sid, mid] = ladderCur.k.split('|');
-    document.getElementById('ldTbl').innerHTML = ladderTable(sid, mid, ladderCur.ts); }
+  const cur = ladderCur, arr = ladder[cur.k] || [], me = arr.find(x=>x.ts===cur.ts);
+  if(me){ me.n = ladderName || '無名飛手'; ladderStore(); }
+  if(LADDER_URL){      // 全校榜：停止打字 0.8 秒後才送出改名
+    clearTimeout(ladderRenT);
+    ladderRenT = setTimeout(()=>{ ladderQ.push({op:'rename', id: cur.rid, n: ladderName || '無名飛手'}); ladderQSave(); ladderSync(cur); }, 800);
+  }else if(me){
+    const [sid, mid] = cur.k.split('|');
+    document.getElementById('ldTbl').innerHTML = ladderTable(sid, mid, cur.ts);
+  }
 });
-const ldSel = {sid: null, mid: 'time'};
+// ---- 選單：天梯排行查看視窗 ----
+const ldSel = {sid: null, mid: 'time', scope: 'local'};
+let ldSeq = 0;
 function ladderOpen(){
   ldSel.mid = RACE_MODES.some(m=>m.id===raceModeId && !m.duoOnly) ? raceModeId : 'time';
   if(!ldSel.sid) ldSel.sid = SCENES[0].id;
+  ldSel.scope = LADDER_URL ? 'all' : 'local';
   ladderRender();
   document.getElementById('ladderModal').style.display = 'flex';
 }
 function ladderRender(){
   const mk = (list, cur, attr) => list.map(x=>'<button class="sceneBtn' + (x.id===cur ? ' on' : '') + '" ' + attr + '="' + x.id + '">' + x.name + '</button>').join('');
+  document.getElementById('ldScope').innerHTML = LADDER_URL ? mk([{id:'all', name:'全校榜'}, {id:'local', name:'這台裝置'}], ldSel.scope, 'data-lc') : '';
   document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly), ldSel.mid, 'data-lm');
   document.getElementById('ldScenes').innerHTML = mk(SCENES, ldSel.sid, 'data-ls');
-  document.getElementById('ldModalTbl').innerHTML = ladderTable(ldSel.sid, ldSel.mid, null);
+  const tb = document.getElementById('ldModalTbl'), my = ++ldSeq;
+  if(LADDER_URL && ldSel.scope === 'all'){
+    tb.innerHTML = '<div class="ldEmpty">載入中…</div>';
+    const mid = ldSel.mid;
+    ladderFlush().then(()=>ladderFetchBoard(ldSel.sid, mid, '')).then(j=>{ if(my === ldSeq) tb.innerHTML = ladderRemoteTable(j, mid); })
+      .catch(()=>{ if(my === ldSeq) tb.innerHTML = '<div class="ldEmpty">連不上全校榜（沒有網路？）可切到「這台裝置」</div>'; });
+  }else tb.innerHTML = ladderTable(ldSel.sid, ldSel.mid, null);
+  document.querySelectorAll('#ldScope [data-lc]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.scope = b.dataset.lc; ladderRender(); }));
   document.querySelectorAll('#ldModes [data-lm]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.mid = b.dataset.lm; ladderRender(); }));
   document.querySelectorAll('#ldScenes [data-ls]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.sid = b.dataset.ls; ladderRender(); }));
 }
 document.getElementById('btnLadder').addEventListener('click', ladderOpen);
 document.getElementById('ldClose').addEventListener('click', ()=>{ document.getElementById('ladderModal').style.display = 'none'; });
+if(LADDER_URL){ if(ladderQ.length) ladderFlush(); addEventListener('online', ()=>{ if(ladderQ.length) ladderFlush(); }); }
 function raceFinish(ok, reason){
   raceDone = true;
   setState('over');
