@@ -4020,7 +4020,10 @@ addEventListener('keydown', e=>{
     else if(mode==='duo') duoRestart();
     else restart();
   }
-  if(e.code==='KeyM' && state!=='menu'){   // 返回模式選單
+  if(e.code==='KeyM' && state!=='menu'){   // 返回「上一頁」（2026-11-12 業主：「按 M 應該回到上一頁，不要每次都從首頁重新選擇」）
+    if(mode==='race'){ raceBackToPanel(); return; }          // 飛行賽道 → 賽道選單（玩法×場景）
+    if(mode==='campaign' && campLevel){ campBackToList(); return; }   // 闖關 → 該場景的關卡列表
+    MF.resume = {stage:MF.stage, mode:MF.mode, from:MF.from};   // 其他模式 → 回到進來前的選單步驟（例如「選場地」）
     setState('menu');
     duoCleanup();                                    // 若剛才在左右雙人對戰，恢復單一畫面與退場的機
     campExitCleanup();                               // 若剛才在闖關模式，清掉關卡道具與闖關 HUD
@@ -5620,7 +5623,7 @@ function watchLeave(){ location.href = location.href.split('#')[0].split('?')[0]
 // 實際開始各模式仍是「點舊的隱藏按鈕」（btnPlayer、btnCampaign…），所以各模式原本的流程（闖關選關、
 // 賽道選玩法、連線大廳）都不用改。舊程式回選單時會把 #modesRow 設回顯示 → 這裡用 MutationObserver
 // 偵測到後把引導畫面重置回第 1 步；進入闖關／賽道／連線面板時舊程式會把 #modesRow 藏起來 → 引導畫面跟著藏。
-const MF = {stage:'1', mode:null, from:null};
+const MF = {stage:'1', mode:null, from:null, resume:null};
 const MF_SCENE_BG = {
   sky:'linear-gradient(180deg,#3a8ee6 0%,#9fd3ff 55%,#ffffff 100%)',
   arena:'radial-gradient(ellipse at 50% 80%,#2a3a8a,#070a14 70%),linear-gradient(90deg,#3d6bff,#ff4d5a)',
@@ -5698,7 +5701,10 @@ document.getElementById('mfBack').addEventListener('click', e=>{
     const shown = mr.style.display !== 'none' && ov.style.display !== 'none';
     document.body.classList.toggle('inMenu', ov.style.display !== 'none');
     mf.style.display = mr.style.display === 'none' ? 'none' : '';
-    if(shown && wasShown !== true) mfShow('1');          // 每次回到選單都從第 1 步開始
+    if(shown && wasShown !== true){                       // 回到選單：按 M 回來的還原到原本那一步，其他情況從第 1 步開始
+      const rs = MF.resume; MF.resume = null;
+      if(rs){ MF.mode = rs.mode; MF.from = rs.from; mfShow(rs.stage); } else mfShow('1');
+    }
     wasShown = shown;
   };
   new MutationObserver(sync).observe(mr, {attributes:true, attributeFilter:['style']});
