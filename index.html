@@ -1100,7 +1100,7 @@ function airTube(x1,y1,z1,x2,y2,z2,hex,r=TUBE_R){
 //   - 圖集載不到（沒上傳 assets/crowd.webp）就只有空看台，不影響比賽。烘焙工具：_tools/crowdbake.html。
 const standGroups = [];    // 四面看台的 group：室內場景才顯示（見場景系統 setScene；每幀由 crowdTick 決定顯示）
 const flashSprites = [];   // 觀眾手機閃光燈
-const CROWD = { NP:12, NF:6, excite:0.1, mats:[], stands:[], tex:null };
+const CROWD = { NP:12, NF:6, excite:0.1, mats:[], stands:[], tex:null, light:[0.80,0.82,0.92], flash:true };
 const STAND = { rows: 5, rise:0.36, tread:0.78, base:0.45, seatW:0.5 };
 function crowdMaterial(){
   const mat = new THREE.ShaderMaterial({
@@ -1152,29 +1152,67 @@ function crowdMaterial(){
   CROWD.mats.push(mat);
   return mat;
 }
+// 2026-11-11：五個場景都有看台。看台材質全場共用（STAND_MAT），切場景時 standStyle() 只換顏色；
+//   靜態零件（階梯／後牆／欄杆）各合併成一個網格 → 一面看台只有 6 次繪製（原本約 20 次），整體比以前還省。
+const STAND_MAT = {
+  concrete: new THREE.MeshStandardMaterial({color:0x2a3040, roughness:.95}),
+  dark:     new THREE.MeshStandardMaterial({color:0x151a26, roughness:1}),
+  metal:    new THREE.MeshStandardMaterial({color:0x8a93a6, roughness:.4, metalness:.7}),
+  seat:     new THREE.MeshStandardMaterial({color:0xffffff, roughness:.55}),
+  base:     new THREE.MeshStandardMaterial({color:0x6b6258, roughness:1, flatShading:true}),
+};
+// 各場景的看台樣式：float＝看台底下加一塊懸浮基座（浮空島、太空站的看台是飄在場地旁邊的）；light＝觀眾立牌的受光顏色
+const STAND_STYLE = {
+  arena:  {concrete:0x2a3040, dark:0x151a26, metal:0x8a93a6, metalness:.7, seat:0x1c3f8f, float:false, flash:true,  light:[0.80,0.82,0.92]},
+  sky:    {concrete:0xa9a294, dark:0x8a8375, metal:0xc7a55a, metalness:.6, seat:0x2a8f8a, float:true,  flash:false, light:[1.00,1.00,1.00], base:0x7b6a57},
+  meadow: {concrete:0x8f7150, dark:0x67503a, metal:0x4f4336, metalness:.1, seat:0x3d7d3a, float:false, flash:false, light:[1.00,0.98,0.93]},
+  neon:   {concrete:0x1b1d30, dark:0x0e0f1c, metal:0xb04fd8, metalness:.8, seat:0x6a35c0, float:false, flash:true,  light:[0.64,0.60,0.82]},
+  orbit:  {concrete:0x7f8794, dark:0x5b636f, metal:0xd0d6e0, metalness:.8, seat:0xd9772f, float:true,  flash:true,  light:[0.86,0.89,0.96], base:0x565e6b},
+};
+const standBases = [];
+function standStyle(id){
+  const Y = STAND_STYLE[id] || STAND_STYLE.arena, M = STAND_MAT;
+  M.concrete.color.setHex(Y.concrete); M.dark.color.setHex(Y.dark); M.metal.color.setHex(Y.metal); M.metal.metalness = Y.metalness;
+  M.seat.color.setHex(Y.seat).convertSRGBToLinear();
+  if(Y.base) M.base.color.setHex(Y.base);
+  standBases.forEach(b=>{ b.visible = !!Y.float; });
+  CROWD.light = Y.light; CROWD.flash = Y.flash;
+}
+function mergeMeshes(list, mat){          // 把同材質的零件併成一個網格（省繪製次數）
+  const P=[], N=[], U=[];
+  for(const m of list){
+    m.updateMatrix();
+    const g = m.geometry.toNonIndexed(); g.applyMatrix4(m.matrix);
+    P.push(...g.attributes.position.array); N.push(...g.attributes.normal.array); U.push(...g.attributes.uv.array);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(P,3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(N,3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(U,2));
+  return new THREE.Mesh(geo, mat);
+}
 function buildStand(px, pz, ry, w){
   const grp = new THREE.Group();
   grp.position.set(px, 0, pz); grp.rotation.y = ry;   // 局部 +z＝面向場內，往 −z 一排一排墊高
   const S = STAND, rows = S.rows;
-  const concrete = new THREE.MeshStandardMaterial({color:0x2a3040, roughness:.95});
-  const dark = new THREE.MeshStandardMaterial({color:0x151a26, roughness:1});
+  const concrete = STAND_MAT.concrete, dark = STAND_MAT.dark, metal = STAND_MAT.metal;
+  const cParts = [], mParts = [];
   for(let r=0; r<rows; r++){
     const h = S.base + r*S.rise;
-    const step = new THREE.Mesh(new THREE.BoxGeometry(w, h, S.tread), concrete);
-    step.position.set(0, h/2, -(r+0.5)*S.tread); grp.add(step);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(w, h, S.tread));
+    step.position.set(0, h/2, -(r+0.5)*S.tread); cParts.push(step);
   }
   const hb = S.base + rows*S.rise + 0.5;               // 後牆
   const back = new THREE.Mesh(new THREE.BoxGeometry(w, hb, 0.12), dark);
   back.position.set(0, hb/2, -rows*S.tread - 0.06); grp.add(back);
   // 前排欄杆
-  const metal = new THREE.MeshStandardMaterial({color:0x8a93a6, roughness:.4, metalness:.7});
-  const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, w, 8), metal);
-  rail.rotation.z = Math.PI/2; rail.position.set(0, S.base+0.50, -0.04); grp.add(rail);
-  const rail2 = rail.clone(); rail2.position.y = S.base+0.26; grp.add(rail2);
+  const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, w, 8));
+  rail.rotation.z = Math.PI/2; rail.position.set(0, S.base+0.50, -0.04); mParts.push(rail);
+  const rail2 = rail.clone(); rail2.position.y = S.base+0.26; mParts.push(rail2);
   const nPost = Math.round(w/1.5);
   for(let i=0; i<=nPost; i++){
-    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6), metal);
-    p.position.set(-w/2 + i*w/nPost, S.base+0.25, -0.04); grp.add(p);
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6));
+    p.position.set(-w/2 + i*w/nPost, S.base+0.25, -0.04); mParts.push(p);
   }
   // 座位：中間留一條走道
   const seats = [], aisle = w > 7 ? 0.8 : 0;
@@ -1186,27 +1224,37 @@ function buildStand(px, pz, ry, w){
       seats.push({x, y:S.base + r*S.rise, z:-(r+0.56)*S.tread, r});
     }
   }
-  const seatMat = new THREE.MeshStandardMaterial({color:0xffffff, roughness:.55});
+  const seatMat = STAND_MAT.seat;
   const backs = new THREE.InstancedMesh(new THREE.BoxGeometry(S.seatW-0.06, 0.34, 0.035), seatMat, seats.length);
   const pads  = new THREE.InstancedMesh(new THREE.BoxGeometry(S.seatW-0.06, 0.045, 0.38), seatMat, seats.length);
   const M = new THREE.Matrix4(), col = new THREE.Color();
   seats.forEach((s, i)=>{
     backs.setMatrixAt(i, M.makeRotationX(-0.12).setPosition(s.x, s.y+0.60, s.z-0.20));
     pads.setMatrixAt(i, M.makeTranslation(s.x, s.y+0.42, s.z));
-    col.setHex(0x1c3f8f).convertSRGBToLinear().multiplyScalar(0.8 + Math.random()*0.3);
+    col.setScalar(0.8 + Math.random()*0.3);          // 每張椅子深淺略不同；顏色本身在 STAND_MAT.seat（隨場景換）
     backs.setColorAt(i, col); pads.setColorAt(i, col);
   });
   grp.add(backs, pads);
   if(aisle){   // 走道階梯（每排中間多一階）
     for(let r=0; r<rows-1; r++){
-      const st = new THREE.Mesh(new THREE.BoxGeometry(aisle-0.1, S.rise/2, S.tread/2), concrete);
-      st.position.set(0, S.base + r*S.rise + S.rise/4, -(r+0.75)*S.tread); grp.add(st);
+      const st = new THREE.Mesh(new THREE.BoxGeometry(aisle-0.1, S.rise/2, S.tread/2));
+      st.position.set(0, S.base + r*S.rise + S.rise/4, -(r+0.75)*S.tread); cParts.push(st);
     }
+  }
+  grp.add(mergeMeshes(cParts, concrete), mergeMeshes(mParts, metal));
+  {  // 懸浮基座（只有 float 的場景顯示）：一塊厚板＋底下倒錐形的岩塊／艙體
+    const dep = rows*S.tread + 0.5;
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w+0.5, 0.3, dep));
+    slab.position.set(0, -0.17, -dep/2 + 0.2);
+    const keel = new THREE.Mesh(new THREE.CylinderGeometry(0.70, 0.22, 1.5, 7));
+    keel.scale.set((w+0.3)/1.4, 1, (dep-0.1)/1.4); keel.position.set(0, -1.07, -dep/2 + 0.2);
+    const base = mergeMeshes([slab, keel], STAND_MAT.base);
+    base.visible = false; grp.add(base); standBases.push(base);
   }
   scene.add(grp);
   grp.updateMatrixWorld(true);
   // 觀眾：八成多的座位有人；同一排相鄰的人不重複
-  const quad = new THREE.PlaneGeometry(1, 2); quad.translate(0, 1, 0);
+  const quad = new THREE.PlaneGeometry(1.1, 2.2); quad.translate(0, 1.1, 0);   // 圖集每格＝實際 1.1×2.2m（_tools/crowdbake.html 的 W、H）
   const geo = new THREE.InstancedBufferGeometry();
   geo.index = quad.index; geo.setAttribute('position', quad.attributes.position); geo.setAttribute('uv', quad.attributes.uv);
   const aPos=[], aYaw=[], aInfo=[], aTint=[], v = new THREE.Vector3(), heads = [];
@@ -1258,7 +1306,7 @@ function crowdTick(dt, t, on){
   const fc = scene.fog.color;
   for(const m of CROWD.mats){
     const u = m.uniforms;
-    u.uTime.value = t; u.uExcite.value = CROWD.excite;
+    u.uTime.value = t; u.uExcite.value = CROWD.excite; u.uLight.value.fromArray(CROWD.light);
     u.uFogC.value.set(Math.sqrt(fc.r), Math.sqrt(fc.g), Math.sqrt(fc.b)); u.uFogN.value = scene.fog.near; u.uFogF.value = scene.fog.far;
   }
   for(const s of CROWD.stands){    // 鏡頭在這面看台裡／後面：整面不畫
@@ -1878,8 +1926,8 @@ function buildOrbit(){
 //     這樣 arena 場景的外觀與加入場景系統前完全相同。
 const SCENE_SAVE_KEY = 'hsinchuDroneSoccerSceneV1';
 const SCENES = [
-  {id:'sky',    emoji:'☁️', name:'天空之城', sub:'雲海 · 浮空島 · 飛艇',
-   bg:0xd6ecff, fog:[0xdcefff,26,150], stands:false, apron:false,
+  {id:'sky',    emoji:'☁️', name:'天空之城', sub:'雲海 · 浮空島 · 懸浮看台',
+   bg:0xd6ecff, fog:[0xdcefff,26,150], stands:true,  apron:false,
    fly:{wind:{x:0,z:0},       gust:0.12, updraft:0.20, dragMul:1,    note:'微弱上升氣流'},
    diff:{parMul:1.20, hitAdd:1},
    hemi:[0xffffff,0xbcd8f5,1.05], key:[0xfff4dc,1.35], fill:[0xcfe4f7,0.55], build:buildSkyCity},
@@ -1889,17 +1937,17 @@ const SCENES = [
    diff:{parMul:1.00, hitAdd:0},
    hemi:[0x9db2ff,0x1e3320,0.65], key:[0xffffff,1.15], fill:[0xaac4ff,0.50], build:null},
   {id:'meadow', emoji:'🌿', name:'草原湖畔', sub:'遠山 · 湖面反光 · 樹林',
-   bg:0xd3e7f0, fog:[0xd8e9f0,32,170], stands:false, apron:false,
+   bg:0xd3e7f0, fog:[0xd8e9f0,32,170], stands:true,  apron:false,
    fly:{wind:{x:-0.25,z:0.42},gust:0.15, updraft:0,    dragMul:1,    note:'穩定側風'},
    diff:{parMul:0.92, hitAdd:0},
    hemi:[0xeaf6ff,0x4d9040,0.95], key:[0xfff2d6,1.50], fill:[0xbfe0f0,0.45], build:buildMeadow},
   {id:'neon',   emoji:'🌃', name:'霓虹夜城', sub:'夜空 · 霓虹天際線',
-   bg:0x06070f, fog:[0x0b0d20,18,90],  stands:false, apron:false,
+   bg:0x06070f, fog:[0x0b0d20,18,90],  stands:true,  apron:false,
    fly:{wind:{x:0.10,z:-0.12},gust:0.75, updraft:0,    dragMul:1,    note:'大樓陣風（忽強忽弱）'},
    diff:{parMul:0.85, hitAdd:-1},
    hemi:[0x5a6bff,0x1a0f2e,0.40], key:[0xd8e6ff,0.85], fill:[0xff5ab8,0.45], build:buildNeonCity},
   {id:'orbit',  emoji:'🛰️', name:'軌道太空站', sub:'星空 · 地球 · 太陽',
-   bg:0x000005, fog:[0x000008,80,400], stands:false, apron:false,
+   bg:0x000005, fog:[0x000008,80,400], stands:true,  apron:false,
    fly:{wind:{x:0,z:0},       gust:0.08, updraft:0,    dragMul:0.45, note:'真空慣性・煞不住'},
    diff:{parMul:0.80, hitAdd:-1},
    hemi:[0x8fa8d0,0x101828,0.35], key:[0xffffff,1.10], fill:[0x5f7fb0,0.25], build:buildOrbit},
@@ -1922,7 +1970,8 @@ function setScene(id){
   if(U.onActive) U.onActive();
   key.color.setHex(S.key[0]);   key.intensity  = S.key[1];
   fill.color.setHex(S.fill[0]); fill.intensity = S.fill[1];
-  // 看台顯示與否：每幀由 crowdTick 依場景（S.stands）與鏡頭位置決定
+  // 看台顯示與否：每幀由 crowdTick 依場景（S.stands）與鏡頭位置決定；樣式（顏色、懸浮基座、觀眾受光）在這裡換
+  standStyle(S.id);
   apron.visible = S.apron !== false;                 // 場地外圍深色地坪：只有室內場館才鋪
   try{ localStorage.setItem(SCENE_SAVE_KEY, S.id); }catch(e){}
   updateSceneBar();
@@ -7109,7 +7158,7 @@ function pilotBuild(d, i){
     if(o.isBone){ o.name = PILOT.boneNames[bi++]; B[o.name] = o; }
     if(o.isMesh){
       o.frustumCulled = false;
-      o.castShadow = !ENV_LOW && !/Cornea|Eyelash|Eyebrow/.test(o.material.name);
+      o.castShadow = !ENV_LOW && !/Cornea|Eyelash|Eyebrow|Teeth/.test(o.material.name);
       if(o.material.name === 'Vest'){ o.material = o.material.clone(); o.material.map = pilotVestTex(d.team, d.role); o.material.needsUpdate = true; }
       else if(o.material.name === 'Tshirt'){ o.material = o.material.clone(); o.material.color.set(look.shirt).convertSRGBToLinear(); }
       else if(o.material.name === 'Hair'){ o.material = o.material.clone(); o.material.color.set(look.hair).convertSRGBToLinear(); pilotHairNormals(o); o.material.roughness = 0.46; o.material.alphaToCoverage = true; }
@@ -7122,7 +7171,8 @@ function pilotBuild(d, i){
       else if(o.material.name === 'Iris'){ o.material = o.material.clone(); o.material.color.set(i%2 ? '#5a3a22' : '#43291a').convertSRGBToLinear(); }
       else if(o.material.name === 'Eyelash'){ o.material = o.material.clone(); o.material.color.set('#4a3a30').convertSRGBToLinear(); o.material.opacity = 0.75; o.material.transparent = true; }
       else if(o.material.name === 'Eyebrow'){ o.material = o.material.clone(); o.material.color.set(look.brow).convertSRGBToLinear(); o.material.opacity = 0.8; o.material.transparent = true; }
-      if(o.morphTargetDictionary) morph.push(o);                  // 眨眼（blink）、眼球轉向（look_*）
+      else if(o.material.name === 'Teeth'){ o.material = o.material.clone(); o.material.emissive = new THREE.Color(0.22, 0.21, 0.20); o.material.emissiveMap = o.material.map; o.material.roughness = 0.35; }
+      if(o.morphTargetDictionary) morph.push(o);                  // 眨眼（blink）、眼球轉向（look_*）、笑容（smile：皮膚＋牙齒）
     }
   });
   const radio = pilotRadio();
@@ -7331,8 +7381,13 @@ function pilotFace(P, dt, R, rk, rawYaw, rawPitch, th){
   let ey = THREE.MathUtils.clamp(rawPitch - headPitch, -0.5, 0.5) + P.sacY + (R==='sad' || R==='crash' ? 0.3*rk : 0);
   const k = 1 - Math.exp(-dt*25);                                // 眼球動得快
   P.eyeX += (ex - P.eyeX)*k; P.eyeY += (ey - P.eyeY)*k;
+  // 2026-11-11 笑容：得分時笑開（露牙），之後帶著微笑幾秒才收；失分／墜機馬上收起來
+  if(R === 'cheer') P.smileHold = 4 + Math.random()*2; else if(R) P.smileHold = 0; else if(P.smileHold > 0) P.smileHold -= dt;
+  const smileTo = R === 'cheer' ? 1 : P.smileHold > 0 ? 0.5 : 0;
+  P.smile = (P.smile || 0) + (smileTo - (P.smile || 0)) * (1 - Math.exp(-dt*(smileTo > (P.smile||0) ? 9 : 2.5)));
   const W = {
-    blink: Math.min(1, squint + blink*(1 - squint)),
+    smile: P.smile,
+    blink: Math.min(1, squint + blink*(1 - squint) + P.smile*0.12),
     // MakeHuman 的 look_left／look_right 是「看的人的左右」：選手往自己左邊看（eyeX>0）要用 look_right
     look_right: Math.min(1, Math.max(0, P.eyeX)/0.8*PILOT_EYE), look_left: Math.min(1, Math.max(0, -P.eyeX)/0.8*PILOT_EYE),
     look_down: Math.min(1, Math.max(0, P.eyeY)/0.75*PILOT_EYE), look_up: Math.min(1, Math.max(0, -P.eyeY)/0.75*PILOT_EYE),
@@ -7639,7 +7694,7 @@ function loop(){
   crowdTick(dt, t, !!sceneById(curScene).stands && !raceHidden.length);
   for(const f of flashSprites){
     f.t -= dt;
-    if(f.t<=0){ f.m.opacity = 0.9; f.t = 1.5 + Math.random()*5; }
+    if(f.t<=0){ f.m.opacity = CROWD.flash ? 0.9 : 0; f.t = 1.5 + Math.random()*5; }   // 白天的戶外場景不閃手機燈
     else if(f.m.opacity>0.01) f.m.opacity *= Math.pow(0.001, dt);
   }
   if(msgTimer>0){ msgTimer-=dt; if(msgTimer<=0) msgEl.style.opacity=0; }

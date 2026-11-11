@@ -10,7 +10,7 @@
  *    素材和函式庫則是存了就一直用（省網路流量），所以換了圖或模型「一定要」改版本號。
  * ※ 新增素材檔時，順便加進 PRECACHE；沒加也能用，只是要等第一次用到才會存。
  */
-const CACHE = 'drone-sim-2026-11-11a';
+const CACHE = 'drone-sim-2026-11-11b';
 const PRECACHE = [
   './', 'index.html', 'manifest.webmanifest',
   'lib/three.min.js', 'lib/GLTFLoader.js', 'lib/SkeletonUtils.js', 'lib/qrcode.min.js',
