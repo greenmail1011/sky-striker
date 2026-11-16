@@ -795,8 +795,8 @@
 </div>
 <div class="hud" id="pracReturn" style="display:none;top:30%;left:50%;transform:translateX(-50%);padding:10px 28px;border-radius:14px;background:rgba(20,14,0,.85);border:2px solid #ffb800;color:#ffe066;font-size:clamp(20px,3vw,30px);font-weight:900;letter-spacing:2px;pointer-events:none">回半場！退到黃線後方才能再穿環</div>
 <div class="hud" id="raceOff" style="display:none;top:24%;left:50%;transform:translateX(-50%);padding:10px 26px;border-radius:14px;background:rgba(40,8,0,.88);border:2px solid #ff6a3a;color:#ffd0bd;font-size:clamp(18px,2.8vw,28px);font-weight:900;letter-spacing:1px;pointer-events:none;text-align:center">偏離航線</div>
-<div id="pracResult"><div class="prBox"><h3>時間到！</h3><div id="prBig"></div><div id="prSub"></div>
-  <div class="prRow"><button class="modeBtn" id="prAgain">再來一次</button><button class="modeBtn" id="prMenu">回選單</button></div></div></div>
+<div id="pracResult"><div class="prBox"><h3>時間到！</h3><div id="prBig"></div><div id="prSub"></div><div id="prLadder" style="margin:6px 0 10px;font-size:14px;color:#ffd75a;min-height:1.2em"></div>
+  <div class="prRow"><button class="modeBtn" id="prAgain">再來一次</button><button class="modeBtn" id="prLadderBtn">天梯排行</button><button class="modeBtn" id="prMenu">回選單</button></div></div></div>
 <div class="hud" id="campGoal" style="display:none"></div>
 <div class="hud" id="campBig" style="display:none"><div id="cbLbl"></div><div id="cbNum"></div></div>
 <div class="hud" id="campHUD" style="display:none">
@@ -913,6 +913,7 @@
         <button class="mfCard c-race" data-mode="race"><span class="tag">STEP 2</span><div class="ic"></div><b>飛行賽道</b><span>穿越拱門衝終點<br>挑戰最快紀錄・可雙人</span></button>
         <button class="mfCard c-camp" data-mode="campaign"><span class="tag">STEP 3</span><div class="ic"></div><b>闖關挑戰</b><span>一關一關過<br>收集星星</span></button>
       </div>
+      <div style="text-align:center;margin-top:10px"><button class="netBtnSmall" id="mfLadderTrain">天梯排行　看看誰最強</button></div>
     </div>
     <div class="mfStage" id="mfS2match">
       <div class="mfQ">要跟誰比？</div>
@@ -3274,7 +3275,7 @@ const pracFmt = t => { t = Math.max(0, Math.ceil(t)); return Math.floor(t/60) + 
 let practiceCount = 0;
 let practiceCooldown = [0,0,0,0];
 // 回半場（業主 2026-11-16）：穿環得分後，要先退回己方半場（黃線後方）才能再穿一次，跟實際比賽「進球後回半場」一樣
-const PRAC_HALF_X = -1.8;
+const PRAC_HALF_X = -1.75;   // 場地本來就有的黃色預備起飛線（距短邊 1.25m → x=±1.75），不另外畫線
 let pracNeedReturn = false;
 // ---- 靶場（2026-11-12 業主：「圓環練習不用在網子競賽場裡面，就像打靶一樣，相同方向就可以了」）----
 // 圓環練習不再放在比賽場（網籠／充氣管框）裡：藏起比賽場、場地放大，改在開闊場地排一列圓環，全部朝同一方向（+x）；
@@ -3312,8 +3313,6 @@ function pracBuild(){
     r.y = y; r.z = z; r.grp.position.set(x, y, z);
     r.grp.children.forEach(c=>{ if(c.geometry && c.geometry.type==='BoxGeometry') c.visible = false; });   // 開闊場地沒有頂架，不要吊帶
     r.grp.add(pracStand(y));   // 腳架式：圓環立在地面的三腳架上，不懸空
-    { const ln = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 7), new THREE.MeshBasicMaterial({color:0xffd75a, transparent:true, opacity:.9}));
-      ln.rotation.x = -Math.PI/2; ln.position.set(PRAC_HALF_X - x, 0.015, 0); r.grp.add(ln); }   // 半場線（黃）
     r.grp.visible = false; r.passes = 0;
     pracRings.push(r);
   });
@@ -3358,6 +3357,9 @@ function pracFinish(){
   document.getElementById('prBig').innerHTML = practiceCount + '<small>顆</small>';
   document.getElementById('prSub').textContent = '練習時間 ' + pracFmt(PRAC_TIME) + '　' + (rec && practiceCount > 0 ? '新紀錄！' : '最佳 ' + best + ' 顆');
   sfx.goal();
+  { const lt = document.getElementById('prLadder'); lt.textContent = '';
+    if(PRAC_TIME > 0 && practiceCount > 0) ladderSubmitScore('practice', 'prac' + PRAC_TIME, 0, practiceCount, x=>{ lt.textContent = '圓環練習 ' + pracFmt(PRAC_TIME) + '　' + x; });
+    else if(PRAC_TIME <= 0) lt.textContent = '不限時不計入天梯（選 30 秒～5 分鐘才會上榜）'; }
   document.getElementById('pracResult').style.display = 'flex'; document.getElementById('pracReturn').style.display = 'none';
 }
 function checkPracticePass(dt){
@@ -7305,10 +7307,11 @@ let ladderCur = null;     // 這次完賽的那一筆 {k, ts, rid, sid, mid}
 const ladderStore = () => { try{ localStorage.setItem(LADDER_KEY, JSON.stringify(ladder)); }catch(e){} };
 const ladderQSave = () => { try{ localStorage.setItem(LADDER_Q_KEY, JSON.stringify(ladderQ.slice(-200))); }catch(e){} };
 // 分數型榜（c 越大越前、同分比 t 越短）：收集賽 coins、闖關星數 camp、對戰 AI 淨勝球 ai1~ai5（2026-11-12 擴充；後端同步：天梯後端_AppsScript.gs 的 isScore_）
-const LADDER_SCORE = mid => mid==='coins' || mid==='camp' || /^ai[1-5]$/.test(mid);
+const LADDER_SCORE = mid => mid==='coins' || mid==='camp' || /^ai[1-5]$/.test(mid) || /^prac\d+$/.test(mid);   // prac30…prac300＝圓環練習（穿環顆數，2026-11-16）
 const ladderCmp = mid => (a,b) => LADDER_SCORE(mid) ? ((b.c-a.c) || (a.t-b.t)) : (a.t-b.t);
 const ladderVal = (mid, e) => mid==='coins' ? e.c + ' 枚　' + Number(e.t).toFixed(1) + ' s'
   : mid==='camp' ? e.c + ' ★'
+  : /^prac/.test(mid) ? e.c + ' 顆'
   : /^ai/.test(mid) ? '淨勝 ' + e.c + ' 球' + (Number(e.t) > 0 ? '　每球 ' + Number(e.t).toFixed(1) + ' s' : '')
   : Number(e.t).toFixed(1) + ' s';
 const ladderEsc = x => String(x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -7424,10 +7427,11 @@ document.getElementById('ladderName').addEventListener('input', e=>{
   }
 });
 // ---- 選單：天梯排行查看視窗 ----
-const ldSel = {sid: null, mid: 'time', scope: 'local', ai: 1};
+const ldSel = {sid: null, mid: 'time', scope: 'local', ai: 1, pt: 120};
 let ldSeq = 0;
-function ladderOpen(){
-  ldSel.mid = RACE_MODES.some(m=>m.id===raceModeId && !m.duoOnly) ? raceModeId : 'time';
+function ladderOpen(preset){
+  ldSel.mid = typeof preset === 'string' ? preset : RACE_MODES.some(m=>m.id===raceModeId && !m.duoOnly) ? raceModeId : 'time';
+  if(ldSel.mid === 'prac'){ ldSel.pt = PRAC_TIME > 0 ? PRAC_TIME : 120; }
   if(!ldSel.sid) ldSel.sid = SCENES[0].id;
   ldSel.ai = AI_LV;
   ldSel.scope = LADDER_URL ? 'all' : 'local';
@@ -7437,12 +7441,12 @@ function ladderOpen(){
 }
 function ladderRender(){
   const mk = (list, cur, attr) => list.map(x=>'<button class="sceneBtn' + (x.id===cur ? ' on' : '') + '" ' + attr + '="' + x.id + '">' + x.name + '</button>').join('');
-  const isAi = ldSel.mid === 'ai', isDaily = ldSel.mid === 'daily';
-  const sid = isAi ? 'match' : isDaily ? 'daily' : ldSel.sid, mid = isAi ? 'ai' + ldSel.ai : isDaily ? 'd' + dailyYmd() : ldSel.mid;      // 對戰 AI 榜不分場景；每個 AI 等級一張榜
+  const isAi = ldSel.mid === 'ai', isDaily = ldSel.mid === 'daily', isPrac = ldSel.mid === 'prac';
+  const sid = isAi ? 'match' : isDaily ? 'daily' : isPrac ? 'practice' : ldSel.sid, mid = isAi ? 'ai' + ldSel.ai : isDaily ? 'd' + dailyYmd() : isPrac ? 'prac' + ldSel.pt : ldSel.mid;      // 對戰 AI 榜不分場景；每個 AI 等級一張榜
   document.getElementById('ldScope').innerHTML = LADDER_URL ? mk([{id:'all', name:'天梯排行榜'}, {id:'local', name:'這台裝置'}], ldSel.scope, 'data-lc') : '';
-  document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly).concat([{id:'camp', name:'闖關星數'}, {id:'ai', name:'對戰 AI'}, {id:'daily', name:'今日挑戰'}]), ldSel.mid, 'data-lm');
-  document.getElementById('ldAi').innerHTML = isAi ? mk([1,2,3,4,5].map(i=>({id:String(i), name:AI_LEVELS[i].ic + ' ' + AI_LEVELS[i].name})), String(ldSel.ai), 'data-la') : '';
-  document.getElementById('ldScenes').innerHTML = (isAi || isDaily) ? '' : mk(SCENES, ldSel.sid, 'data-ls');
+  document.getElementById('ldModes').innerHTML = mk(RACE_MODES.filter(m=>!m.duoOnly).concat([{id:'prac', name:'圓環練習'}, {id:'camp', name:'闖關星數'}, {id:'ai', name:'對戰 AI'}, {id:'daily', name:'今日挑戰'}]), ldSel.mid, 'data-lm');
+  document.getElementById('ldAi').innerHTML = isPrac ? mk([30,60,120,180,300].map(t=>({id:String(t), name:pracFmt(t)})), String(ldSel.pt), 'data-lp') : isAi ? mk([1,2,3,4,5].map(i=>({id:String(i), name:AI_LEVELS[i].ic + ' ' + AI_LEVELS[i].name})), String(ldSel.ai), 'data-la') : '';
+  document.getElementById('ldScenes').innerHTML = (isAi || isDaily || isPrac) ? '' : mk(SCENES, ldSel.sid, 'data-ls');
   const tb = document.getElementById('ldModalTbl'), my = ++ldSeq;
   if(LADDER_URL && ldSel.scope === 'all'){
     tb.innerHTML = '<div class="ldEmpty">載入中…</div>';
@@ -7451,6 +7455,7 @@ function ladderRender(){
   }else tb.innerHTML = ladderTable(sid, mid, null);
   document.querySelectorAll('#ldScope [data-lc]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.scope = b.dataset.lc; ladderRender(); }));
   document.querySelectorAll('#ldModes [data-lm]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.mid = b.dataset.lm; ladderRender(); }));
+  document.querySelectorAll('#ldAi [data-lp]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.pt = +b.dataset.lp; ladderRender(); }));
   document.querySelectorAll('#ldAi [data-la]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.ai = +b.dataset.la; ladderRender(); }));
   document.querySelectorAll('#ldScenes [data-ls]').forEach(b=>b.addEventListener('click', ()=>{ ldSel.sid = b.dataset.ls; ladderRender(); }));
 }
@@ -7458,7 +7463,9 @@ document.getElementById('ldNameView').addEventListener('input', e=>{       // �
   ladderName = e.target.value.trim().slice(0, 12);
   try{ localStorage.setItem(LADDER_NAME_KEY, ladderName); }catch(err){}
 });
-document.getElementById('btnLadder').addEventListener('click', ladderOpen);
+document.getElementById('btnLadder').addEventListener('click', ()=>ladderOpen());
+document.getElementById('prLadderBtn').addEventListener('click', ()=>ladderOpen('prac'));
+document.getElementById('mfLadderTrain').addEventListener('click', ()=>ladderOpen('prac'));
 document.getElementById('ldClose').addEventListener('click', ()=>{ document.getElementById('ladderModal').style.display = 'none'; });
 
 // ---------- 每日挑戰（2026-11-12）----------
