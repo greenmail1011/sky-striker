@@ -8617,6 +8617,7 @@ function pilotBuild(d, i){
 }
 
 // 每幀：在 syncMesh／回放擺完模型之後呼叫
+const _pilotTmp = new THREE.Vector3();
 function pilotsTick(dt, t){
   if(PILOT.state !== 'ready') return;
   const show = !AUTOQ.hidePilots && (rpMatchMode() || (state==='menu' && mode!=='race'));
@@ -8625,6 +8626,13 @@ function pilotsTick(dt, t){
     const d = P.d, vis = show && !d.benched && d.mesh.grp.visible;
     P.root.visible = vis;
     if(!vis) continue;
+    // 業主：飛機靠近端線時，鏡頭會貼著自己的選手，人和遙控器擋住畫面 → 離鏡頭太近的選手暫時隱藏（機載視角範圍更大，遲滯避免閃爍）
+    if(state==='play' && !DUO.on){
+      _pilotTmp.setFromMatrixPosition(P.root.matrixWorld); _pilotTmp.y += 0.9;
+      const lim = (camMode===1 ? 3.4 : 2.3) + (P.nearHide ? 0.35 : 0);
+      P.nearHide = camera.position.distanceTo(_pilotTmp) < lim;
+      if(P.nearHide){ P.root.visible = false; pilotMove(P, live ? dt : 0, t); continue; }
+    }
     pilotMove(P, live ? dt : 0, t);
     pilotPose(P, dt, t);
   }
