@@ -355,6 +355,9 @@
     #overlay.stage3 .mfBack{margin-top:6px}
     #overlay.stage3 #aiLvDesc{font-size:11.5px;padding:4px 10px}
     #overlay.stage3 #aiLvCmp{font-size:12px}
+  .raceModeSelWrap{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:#cdd8ee}
+  #raceModeSel{background:#12182e;color:#fff;border:1px solid #3a4a7a;border-radius:10px;padding:7px 12px;font-size:15px;font-weight:700;min-width:190px}
+  #raceModes{margin:8px 0}
     @media (max-height:620px){ #overlay.stage3 h1{display:none} #overlay.stage3 #mfDuoOpt .row{margin:0 0 2px} #overlay.stage3 #mfDuoOpt button{padding:3px 10px;font-size:12.5px} #overlay.stage3 .mfGo{margin-top:4px;padding:7px 36px} #overlay.stage3 .mfBack{margin-top:2px;padding:4px 14px} }
   }
   #mfDuoOpt .rPracTime{display:none}
@@ -790,6 +793,8 @@
   text-align:center;font-size:14px;color:#cdd8ee;letter-spacing:1px">
   圓環練習（由西往東 → 穿越）　<span id="pracTimeLbl">剩餘</span><b id="pracTimeEl" style="color:#ffd75a;font-size:22px;margin:0 14px 0 6px">2:00</b>穿環<b id="practiceCountEl" style="color:#7dffa9;font-size:22px;margin-left:8px">0</b>
 </div>
+<div class="hud" id="pracReturn" style="display:none;top:30%;left:50%;transform:translateX(-50%);padding:10px 28px;border-radius:14px;background:rgba(20,14,0,.85);border:2px solid #ffb800;color:#ffe066;font-size:clamp(20px,3vw,30px);font-weight:900;letter-spacing:2px;pointer-events:none">回半場！退到黃線後方才能再穿環</div>
+<div class="hud" id="raceOff" style="display:none;top:24%;left:50%;transform:translateX(-50%);padding:10px 26px;border-radius:14px;background:rgba(40,8,0,.88);border:2px solid #ff6a3a;color:#ffd0bd;font-size:clamp(18px,2.8vw,28px);font-weight:900;letter-spacing:1px;pointer-events:none;text-align:center">偏離航線</div>
 <div id="pracResult"><div class="prBox"><h3>時間到！</h3><div id="prBig"></div><div id="prSub"></div>
   <div class="prRow"><button class="modeBtn" id="prAgain">再來一次</button><button class="modeBtn" id="prMenu">回選單</button></div></div></div>
 <div class="hud" id="campGoal" style="display:none"></div>
@@ -3268,6 +3273,9 @@ let pracTimeLeft = 0, pracElapsed = 0, pracEnded = false;
 const pracFmt = t => { t = Math.max(0, Math.ceil(t)); return Math.floor(t/60) + ':' + String(t%60).padStart(2,'0'); };
 let practiceCount = 0;
 let practiceCooldown = [0,0,0,0];
+// 回半場（業主 2026-11-16）：穿環得分後，要先退回己方半場（黃線後方）才能再穿一次，跟實際比賽「進球後回半場」一樣
+const PRAC_HALF_X = -1.8;
+let pracNeedReturn = false;
 // ---- 靶場（2026-11-12 業主：「圓環練習不用在網子競賽場裡面，就像打靶一樣，相同方向就可以了」）----
 // 圓環練習不再放在比賽場（網籠／充氣管框）裡：藏起比賽場、場地放大，改在開闊場地排一列圓環，全部朝同一方向（+x）；
 // 沿同一個方向（→）穿越才計數，逆向穿越只提示不計。單人／雙人練習共用。
@@ -3304,6 +3312,8 @@ function pracBuild(){
     r.y = y; r.z = z; r.grp.position.set(x, y, z);
     r.grp.children.forEach(c=>{ if(c.geometry && c.geometry.type==='BoxGeometry') c.visible = false; });   // 開闊場地沒有頂架，不要吊帶
     r.grp.add(pracStand(y));   // 腳架式：圓環立在地面的三腳架上，不懸空
+    { const ln = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 7), new THREE.MeshBasicMaterial({color:0xffd75a, transparent:true, opacity:.9}));
+      ln.rotation.x = -Math.PI/2; ln.position.set(PRAC_HALF_X - x, 0.015, 0); r.grp.add(ln); }   // 半場線（黃）
     r.grp.visible = false; r.passes = 0;
     pracRings.push(r);
   });
@@ -3348,10 +3358,13 @@ function pracFinish(){
   document.getElementById('prBig').innerHTML = practiceCount + '<small>顆</small>';
   document.getElementById('prSub').textContent = '練習時間 ' + pracFmt(PRAC_TIME) + '　' + (rec && practiceCount > 0 ? '新紀錄！' : '最佳 ' + best + ' 顆');
   sfx.goal();
-  document.getElementById('pracResult').style.display = 'flex';
+  document.getElementById('pracResult').style.display = 'flex'; document.getElementById('pracReturn').style.display = 'none';
 }
 function checkPracticePass(dt){
   const d = player;
+  const rb = document.getElementById('pracReturn');
+  if(pracNeedReturn && d.pos.x < PRAC_HALF_X){ pracNeedReturn = false; flashMsg('回到半場，可以再穿一次', '#7dffa9', 0.9); }
+  if(rb) rb.style.display = (pracNeedReturn && state==='play') ? 'block' : 'none';
   pracRings.forEach((ring, i)=>{
     practiceCooldown[i] = Math.max(0, practiceCooldown[i] - dt);
     if(practiceCooldown[i] > 0) return;
@@ -3359,6 +3372,8 @@ function checkPracticePass(dt){
     if(!dir) return;
     practiceCooldown[i] = 0.6;   // 短冷卻，避免貼著框平面晃動時重複計數
     if(dir < 0){ flashMsg('方向相反，請由西往東（→）穿越', '#ffb454', 1.0); return; }
+    if(pracNeedReturn){ flashMsg('先退回半場（黃線後方）再穿越', '#ffb454', 1.0); return; }
+    pracNeedReturn = true;
     practiceCount++;
     ring.passes = (ring.passes||0) + 1;
     flashMsg('✓ 穿越成功！第 ' + practiceCount + ' 次', '#7dffa9', 1.1);
@@ -3371,7 +3386,7 @@ function restartPractice(){
   ringSwingReset();
   drones.forEach((d,i)=>{ d.reset(); setDroneVisible(d, i===0); });   // 只留玩家機，其餘 5 台隱藏、不參與模擬
   pracPlace(player, 0);
-  practiceCount = 0; practiceCooldown = [0,0,0,0];
+  practiceCount = 0; practiceCooldown = [0,0,0,0]; pracNeedReturn = false;
   pracRings.forEach(r=>r.passes = 0);
   pracTimeLeft = PRAC_TIME; pracElapsed = 0; pracEnded = false;
   document.getElementById('pracResult').style.display = 'none';
@@ -4155,7 +4170,7 @@ addEventListener('keydown', e=>{
     drones.forEach(d=>setDroneVisible(d,true));      // 若剛才在練習模式，恢復其餘 5 台機顯示
     document.getElementById('scoreboard').style.display='flex';
     document.getElementById('practiceHUD').style.display='none';
-    document.getElementById('pracResult').style.display='none';
+    document.getElementById('pracResult').style.display='none'; document.getElementById('pracReturn').style.display='none'; pracNeedReturn=false;
     document.getElementById('campPanel').style.display='none';
     document.getElementById('campMapPanel').style.display='none';
     document.getElementById('racePanel').style.display='none';
@@ -6761,6 +6776,7 @@ const raceGrandMax = () => SCENES.length * RACE_MODES.filter(m=>m.star!==false).
 let raceSceneId = 'sky', raceModeId = 'time';
 let raceData = null, raceGroup = null, raceHidden = [];
 let raceGateObjs = [], raceCoinObjs = [], raceObs = [], raceArrow = null, raceDotsHi = null;
+let raceTrackPts = [], raceOffT = 0;
 let raceIdx = 0, raceTime = 0, raceHits = 0, raceHitCd = 0, raceCD = 0, raceCDShown = 0, raceDone = false, raceCoinGot = 0;
 const racePrevPos = V3(0,0,0);
 
@@ -6977,6 +6993,7 @@ function raceClear(){
     scene.remove(raceGroup);
     raceGroup.traverse(o=>{ if(o.geometry && o.geometry!==raceCoinGeo) o.geometry.dispose(); });
   }
+  { const ob = document.getElementById('raceOff'); if(ob) ob.style.display = 'none'; }
   raceGroup = null; raceGateObjs = []; raceCoinObjs = []; raceObs = []; raceArrow = null; raceArrow2 = null; raceDotsHi = null;
   raceItems = []; raceChaser = null; raceGhostObj = null; raceGhost = null;
 }
@@ -6987,6 +7004,7 @@ function raceBuild(){
   raceGroup = new THREE.Group(); scene.add(raceGroup);
   // 航線光點（全程淡淡的）
   const pts = D.curve.getSpacedPoints(Math.max(20, Math.floor(D.len/0.6)));
+  raceTrackPts = pts; raceOffT = 0;
   const dots = new THREE.Points(new THREE.BufferGeometry().setFromPoints(pts),
     new THREE.PointsMaterial({color:0xbfe8ff, size:0.07, transparent:true, opacity:.45, depthWrite:false}));
   raceGroup.add(dots);
@@ -7013,7 +7031,14 @@ function raceBuild(){
         post.position.set(c.x, postTop/2, c.z); raceGroup.add(post);
       }
     }
-    raceGateObjs.push({c, tor, mat, lbl, fin, postTop, base: TH.gateFuture});
+    // 業主 2026-11-16：天空場地上環太不明顯 → 每道門加一圈較粗的高對比光暈，下一道門再加一根大光柱，遠遠就找得到
+    const haloMat = new THREE.MeshBasicMaterial({color:0xff5a2a, transparent:true, opacity:.65, depthWrite:false});
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(c.r + RACE_GT, 0.075, 10, 56), haloMat);
+    halo.position.copy(tor.position); halo.rotation.copy(tor.rotation); raceGroup.add(halo);
+    const beaconMat = new THREE.MeshBasicMaterial({color:0xffd000, transparent:true, opacity:.32, depthWrite:false, side:THREE.DoubleSide});
+    const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 16, 10, 1, true), beaconMat);
+    beacon.position.set(c.x, c.y + 6.5, c.z); beacon.visible = false; raceGroup.add(beacon);
+    raceGateObjs.push({c, tor, mat, lbl, fin, postTop, base: TH.gateFuture, halo, haloMat, beacon, beaconMat});
   });
   // 障礙物
   const boxMat = new THREE.MeshStandardMaterial({color:new THREE.Color(TH.box).convertSRGBToLinear(),
@@ -7094,11 +7119,13 @@ function raceObsDist(o, p){
 function raceRefreshGates(){
   if(raceDuo && raceRacers.length) raceIdx = Math.min(...raceRacers.map(r=>r.idx));   // 兩人都過了才變灰
   raceGateObjs.forEach((G,k)=>{
-    if(k < raceIdx){ G.mat.emissive.setHex(0x3a4050); G.mat.emissiveIntensity = .25; G.lbl.visible = false; }
-    else if(k === raceIdx){ G.mat.emissive.setHex(G.fin ? 0xffd23d : 0x39ff8a); G.mat.emissiveIntensity = 2.4; G.lbl.visible = true; }
-    else { G.mat.emissive.setHex(G.fin ? 0xffd23d : G.base); G.mat.emissiveIntensity = G.fin ? 1.2 : .9; G.lbl.visible = k < raceIdx + 3 || G.fin; }
+    if(k < raceIdx){ G.mat.emissive.setHex(0x3a4050); G.mat.emissiveIntensity = .25; G.lbl.visible = false; G.halo.visible = false; G.beacon.visible = false; }
+    else if(k === raceIdx){ G.mat.emissive.setHex(G.fin ? 0xffd23d : 0x39ff8a); G.mat.emissiveIntensity = 2.4; G.lbl.visible = true;
+      G.halo.visible = true; G.haloMat.color.setHex(0xffd000); G.haloMat.opacity = 1; G.beacon.visible = true; }
+    else { G.mat.emissive.setHex(G.fin ? 0xffd23d : G.base); G.mat.emissiveIntensity = G.fin ? 1.2 : .9; G.lbl.visible = k < raceIdx + 3 || G.fin;
+      G.halo.visible = true; G.haloMat.color.setHex(G.fin ? 0xffd23d : 0xff5a2a); G.haloMat.opacity = .65; G.beacon.visible = false; }
   });
-  if(raceDuo) raceRacers.forEach(r=>{ const G = raceGateObjs[r.idx]; if(G && !r.done){ G.mat.emissive.setHex(G.fin ? 0xffd23d : 0x39ff8a); G.mat.emissiveIntensity = 2.4; G.lbl.visible = true; } });
+  if(raceDuo) raceRacers.forEach(r=>{ const G = raceGateObjs[r.idx]; if(G && !r.done){ G.mat.emissive.setHex(G.fin ? 0xffd23d : 0x39ff8a); G.mat.emissiveIntensity = 2.4; G.lbl.visible = true; G.halo.visible = true; G.haloMat.color.setHex(0xffd000); G.haloMat.opacity = 1; G.beacon.visible = true; } });
   // 目前這一段航線（上一道門 → 下一道門）亮綠色
   if(raceData && raceDotsHi){
     const n = raceData.C.length - 1, cur = raceData.gates[raceIdx];
@@ -7217,6 +7244,7 @@ function raceStep(h, t){
     }else flashMsg('碰撞', '#f87171', 0.45);
   }
   raceModeTick(raceSoloR, h, t); if(raceDone) return;
+  raceOffTrackTick(h);
   // 下一道門：由後往前穿過圓環平面、且在開口內
   const c = raceData.gates[raceIdx];
   if(c){
@@ -7236,6 +7264,32 @@ function raceStep(h, t){
   if(!raceDone && raceTime >= raceLimit()) raceFinish(false, '時間到');
 }
 function racePassGate(){ raceGatePassed(raceSoloR); }
+// 偏離航線自動拉回（業主 2026-11-16：失控飛太遠沒有拉回機制）：離航線 > 8m 先警告並輕輕把機身往航線拉；
+// 超過 15m 或警告超過 4 秒 → 送回上一道門（起點）、機身停穩、加罰 3 秒
+const RACE_OFF_WARN = 8, RACE_OFF_MAX = 15, RACE_OFF_TIME = 4;
+function raceOffTrackTick(h){
+  const bar = document.getElementById('raceOff');
+  if(!raceTrackPts.length) return;
+  let md = 1e9, near = null;
+  for(const q of raceTrackPts){ const dd = (q.x-player.pos.x)**2 + (q.y-player.pos.y)**2 + (q.z-player.pos.z)**2; if(dd < md){ md = dd; near = q; } }
+  const off = Math.sqrt(md);
+  if(off <= RACE_OFF_WARN){ raceOffT = 0; if(bar) bar.style.display = 'none'; return; }
+  raceOffT += h;
+  const pull = Math.min(1, (off - RACE_OFF_WARN)/6) * 7;                       // 越遠拉越用力
+  _roTmp.set(near.x - player.pos.x, near.y - player.pos.y, near.z - player.pos.z).normalize();
+  player.vel.addScaledVector(_roTmp, pull*h);
+  if(bar){ bar.style.display = 'block'; bar.textContent = '偏離航線！系統拉回中　' + Math.max(0, RACE_OFF_TIME - raceOffT).toFixed(0) + ' 秒後送回上一道門'; }
+  if(off > RACE_OFF_MAX || raceOffT > RACE_OFF_TIME){
+    const D = raceData, k = Math.max(0, raceIdx - 1), g = raceIdx > 0 ? D.gates[k] : null, nx = D.gates[Math.min(raceIdx, D.gates.length-1)];
+    const bx = g ? g.x - g.nx*1.2 : RACE_START.x, by = g ? Math.max(1.0, g.y) : DRONE_R, bz = g ? g.z - g.nz*1.2 : RACE_START.z;   // 上一道門的後方一點，面向下一道門
+    player.pos.set(bx, by, bz); player.vel.set(0,0,0); player.crash = null; if(player.rollQ) player.rollQ.identity();
+    player.tiltP = player.tiltR = 0; player.disturb = 0; player.kx = player.kz = player.kvx = player.kvz = 0;
+    player.yaw = Math.atan2(nx.x - bx, nx.z - bz); racePrevPos.copy(player.pos);
+    raceTime += RACE_PENALTY; raceOffT = 0; if(bar) bar.style.display = 'none';
+    flashMsg('偏離航線，送回上一道門　+' + RACE_PENALTY + ' 秒', '#ffb454', 1.6);
+  }
+}
+const _roTmp = new THREE.Vector3();
 const raceTotalTime = () => raceTime + raceAdj(raceSoloR);
 // ---------- 天梯排行（2026-11-12，業主：「不要叫班級排行，叫天梯排行」「要跨裝置也能累積」）
 //   飛行賽道單人完賽的成績。本機榜：每個「賽道＋玩法」前 10 名存在這台裝置（localStorage）。
@@ -7834,7 +7888,7 @@ function raceAnimate(t){
   raceModeAnimate(t);
   if(raceDuo){ raceDuoAnimate(t); return; }
   const G = raceGateObjs[raceIdx];
-  if(G) G.mat.emissiveIntensity = 2.0 + Math.sin(t*6)*0.9;
+  if(G){ G.mat.emissiveIntensity = 2.0 + Math.sin(t*6)*0.9; G.halo.scale.setScalar(1 + Math.sin(t*5)*0.03); G.beaconMat.opacity = .26 + Math.sin(t*4)*.1; }
   raceCoinObjs.forEach(m=>{ if(m.visible){ m.rotation.y = t*2.6 + m.userData.ph; } });
   // 箭頭：機身上方，指向下一道門
   const c = raceData.gates[raceIdx];
@@ -7919,23 +7973,16 @@ function raceBackToPanel(){
 // ---------- 選單：玩法 × 場景 ----------
 function raceBuildPanel(){
   const M = RACE_MODES.find(m=>m.id===raceModeId);
-  const mBtn = m=>'<button class="sceneBtn' + (m.id===raceModeId ? ' on' : '') + '" data-id="' + m.id + '"><i>' + ico('race_' + m.id) + '</i>' + m.name + '</button>';
+  // 2026-11-16 業主：「這裡按鈕多又雜」→ 8 顆玩法按鈕＋「更多玩法」改成一個下拉選單（分「常用／進階」兩組），選單頁只剩：人數、玩法、5 個場景
+  const opt = m=>'<option value="' + m.id + '"' + (m.id===raceModeId ? ' selected' : '') + '>' + m.name + (m.duoOnly ? '（雙人）' : m.solo ? '（單人）' : '') + '</option>';
   const mainM = RACE_MODES.filter(m=>RACE_MODES_MAIN.includes(m.id)), moreM = RACE_MODES.filter(m=>!RACE_MODES_MAIN.includes(m.id));
-  const moreOn = raceModesMoreOpen || moreM.some(m=>m.id===raceModeId);     // 選到進階玩法時自動展開
-  document.getElementById('raceModes').innerHTML = mainM.map(mBtn).join('') +
-    '<button class="sceneBtn moreBtn" id="btnModesMore">' + (moreOn ? '收起 ▴' : '更多玩法 ▾') + '</button>';
-  document.getElementById('raceModesMore').innerHTML = moreM.map(mBtn).join('');
-  document.getElementById('raceModesMore').classList.toggle('on', moreOn);
-  document.getElementById('btnModesMore').addEventListener('click', ()=>{
-    raceModesMoreOpen = !moreOn && true;
-    if(moreOn && moreM.some(m=>m.id===raceModeId)){ raceModeId = 'time'; }   // 收起時若選的是進階玩法，退回計時賽
+  document.getElementById('raceModes').innerHTML = '<label class="raceModeSelWrap">玩法：<select id="raceModeSel"><optgroup label="常用">' + mainM.map(opt).join('') + '</optgroup><optgroup label="進階">' + moreM.map(opt).join('') + '</optgroup></select></label>';
+  document.getElementById('raceModesMore').innerHTML = ''; document.getElementById('raceModesMore').classList.remove('on');
+  document.getElementById('raceModeSel').addEventListener('change', e=>{
+    raceModeId = e.target.value;
+    try{ localStorage.setItem(RACE_SAVE_KEY + '-mode', raceModeId); }catch(err){}
     raceBuildPanel();
   });
-  document.querySelectorAll('#raceModes .sceneBtn:not(.moreBtn), #raceModesMore .sceneBtn').forEach(b=>b.addEventListener('click', ()=>{
-    raceModeId = b.dataset.id;
-    try{ localStorage.setItem(RACE_SAVE_KEY + '-mode', raceModeId); }catch(e){}
-    raceBuildPanel();
-  }));
   document.getElementById('raceModeDesc').textContent = M.desc + (M.duoOnly ? '（自動使用雙人左右分割畫面）' : M.solo ? '（單人）' : '');
   document.getElementById('raceMaps').innerHTML = SCENES.map(S=>{
     const I = raceInfo(S.id), R = raceRec(S.id, raceModeId), st = raceStarsOf(S.id, raceModeId);
