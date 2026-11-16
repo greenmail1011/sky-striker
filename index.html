@@ -575,6 +575,9 @@
   #help:not(.mini) .pHint,#telemetry:not(.mini) .pHint{display:none}
   body.touch #help.mini,body.touch #telemetry.mini{max-height:20px;opacity:.6}
   /* ---------- 手機／平板觸控操作（2026-10-09 新增）：Mode 2 雙虛擬搖桿，跟實機遙控器一致 ---------- */
+  #btnBackPage{left:10px;top:54px;pointer-events:auto;cursor:pointer;background:rgba(8,12,24,.78);border:1px solid rgba(120,160,255,.4);color:#e6eeff;border-radius:10px;padding:7px 14px;font-size:14px;font-weight:700;letter-spacing:1px;z-index:41}
+  #btnBackPage:hover{background:rgba(30,50,110,.9)}
+  body.touch #btnBackPage{display:none!important}
   #stickViz{left:50%;bottom:34px;transform:translateX(-50%);display:flex;gap:34px;pointer-events:none;z-index:11;opacity:.92}
   #stickViz .svPad{position:relative;width:84px;height:84px;border-radius:50%;background:rgba(8,12,24,.55);border:2px solid rgba(160,190,255,.45)}
   #stickViz .svPad i{position:absolute;left:50%;top:6px;bottom:6px;width:1px;background:rgba(160,190,255,.25);transform:translateX(-50%)}
@@ -749,6 +752,7 @@
 <div class="hud" id="msg"></div>
 <div id="report" style="display:none"></div>
 <button class="hud" id="rpBtn" style="display:none">回放</button>
+<button class="hud" id="btnBackPage" style="display:none" title="回上一頁（M）">‹ 回上一頁</button>
 <div id="hudTgl" style="display:none">
   <button id="rpToggle" title="關掉後：進球不切回放片段、不出現回放按鈕、示範賽也不自動回放">回放：開</button>
   <button id="demoLoop" style="display:none" title="打開後，每場結束會自動開始下一場">連續對戰：關</button>
@@ -3154,7 +3158,7 @@ function playFx(data){
   }else if(data.type==='zoneWarn'){
     flashMsg('勿於己方球門區逗留（防守違規倒數）', '#fbbf24', 1.2);
   }else if(data.type==='start'){
-    flashMsg(data.ai ? '比賽開始！ AI：' + data.ai : '比賽開始！', '#ffe680', 1.5);
+    flashMsg(mode==='practice' ? '圓環練習開始！' : data.ai ? '比賽開始！ AI：' + data.ai : '比賽開始！', '#ffe680', 1.5);   // 練習沒有 AI，不要寫 AI 難度
     sfx.whistle();
   }else if(data.type==='warn30'){
     sfx.warn();
@@ -3313,6 +3317,13 @@ function pracBuild(){
     r.y = y; r.z = z; r.grp.position.set(x, y, z);
     r.grp.children.forEach(c=>{ if(c.geometry && c.geometry.type==='BoxGeometry') c.visible = false; });   // 開闊場地沒有頂架，不要吊帶
     r.grp.add(pracStand(y));   // 腳架式：圓環立在地面的三腳架上，不懸空
+    // 2026-11-16 業主：「穿環練習不明顯，被擋道了」→ 圓環外圍加橘色光暈環＋往上的黃色光柱（跟飛行賽道的目標門同一套），天空背景下也一眼找得到、不會被場邊的人／網遮住
+    r.haloMat = new THREE.MeshBasicMaterial({color:0xff7a1a, transparent:true, opacity:.9, depthWrite:false, depthTest:false});
+    r.halo = new THREE.Mesh(new THREE.TorusGeometry(RING.Ro + 0.12, 0.06, 10, 56), r.haloMat);
+    r.halo.rotation.y = Math.PI/2; r.halo.renderOrder = 999; r.grp.add(r.halo);
+    r.beaconMat = new THREE.MeshBasicMaterial({color:0xffd000, transparent:true, opacity:.32, depthWrite:false, side:THREE.DoubleSide});
+    r.beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 18, 10, 1, true), r.beaconMat);
+    r.beacon.position.set(0, 9.4, 0); r.grp.add(r.beacon);
     r.grp.visible = false; r.passes = 0;
     pracRings.push(r);
   });
@@ -4135,6 +4146,7 @@ fsUpdateUI();
 const keys = {};
 addEventListener('keydown', e=>{
   if(e.target && e.target.tagName === 'INPUT') return;   // 在輸入框打字（飛手名字）時不觸發遊戲快捷鍵
+  if(bgDemo() && (e.code==='KeyP' || e.code==='KeyR' || e.code==='KeyM' || e.code==='KeyV')) return;   // 背景示範不吃暫停／重賽／回選單／回放
   if(REPLAY.on){ rpKey(e); return; }            // 回放中：鍵盤只控制回放
   if(e.code==='KeyV' && document.getElementById('rpBtn').style.display !== 'none'){ rpOpen(); return; }
   keys[e.code]=true;
@@ -4229,7 +4241,7 @@ function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
     if(btn(3)) camNext();
     return;
   }
-  if(btn(9)){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); } // OPTIONS=暫停
+  if(btn(9) && !bgDemo()){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); } // OPTIONS=暫停
   if(btn(3)) camNext();                  // △=切換視角
   if(btn(8) && state!=='menu'){                        // SHARE=重賽
     if(mode==='practice') restartPractice();
@@ -4526,6 +4538,11 @@ function updateHUD(){
 // ---------- 攝影機 ----------
 let camMode = 0;  // 0 追視 1 機載 2 全場 3 高空俯視（單人／網路；雙人分割畫面只有前三種）
 const CAM_NAMES = ['追視','機載','全場','高空俯視'];
+// 2026-11-16 業主：「連接進去馬上就看到 AI 對戰示範」→ 開頁就在主選單背後跑 AI 對戰（state 是 'play'、選單蓋在上面）。
+// bgDemo()＝正在跑這個背景示範；選單裡點任何東西就停掉（bgStop），之後流程跟以前完全一樣。
+const menuUp = () => document.getElementById('overlay').style.display !== 'none';
+const bgDemo = () => state === 'play' && menuUp();
+function bgStop(){ if(bgStop.skip || !bgDemo()) return; mode = 'player'; setState('menu'); }
 function camNext(){
   camMode = (camMode + 1) % (DUO.on ? 3 : 4);
   try{ flashMsg('視角：' + CAM_NAMES[camMode], '#9fd0ff', 1); }catch(e){}
@@ -4588,7 +4605,7 @@ function updateCamera(dt){
     const by = (cd ? cd.yaw : 0) + cv.yaw, p = 0.4266 + cv.pitch, R = 2.417*cv.zoom;
     const hx = Math.sin(by), hz = Math.cos(by);
     dp = cd.pos.clone().add(V3(-hx*Math.cos(p)*R, Math.sin(p)*R, -hz*Math.cos(p)*R));
-    dl = cd.pos.clone().add(V3(hx*1.6, 0, hz*1.6));
+    dl = cd.pos.clone().add(V3(hx*1.6, mode==='practice' ? 0.55 : 0, hz*1.6));   // 圓環練習：視線抬高，環落在畫面中央、不會頂到上方的計時列
   }else if(camMode===1){    // 機載 FPV（拖曳＝轉頭看）
     const by = cd.yaw + cv.yaw;
     const lx = Math.sin(by)*Math.cos(cv.pitch), lz = Math.cos(by)*Math.cos(cv.pitch), ly = -Math.sin(cv.pitch);
@@ -4781,7 +4798,10 @@ const DEMO_LOOP_KEY = 'hsinchuDroneDemoLoopV1';
 const DEMO_LOOP = {on:false, nextT:0, shown:'' };
 try{ DEMO_LOOP.on = localStorage.getItem(DEMO_LOOP_KEY) === '1'; }catch(e){}
 function demoLoopTick(dt){
-  const show = mode==='demo' && state!=='menu' && !REPLAY.on;
+  if(mode==='demo' && state==='over' && menuUp()){ DEMO_LOOP.nextT -= dt; if(DEMO_LOOP.nextT <= 0) restart(); }   // 主選單背後的示範：打完自動接下一場
+  { const bp = document.getElementById('btnBackPage'), bs = state!=='menu' && !bgDemo() && !menuUp();
+    if(bp && (bp.style.display !== 'none') !== bs) bp.style.display = bs ? '' : 'none'; }
+  const show = mode==='demo' && state!=='menu' && !REPLAY.on && !menuUp();
   // 右上角開關列：比賽類模式都顯示（回放開關），連續對戰只在示範賽出現
   const tg = document.getElementById('hudTgl'), tShow = rpMatchMode() && state!=='menu';
   if(tg.style.display !== (tShow ? 'flex' : 'none')) tg.style.display = tShow ? 'flex' : 'none';
@@ -4813,6 +4833,7 @@ document.getElementById('demoLoop').addEventListener('click', e=>{
 });
 let mode = 'player';   // 'player' | 'demo' | 'net' | 'practice' | 'campaign' | 'race'
 function startGame(m){
+  msgEl.style.opacity = 0; msgTimer = 0;      // 清掉背景示範殘留的大字（例如「比賽開始！AI：…」），免得蓋住圓環
   duoCleanup();
   if(NET.connected) netTeardown();          // 若切回單機模式，順便離開連線房間
   document.getElementById('netPanel').style.display = 'none';
@@ -5866,6 +5887,7 @@ document.getElementById('mfGo').addEventListener('click', e=>{
   const id = MF_MODE_BTN[MF.mode];
   if(id) document.getElementById(id).click();
 });
+document.getElementById('menuFlow').addEventListener('click', ()=>bgStop(), true);   // 在選單裡點任何東西 → 先停掉背景示範，其餘流程不變
 document.getElementById('mfBack').addEventListener('click', e=>{
   e.stopPropagation();
   if(MF.stage === '3' && MF.mode !== 'demo' && MF.from) mfShow('2' + MF.from);
@@ -7464,6 +7486,7 @@ document.getElementById('ldNameView').addEventListener('input', e=>{       // �
   try{ localStorage.setItem(LADDER_NAME_KEY, ladderName); }catch(err){}
 });
 document.getElementById('btnLadder').addEventListener('click', ()=>ladderOpen());
+document.getElementById('btnBackPage').addEventListener('click', e=>{ e.stopPropagation(); dispatchEvent(new KeyboardEvent('keydown', {code:'KeyM'})); });
 document.getElementById('prLadderBtn').addEventListener('click', ()=>ladderOpen('prac'));
 document.getElementById('mfLadderTrain').addEventListener('click', ()=>ladderOpen('prac'));
 document.getElementById('ldClose').addEventListener('click', ()=>{ document.getElementById('ladderModal').style.display = 'none'; });
@@ -8307,7 +8330,7 @@ function rpTick(dt, t){
   rpRecord(dt);
   if(REPLAY.btnShowT > 0){ REPLAY.btnShowT -= dt; if(REPLAY.btnShowT <= 0) rpUpdateBtn(true); }
   if(!REPLAY.on){
-    if(REPLAY.autoAt && mode==='demo' && state==='play' && REC.t >= REPLAY.autoAt) rpOpen(null, true);
+    if(REPLAY.autoAt && mode==='demo' && state==='play' && !bgDemo() && REC.t >= REPLAY.autoAt) rpOpen(null, true);
     rpUpdateBtn(false);
     return;
   }
@@ -9121,6 +9144,7 @@ function loop(){
   }else if(mode==='practice' && state==='play'){
     // ---- 圓環練習：只有玩家機和一個電子環；可設定倒數時間 ----
     practiceTick(dt);
+    pracRings.forEach(r=>{ if(r.halo){ r.halo.scale.setScalar(1 + Math.sin(t*5)*0.04); r.haloMat.opacity = .8 + Math.sin(t*6)*.2; r.beaconMat.opacity = .26 + Math.sin(t*4)*.1; } });   // 光暈／光柱呼吸
     readPlayerInput();
     acc += dt;
     while(acc >= H){
@@ -9248,7 +9272,7 @@ function loop(){
   updateCamera(dt);
   if(REPLAY.on) rpCamera(dt);
   if(duoOn) duoFrame(dt);                       // 左右兩個鏡頭＋各自的遮擋半透明／HUD
-  sfx.updateEngines(drones, duoOn ? DUO.lisPos : camera.position, duoOn ? DUO.lisLook : camLook, state==='play',
+  sfx.updateEngines(drones, duoOn ? DUO.lisPos : camera.position, duoOn ? DUO.lisLook : camLook, state==='play' && !bgDemo(),
                     state==='play' && SHOW_CROWD && sceneById(curScene).stands);   // 觀眾聲：只有比賽中＋有看台的場景   // 各機依與鏡頭的距離/方位即時調整音量與定位
   if(duoOn) duoRender(); else renderer.render(scene, camera);
 }
@@ -9277,6 +9301,20 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   });
 }
 
+// 開頁就看 AI 對戰示範（觀賽連結 ?watch= 不啟動）
+if(!/[?&]watch=/.test(location.search)){
+  mode = 'demo'; camMode = 2;
+  document.querySelector('#telemetry b').textContent = '紅隊 Striker（AI ' + aiLabel(AI_DEMO.red) + '）';
+  restart();                                         // 內部 setState('play')：會呼叫 panelsPeek／fsAuto，下面還原
+  panelPeeked = false; clearTimeout(panelPeekTmr); panelPeekTmr = null; panelsApply();
+  FS.pending = false;
+  // 2026-11-16 業主：「短網址進去可以直接在對戰 AI 頁面」→ 網址加 ?go=ai 就直接停在「選場地・對戰 AI・選難度」那頁（背後的 AI 示範照跑）
+  if(/[?&]go=ai(&|$)/.test(location.search)){
+    bgStop.skip = true;
+    try{ document.querySelector('#mfS1 .mfCard[data-go="match"]').click(); document.querySelector('#mfS2match .mfCard[data-mode="player"]').click(); }catch(e){}
+    bgStop.skip = false;
+  }
+}
 loop();
 </script>
 </body>
