@@ -572,6 +572,13 @@
   #help:not(.mini) .pHint,#telemetry:not(.mini) .pHint{display:none}
   body.touch #help.mini,body.touch #telemetry.mini{max-height:20px;opacity:.6}
   /* ---------- 手機／平板觸控操作（2026-10-09 新增）：Mode 2 雙虛擬搖桿，跟實機遙控器一致 ---------- */
+  #stickViz{left:50%;bottom:34px;transform:translateX(-50%);display:flex;gap:34px;pointer-events:none;z-index:11;opacity:.92}
+  #stickViz .svPad{position:relative;width:84px;height:84px;border-radius:50%;background:rgba(8,12,24,.55);border:2px solid rgba(160,190,255,.45)}
+  #stickViz .svPad i{position:absolute;left:50%;top:6px;bottom:6px;width:1px;background:rgba(160,190,255,.25);transform:translateX(-50%)}
+  #stickViz .svPad::before{content:"";position:absolute;top:50%;left:6px;right:6px;height:1px;background:rgba(160,190,255,.25)}
+  #stickViz .svPad b{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#ffd75a;box-shadow:0 0 10px rgba(255,215,90,.8);transition:transform .04s linear}
+  #stickViz .svPad span{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:3px;font-size:11px;color:#9fb0d8;white-space:nowrap;text-shadow:0 0 4px #000}
+  body.touch #stickViz,body.duo #stickViz,body.inMenu #stickViz,body.replaying #stickViz{display:none!important}
   #touchUI{display:none;position:fixed;inset:0;z-index:40;pointer-events:none}
   body.touch #touchUI{display:block}
   .joy{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 4vh);width:var(--joy);height:var(--joy);
@@ -826,6 +833,7 @@
   <div class="duoPos" id="duoPos0"></div><div class="duoPos" id="duoPos1"></div>
 </div>
 <div id="raceLights" style="display:none"><i></i><i></i><i></i></div>
+<div class="hud" id="stickViz"><div class="svPad"><i></i><b id="svL"></b><span>油門／旋轉</span></div><div class="svPad"><i></i><b id="svR"></b><span>前後／側飛</span></div></div>
 <div id="touchUI">
   <div class="joy" id="joyL"><span class="joyLbl">油門／旋轉</span><div class="joyBase"></div><div class="joyKnob"></div></div>
   <div class="joy" id="joyR"><span class="joyLbl">前後／側飛</span><div class="joyBase"></div><div class="joyKnob"></div></div>
@@ -4091,7 +4099,7 @@ addEventListener('keydown', e=>{
   if(e.code==='KeyV' && document.getElementById('rpBtn').style.display !== 'none'){ rpOpen(); return; }
   keys[e.code]=true;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-  if(e.code==='KeyC') camMode=(camMode+1)%3;
+  if(e.code==='KeyC') camNext();
   if(mode==='net'){
     // 網路對戰：比賽流程只能由房主操作（P/R），避免雙方狀態互相搶權；
     // M 一律代表「離開房間」返回選單（房主離開時其他人也會收到斷線通知）
@@ -4178,11 +4186,11 @@ function pollPadButtons(){   // 每幀輪詢（含暫停中），邊緣觸發
     const fired = v && !padPrev[n]; padPrev[n] = v; return fired;
   };
   if(mode==='net' && !NET.isHost){                      // 網路對戰非房主：只能切視角
-    if(btn(3)) camMode = (camMode+1)%3;
+    if(btn(3)) camNext();
     return;
   }
   if(btn(9)){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); } // OPTIONS=暫停
-  if(btn(3)) camMode = (camMode+1)%3;                  // △=切換視角
+  if(btn(3)) camNext();                  // △=切換視角
   if(btn(8) && state!=='menu'){                        // SHARE=重賽
     if(mode==='practice') restartPractice();
     else if(mode==='campaign') campRestart();
@@ -4476,7 +4484,12 @@ function updateHUD(){
 }
 
 // ---------- 攝影機 ----------
-let camMode = 0;  // 0 追視 1 機載 2 全場
+let camMode = 0;  // 0 追視 1 機載 2 全場 3 高空俯視（單人／網路；雙人分割畫面只有前三種）
+const CAM_NAMES = ['追視','機載','全場','高空俯視'];
+function camNext(){
+  camMode = (camMode + 1) % (DUO.on ? 3 : 4);
+  try{ flashMsg('視角：' + CAM_NAMES[camMode], '#9fd0ff', 1); }catch(e){}
+}
 const camPos = V3(0,3.5,6.5), camLook = V3(0,1,0);
 // 網路對戰時鏡頭跟拍「我方配對到的機」；未配位（觀戰）則退回全場鏡頭
 function camDrone(){
@@ -4487,7 +4500,7 @@ function camDrone(){
 // 滑鼠／手指拖曳調整觀看角度（2026-10-31，業主：「我也要能夠透過滑鼠調整觀看角度」）
 //   拖曳畫面＝轉動視角（追視：繞著飛機轉；全場：繞著場地轉；機載：左右上下看）、滾輪＝拉近拉遠、雙擊＝回到預設。
 //   每種視角各自記住自己的調整；搖桿、按鈕上的拖曳不受影響（只吃在 3D 畫面上的拖曳）。
-const CAMV = [{yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}];
+const CAMV = [{yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}];
 (function(){
   const cv = renderer.domElement;
   let drag = null;
@@ -4502,7 +4515,7 @@ const CAMV = [{yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:
     const v = CAMV[camMode] || CAMV[0];
     v.yaw   -= (e.clientX - drag.x)*0.006;
     v.pitch += (e.clientY - drag.y)*0.005;
-    const lim = camMode===1 ? [-0.8, 0.8] : camMode===2 ? [-0.4, 1.0] : [-0.6, 0.9];
+    const lim = camMode===1 ? [-0.8, 0.8] : camMode>=2 ? [-0.4, 1.0] : [-0.6, 0.9];
     v.pitch = clamp(v.pitch, lim[0], lim[1]);
     drag.x = e.clientX; drag.y = e.clientY;
   });
@@ -4512,7 +4525,7 @@ const CAMV = [{yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:0, zoom:1}, {yaw:0, pitch:
     if(!usable()) return;
     e.preventDefault();
     const v = CAMV[camMode] || CAMV[0];
-    v.zoom = clamp(v.zoom * (e.deltaY > 0 ? 1.1 : 0.9), camMode===2 ? 0.4 : 0.5, camMode===2 ? 1.8 : 3);
+    v.zoom = clamp(v.zoom * (e.deltaY > 0 ? 1.1 : 0.9), camMode>=2 ? 0.4 : 0.5, camMode>=2 ? 1.8 : 3);
   }, {passive:false});
   cv.addEventListener('dblclick', ()=>{ if(usable()) Object.assign(CAMV[camMode] || CAMV[0], {yaw:0, pitch:0, zoom:1}); });
 })();
@@ -4541,6 +4554,10 @@ function updateCamera(dt){
     const lx = Math.sin(by)*Math.cos(cv.pitch), lz = Math.cos(by)*Math.cos(cv.pitch), ly = -Math.sin(cv.pitch);
     dp = cd.pos.clone().add(V3(0,0.12,0)).addScaledVector(fwd,0.15);
     dl = dp.clone().add(V3(lx*4, ly*4 + 0.18, lz*4));
+  }else if(camMode===3){    // 高空俯視：鏡頭抬到框架上方、微微跟著飛機左右移動，球／球門／對手一覽無遺，框架不擋視線
+    const fx = cd ? clamp(cd.pos.x*0.35, -2.5, 2.5) : 0, p = 1.0 + cv.pitch, R = 9.5*cv.zoom, by = cv.yaw;
+    dl = V3(fx, 0.6, 0);
+    dp = dl.clone().add(V3(Math.sin(by)*Math.cos(p)*R, Math.sin(p)*R, Math.cos(by)*Math.cos(p)*R));
   }else{                    // 全場轉播（預設＝(0,3.6,5.6) 看場中；拖曳可繞著場地轉）
     const p = 0.4495 + cv.pitch, R = 6.217*cv.zoom, by = cv.yaw;
     dl = V3(0, 0.9, 0);
@@ -5008,7 +5025,7 @@ function duoPollButtons(){
     const btn = n=>{ const v = !!(gp.buttons[n] && gp.buttons[n].pressed); const f = v && !prev[n]; prev[n] = v; return f; };
     if(state==='menu') continue;
     if(btn(9)){ if(state==='play') setState('pause'); else if(state==='pause') setState('play'); }
-    if(btn(3)) camMode = (camMode+1)%3;
+    if(btn(3)) camNext();
     if(btn(8)) duoRestart();
   }
 }
@@ -9107,6 +9124,11 @@ function loop(){
   pilotsTick(dt, t);                            // 場邊虛擬選手（看自己的機、搖桿跟輸入動）
   demoLoopTick(dt);                             // 示範賽連續對戰
   envAnimate(dt);
+  { const si = (mode==='net' && NET.mySlot>=0) ? drones[NET.mySlot].input : (mode==='train' ? trainHuman().input : player.input);   // 搖桿視覺圖：顯示目前操作輸入
+    if(si && state==='play'){
+      const R=29, put=(id,x,y)=>{ const el=document.getElementById(id); if(el) el.style.transform='translate('+(clamp(x,-1,1)*R).toFixed(1)+'px,'+(clamp(-y,-1,1)*R).toFixed(1)+'px)'; };
+      put('svL', -si.yawRate/YAW_RATE, si.throttle); put('svR', si.roll, si.pitch);
+    } }
   if(mode==='campaign'){ campAnimate(t); campUpdateHUD(); }
   if(mode==='race'){ raceAnimate(t); raceUpdateHUD(); }
   if(ringPulse){
