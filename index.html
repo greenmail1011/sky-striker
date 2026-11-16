@@ -2698,6 +2698,7 @@ class Drone{
     this.tiltP = 0; this.tiltR = 0;           // 實際傾角狀態（pitch/roll 比例）
     this.input = {pitch:0, roll:0, yawRate:0, throttle:0};
     this.disturb = 0;               // 0~1 被撞失控程度
+    this.kx=this.kz=this.kvx=this.kvz=0;   // 被撞傾倒（阻尼彈簧）
     this.wobblePhase = Math.random()*10;
     this.canScore = true;           // 得分權（回防解鎖）
     this.prevX = this.pos.x;
@@ -2720,15 +2721,30 @@ class Drone{
   reset(){
     this.pos.copy(this.spawn); this.vel.set(0,0,0);
     this.yaw = this.yaw0; this.tiltP=this.tiltR=0;
-    this.disturb=0; this.canScore=true; this.prevX=this.pos.x;
+    this.disturb=0; this.canScore=true; this.prevX=this.pos.x; this.kx=this.kz=this.kvx=this.kvz=0;
     this.zoneT=0; this.zoneWarned=false; this.backoffT=0;
     this.strat=0; this.stratT=Math.random()*1.5;
     this.dash=false; this.dashT=0;
     this.input={pitch:0,roll:0,yawRate:0,throttle:0};
     this.crash = null; this.snag = 0; this.lost = 0;
   }
+  // ---- 被撞反應（2026-11-16 業主：被撞不該「滯空扭動」，要像物理引擎依力道彈開）----
+  // 撞擊的速度變化量 dv 變成機身往衝擊方向的傾倒角速度，之後由阻尼彈簧自己扶正（像飛控把機身拉回來），
+  // 取代原本的高頻亂抖；位移本身由碰撞衝量彈開。
+  bump(dv){
+    const m = Math.hypot(dv.x||0, dv.z||0); if(m < 0.15) return;
+    const g = Math.min(6, m*1.5);
+    this.kvx += dv.x/m*g; this.kvz += dv.z/m*g;
+  }
+  stepKick(h){
+    const w = 11, z = 0.32;
+    this.kvx += (-w*w*this.kx - 2*z*w*this.kvx)*h; this.kvz += (-w*w*this.kz - 2*z*w*this.kvz)*h;
+    this.kx += this.kvx*h; this.kz += this.kvz*h;
+    const a = Math.hypot(this.kx, this.kz); if(a > 0.8){ this.kx *= 0.8/a; this.kz *= 0.8/a; }
+  }
   // ---- 四軸飛行動力學 ----
   step(h){
+    this.stepKick(h);
     if(this.crash){ this.stepCrash(h); return; }   // 墜機中：不吃操控，自由落下／躺在地上等重新起飛
     const auth = (1 - 0.78*this.disturb) * (this.snag>0 ? 0.25 : 1);   // 被撞後控制權下降；卡在網上幾乎操控不了
     // 傾角朝指令值收斂（一階響應，模擬飛控角度模式）
@@ -2752,7 +2768,7 @@ class Drone{
     const thr = clamp(this.input.throttle*auth, -1, 1);
     this.thrustN = MASS*G*(1+THR_RANGE*thr)/Math.max(Math.cos(tiltAng),0.55);
     // 失控時推力紊亂
-    if(this.disturb>0.05) this.thrustN *= 1 + (Math.random()-0.5)*0.55*this.disturb;
+    if(this.disturb>0.05) this.thrustN *= 1 + (Math.random()-0.5)*0.2*this.disturb;
 
     // 合力 → 加速度
     const acc = thrustDir.multiplyScalar(this.thrustN/MASS);
@@ -2788,7 +2804,7 @@ class Drone{
     if(Math.abs(this.pos.x)>bx){
       const hit = Math.abs(this.vel.x);
       this.pos.x = Math.sign(this.pos.x)*bx;
-      this.vel.x = -this.vel.x*REST_WALL; this.vel.y*=0.92; this.vel.z*=0.92;
+      this.bump({x:-Math.sign(this.pos.x)*hit*(1+REST_WALL)*0.5, z:0}); this.vel.x = -this.vel.x*REST_WALL; this.vel.y*=0.92; this.vel.z*=0.92;
       if(hit>2) this.disturb = Math.min(1,this.disturb+hit*0.05);
       hapticHit(this, hit);
       this.netHit(hit, V3(-Math.sign(this.pos.x),0,0));
@@ -2796,7 +2812,7 @@ class Drone{
     if(Math.abs(this.pos.z)>bz){
       const hit = Math.abs(this.vel.z);
       this.pos.z = Math.sign(this.pos.z)*bz;
-      this.vel.z = -this.vel.z*REST_WALL; this.vel.y*=0.92; this.vel.x*=0.92;
+      this.bump({x:0, z:-Math.sign(this.pos.z)*hit*(1+REST_WALL)*0.5}); this.vel.z = -this.vel.z*REST_WALL; this.vel.y*=0.92; this.vel.x*=0.92;
       if(hit>2) this.disturb = Math.min(1,this.disturb+hit*0.05);
       hapticHit(this, hit);
       this.netHit(hit, V3(0,0,-Math.sign(this.pos.z)));
@@ -2816,7 +2832,7 @@ class Drone{
       }
     }
     // 失控衰減（飛控重新穩定）
-    this.disturb = Math.max(0, this.disturb - h*0.85);
+    this.disturb = Math.max(0, this.disturb - h*1.5);   // 飛控更快穩住（原 0.85）
     this.propSpin += (6 + this.thrustN*2.2)*h*Math.PI*2*0.3;
   }
   // ---- 意外狀況（2026-10-31，業主：「沒有不小心被撞到地上再起飛的情況，或是觸網迷失方向的情況」）----
@@ -2949,12 +2965,17 @@ class Drone{
     this.mesh.grp.quaternion.copy(qTilt).multiply(qYaw);
     if(this.crash && this.rollQ) this.mesh.grp.quaternion.premultiply(this.rollQ);   // 墜機時的翻滾／側躺／肚子朝上
     // 被撞翻滾搖晃
-    if(this.disturb>0.02){
-      const w = this.disturb;
+    {
+      const ka = Math.hypot(this.kx||0, this.kz||0);
+      if(ka > 0.005){   // 往衝擊方向傾倒、再被扶正
+        const axis = V3(this.kz/ka, 0, -this.kx/ka);
+        this.mesh.grp.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axis, ka));
+      }
+    }
+    if(this.disturb>0.02){   // 殘餘輕微抖動（原 0.9 rad 的亂抖看起來像「滯空扭動」→ 降到很小）
+      const w = this.disturb*0.18;
       const qW = new THREE.Quaternion().setFromEuler(new THREE.Euler(
-        Math.sin(t*21+this.wobblePhase)*w*0.9,
-        Math.sin(t*17+this.wobblePhase*2)*w*0.7,
-        Math.cos(t*23+this.wobblePhase)*w*0.9));
+        Math.sin(t*21+this.wobblePhase)*w, Math.sin(t*17+this.wobblePhase*2)*w*0.6, Math.cos(t*23+this.wobblePhase)*w));
       this.mesh.grp.quaternion.multiply(qW);
     }
     this.mesh.props.forEach((p,i)=>{ p.rotation.z = this.propSpin*(i%2?1:-1); });
@@ -3023,6 +3044,7 @@ function collideDrones(){
     a.pos.addScaledVector(n,-push); b.pos.addScaledVector(n,push);
     // 衝量
     const vn = a.vel.clone().sub(b.vel).dot(n);
+    const a0 = a.vel.clone(), b0 = b.vel.clone();
     if(vn>0){
       const imp = n.clone().multiplyScalar(vn*(1+REST_DRONE)/2);
       a.vel.sub(imp); b.vel.add(imp);
@@ -3034,6 +3056,7 @@ function collideDrones(){
         a.vel.x += (Math.random()-0.5)*extra*0.6; a.vel.y += (Math.random()-0.5)*extra*0.5; a.vel.z += (Math.random()-0.5)*extra*0.6;
         b.vel.x += (Math.random()-0.5)*extra*0.6; b.vel.y += (Math.random()-0.5)*extra*0.5; b.vel.z += (Math.random()-0.5)*extra*0.6;
       }
+      a.bump(a.vel.clone().sub(a0)); b.bump(b.vel.clone().sub(b0));
       const k = Math.min(1, vn*0.16);
       a.disturb = Math.min(1, a.disturb+k);
       b.disturb = Math.min(1, b.disturb+k);
@@ -3079,7 +3102,7 @@ function collideRing(d, ring){
   if(vn<0){
     const mu = S ? MASS*RING_SWING.m/(MASS + RING_SWING.m) : MASS;   // 兩物體碰撞的約化質量
     const Jn = -vn*(1+0.5)*mu;                                        // 衝量大小（恢復係數 0.5）
-    d.vel.addScaledVector(n, Jn/MASS);
+    d.vel.addScaledVector(n, Jn/MASS); d.bump(n.clone().multiplyScalar(Jn/MASS));
     d.disturb = Math.min(1, d.disturb + Math.min(0.6,-vn*0.1));
     if(-vn>1.2) sfx.hit(Math.min(1,-vn/8));
     hapticHit(d, -vn);
@@ -3291,7 +3314,7 @@ function pracOpen(){
   pracRings.forEach(r=>{ r.grp.visible = true; r.passes = 0; });
 }
 function pracPlace(d, z){      // 起點：靶場西端，機頭朝 +x（圓環的穿越方向）
-  d.pos.x = -6.5; d.pos.z = z; d.yaw = Math.PI/2; d.prevX = d.pos.x;
+  d.pos.x = -3.2; d.pos.z = z; d.yaw = Math.PI/2; d.prevX = d.pos.x;   // 業主：圓環練習距離太遠 → 起點離環 3.2m
 }
 function pracPassDir(d, ring){   // 1＝順向（→）穿越、−1＝逆向穿越、0＝沒穿過
   const a = d.prevX - ring.x, b = d.pos.x - ring.x;
